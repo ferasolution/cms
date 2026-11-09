@@ -12,18 +12,17 @@ Web portal (installable on Android / iOS as an app) for running a housing commun
 | 1 | **Security** — visitors, guests, workers, relatives & friends per household; photo + video at entry; purpose; duration of stay; exit record | Security (officials only) |
 | 2 | **Inventory** — stock, issuance form (who issued, who took it, purpose), returns, low-stock alerts | Inventory handler |
 | 3 | **Library** — catalogue, e-books (digital library), issue requests, issuance record, fines | Librarian, residents |
-| 4 | **Finance** — salaries, revenue (events, subscriptions, penalties, dues, fines), monthly maintenance, expenses, receipts, expense requests approved by ADH | Finance; all officials can request expenses |
+| 4 | **Finance** — salaries, revenue (events, subscriptions, penalties, dues, fines), monthly maintenance, expenses, receipts, expense requests approved by an Admin | Finance; all officials can request expenses |
 | 5 | **Events** — applications, calculator, event codes, allowance report, gate verification, **alarm at security when the time is over** | Manager, residents, security |
 | 6 | **Complaints** — online complaints, manager aligns workers, resolution report, ratings | Manager, residents |
 | 7 | **NOC** — document upload with checklist, every status change logged & notified, certificate | Manager, residents |
 | 8 | **Record room** — every household's files in e-format; owners see only their own | Manager, residents |
-
 | 9 | **Staff CRM** — employee profiles & IDs, online check-in/out (web or RFID), automatic working hours / late / overtime, leave approvals, department tasks | HR; every staff member via *My Workspace* |
 | 10 | **Gym & Club** — plans, members, RFID door check (active · paid · not blocked), pay-by-QR with proof upload, dues alerts | Gym manager, residents |
 
 Also: visitor pre-registration with **QR passes**, household **approve / reject** at the gate, overstay alerts, blacklist / watchlist, vehicles, incident reports, event QR passes, **announcements**, **SOS emergency**, global search (Ctrl+K), dark mode, audit log, settings.
 
-**Live updates:** the portal polls for alerts every 8 seconds (works on shared hosting with no extra services). Event time checks run on that poll, so no cron job is needed. Danger alerts ring an alarm sound.
+**Live updates:** the portal polls every 5 seconds — new alerts plus which modules changed, so open pages refresh themselves (works on shared hosting with no extra services). Event time checks run on that poll, so no cron job is needed. Danger alerts ring an alarm sound.
 
 ## Roles & permissions
 
