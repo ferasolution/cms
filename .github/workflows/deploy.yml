@@ -119,11 +119,7 @@ jobs:
             exit 0
           fi
           UA="Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0 Safari/537.36"
-          # Bluehost mod_security rejects bare automated requests (406), so look like a normal browser call.
-          code=$(curl -sS -o resp.json -w "%{http_code}" -X POST -A "$UA" -H "X-Deploy-Token: $DEPLOY_TOKEN" -H "Accept: application/json" -H "Content-Type: application/json" -d '{"run":"migrate"}' "$APP_URL/system/deploy" || true)
-          if [ "$code" != "200" ]; then
-            echo "POST returned $code, retrying with GET"
-            code=$(curl -sS -o resp.json -w "%{http_code}" -A "$UA" -H "X-Deploy-Token: $DEPLOY_TOKEN" -H "Accept: application/json" "$APP_URL/system/deploy" || true)
-          fi
+          # Bluehost mod_security rejects automated POSTs (406); a browser-like GET passes.
+          code=$(curl -sS -o resp.json -w "%{http_code}" -A "$UA" -H "X-Deploy-Token: $DEPLOY_TOKEN" -H "Accept: application/json" "$APP_URL/system/deploy" || true)
           cat resp.json; echo
           [ "$code" = "200" ] || { echo "::error::Server returned $code for /system/deploy"; exit 1; }
