@@ -1,4 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { X, Search, ChevronLeft, ChevronRight, Loader2, Inbox, Paperclip } from 'lucide-react';
 import { get, fileUrl, title } from '../lib/api';
 
@@ -21,7 +22,7 @@ export function ToastProvider({ children }) {
                 {items.map((t) => (
                     <div key={t.id} className={`toast-in card border-l-4 px-4 py-3 ${tone[t.level] || tone.info}`}>
                         <div className="text-sm font-semibold">{t.message}</div>
-                        {t.body && <div className="mt-0.5 text-xs text-black/60">{t.body}</div>}
+                        {t.body && <div className="mt-0.5 text-xs text-ink/60">{t.body}</div>}
                     </div>
                 ))}
             </div>
@@ -68,7 +69,7 @@ export function PageHeader({ icon: Icon, title: t, subtitle, children }) {
                 {Icon && <div className="grid size-11 place-items-center rounded-2xl bg-brand-600 text-white shadow-sm"><Icon size={22} /></div>}
                 <div>
                     <h1 className="text-xl font-bold tracking-tight sm:text-2xl">{t}</h1>
-                    {subtitle && <p className="text-sm text-black/55">{subtitle}</p>}
+                    {subtitle && <p className="text-sm text-ink/55">{subtitle}</p>}
                 </div>
             </div>
             <div className="flex flex-wrap items-center gap-2">{children}</div>
@@ -78,10 +79,10 @@ export function PageHeader({ icon: Icon, title: t, subtitle, children }) {
 
 export function Tabs({ tabs, value, onChange }) {
     return (
-        <div className="mb-4 flex gap-1 overflow-x-auto rounded-2xl bg-black/[.04] p-1">
+        <div className="mb-4 flex gap-1 overflow-x-auto rounded-2xl bg-ink/[.04] p-1">
             {tabs.filter(Boolean).map((t) => (
                 <button key={t.key} onClick={() => onChange(t.key)}
-                    className={`flex shrink-0 items-center gap-1.5 rounded-xl px-3.5 py-2 text-sm font-semibold transition ${value === t.key ? 'bg-white text-brand-700 shadow-sm' : 'text-black/55 hover:text-black'}`}>
+                    className={`flex shrink-0 items-center gap-1.5 rounded-xl px-3.5 py-2 text-sm font-semibold transition ${value === t.key ? 'bg-surface text-brand-700 shadow-sm' : 'text-ink/55 hover:text-black'}`}>
                     {t.icon && <t.icon size={15} />}{t.label}
                     {t.count > 0 && <span className="rounded-full bg-sand-400 px-1.5 text-[11px] text-white">{t.count}</span>}
                 </button>
@@ -95,11 +96,11 @@ export function Stat({ label, value, sub, icon: Icon, tone = 'brand', onClick })
     return (
         <div onClick={onClick} className={`card p-4 ${onClick ? 'cursor-pointer transition hover:-translate-y-0.5' : ''}`}>
             <div className="flex items-start justify-between gap-2">
-                <div className="text-xs font-semibold text-black/50">{label}</div>
+                <div className="text-xs font-semibold text-ink/50">{label}</div>
                 {Icon && <div className={`grid size-8 place-items-center rounded-xl ${tones[tone]}`}><Icon size={16} /></div>}
             </div>
             <div className="mt-1 text-2xl font-bold tracking-tight">{value}</div>
-            {sub && <div className="mt-0.5 text-xs text-black/50">{sub}</div>}
+            {sub && <div className="mt-0.5 text-xs text-ink/50">{sub}</div>}
         </div>
     );
 }
@@ -109,12 +110,12 @@ const BADGE = {
     assigned: 'bg-sky-50 text-sky-700', in_progress: 'bg-sky-50 text-sky-700', under_review: 'bg-sky-50 text-sky-700', issued: 'bg-sky-50 text-sky-700',
     documents_required: 'bg-orange-50 text-orange-700', approved: 'bg-emerald-50 text-emerald-700', resolved: 'bg-emerald-50 text-emerald-700',
     completed: 'bg-emerald-50 text-emerald-700', returned: 'bg-emerald-50 text-emerald-700', paid: 'bg-emerald-50 text-emerald-700', inside: 'bg-emerald-50 text-emerald-700',
-    rejected: 'bg-black/5 text-black/60', closed: 'bg-black/5 text-black/60', cancelled: 'bg-black/5 text-black/60', exited: 'bg-black/5 text-black/60',
-    urgent: 'bg-red-600 text-white', high: 'bg-red-50 text-red-700', normal: 'bg-black/5 text-black/60', low: 'bg-black/5 text-black/45',
+    rejected: 'bg-ink/5 text-ink/60', closed: 'bg-ink/5 text-ink/60', cancelled: 'bg-ink/5 text-ink/60', exited: 'bg-ink/5 text-ink/60',
+    urgent: 'bg-red-600 text-white', high: 'bg-red-50 text-red-700', normal: 'bg-ink/5 text-ink/60', low: 'bg-ink/5 text-ink/45',
     revenue: 'bg-emerald-50 text-emerald-700', expense: 'bg-red-50 text-red-700', salary: 'bg-violet-50 text-violet-700', overdue: 'bg-red-50 text-red-700', live: 'bg-emerald-600 text-white',
 };
 export function Badge({ value, children }) {
-    return <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold whitespace-nowrap ${BADGE[value] || 'bg-black/5 text-black/60'}`}>{children ?? title(value)}</span>;
+    return <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold whitespace-nowrap ${BADGE[value] || 'bg-ink/5 text-ink/60'}`}>{children ?? title(value)}</span>;
 }
 
 export function Spinner({ className = '' }) {
@@ -122,7 +123,7 @@ export function Spinner({ className = '' }) {
 }
 
 export function Empty({ text = 'Nothing here yet.' }) {
-    return <div className="flex flex-col items-center gap-2 py-12 text-sm text-black/40"><Inbox size={28} />{text}</div>;
+    return <div className="flex flex-col items-center gap-2 py-12 text-sm text-ink/40"><Inbox size={28} />{text}</div>;
 }
 
 export function SearchBox({ value, onChange, placeholder = 'Search…' }) {
@@ -131,7 +132,7 @@ export function SearchBox({ value, onChange, placeholder = 'Search…' }) {
     useEffect(() => { clearTimeout(t.current); t.current = setTimeout(() => v !== (value || '') && onChange(v), 350); return () => clearTimeout(t.current); }, [v]); // eslint-disable-line
     return (
         <label className="relative block">
-            <Search size={15} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-black/35" />
+            <Search size={15} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-ink/35" />
             <input className="input w-56 pl-9" value={v} onChange={(e) => setV(e.target.value)} placeholder={placeholder} />
         </label>
     );
@@ -153,10 +154,10 @@ export function Table({ list, columns, empty, onRow, footer = true }) {
         <div className="card overflow-hidden">
             <div className="overflow-x-auto">
                 <table className="w-full">
-                    <thead className="border-b border-black/5 bg-black/[.015]">
+                    <thead className="border-b border-ink/5 bg-ink/[.015]">
                         <tr>{columns.map((c, i) => <th key={i} className={`th ${c.className || ''}`}>{c.label}</th>)}</tr>
                     </thead>
-                    <tbody className="divide-y divide-black/5">
+                    <tbody className="divide-y divide-ink/5">
                         {rows.map((r) => (
                             <tr key={r.id} onClick={onRow ? () => onRow(r) : undefined} className={onRow ? 'cursor-pointer hover:bg-brand-50/40' : ''}>
                                 {columns.map((c, i) => <td key={i} className={`td ${c.className || ''}`}>{c.render ? c.render(r) : r[c.key] ?? '—'}</td>)}
@@ -168,7 +169,7 @@ export function Table({ list, columns, empty, onRow, footer = true }) {
             {loading && !rows.length && <div className="grid place-items-center py-12"><Spinner /></div>}
             {!loading && !rows.length && <Empty text={empty} />}
             {footer && data?.last_page > 1 && (
-                <div className="flex items-center justify-between border-t border-black/5 px-4 py-2.5 text-xs text-black/55">
+                <div className="flex items-center justify-between border-t border-ink/5 px-4 py-2.5 text-xs text-ink/55">
                     <span>{data.from}–{data.to} of {data.total}</span>
                     <div className="flex gap-1">
                         <button className="btn-ghost btn-sm" disabled={data.current_page <= 1} onClick={() => list.setPage(data.current_page - 1)}><ChevronLeft size={14} /></button>
@@ -190,16 +191,18 @@ export function Modal({ open, onClose, title: t, children, wide }) {
         return () => window.removeEventListener('keydown', k);
     }, [open, onClose]);
     if (!open) return null;
-    return (
+    // Portal to <body> so modals are never clipped by a parent with transform / backdrop-filter.
+    return createPortal(
         <div className="fixed inset-0 z-50 flex items-end justify-center bg-ink/40 p-0 backdrop-blur-[2px] sm:items-center sm:p-4" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
             <div className={`card max-h-[92vh] w-full overflow-y-auto rounded-b-none sm:rounded-2xl ${wide ? 'sm:max-w-3xl' : 'sm:max-w-lg'}`}>
-                <div className="sticky top-0 z-10 flex items-center justify-between border-b border-black/5 bg-white px-5 py-3.5">
+                <div className="sticky top-0 z-10 flex items-center justify-between border-b border-ink/5 bg-surface px-5 py-3.5">
                     <h3 className="font-bold">{t}</h3>
                     <button className="btn-ghost btn-sm" onClick={onClose}><X size={16} /></button>
                 </div>
                 <div className="p-5">{children}</div>
             </div>
-        </div>
+        </div>,
+        document.body,
     );
 }
 
@@ -240,7 +243,7 @@ export function Form({ fields, initial = {}, onSubmit, submitLabel = 'Save', onC
                 <div key={f.name} className={f.half ? 'col-span-2 sm:col-span-1' : 'col-span-2'}>
                     {f.type !== 'checkbox' && <label className="label">{f.label}{f.required && <span className="text-red-500"> *</span>}</label>}
                     <Field f={f} value={values[f.name]} set={(v) => set(f.name, v)} />
-                    {f.hint && <p className="mt-1 text-[11px] text-black/45">{f.hint}</p>}
+                    {f.hint && <p className="mt-1 text-[11px] text-ink/45">{f.hint}</p>}
                     {(errors[f.name] || errors[f.name + '.0']) && <p className="mt-1 text-xs text-red-600">{(errors[f.name] || errors[f.name + '.0'])[0]}</p>}
                 </div>
             ))}
@@ -268,7 +271,7 @@ function Field({ f, value, set }) {
             return <label className="flex items-center gap-2 text-sm"><input type="checkbox" className="size-4 accent-brand-600" checked={!!value} onChange={(e) => set(e.target.checked)} />{f.label}</label>;
         case 'file':
             return (
-                <label className="flex cursor-pointer items-center gap-2 rounded-xl border border-dashed border-black/15 bg-black/[.015] px-3 py-2.5 text-sm text-black/60 hover:border-brand-500">
+                <label className="flex cursor-pointer items-center gap-2 rounded-xl border border-dashed border-ink/15 bg-ink/[.015] px-3 py-2.5 text-sm text-ink/60 hover:border-brand-500">
                     <Paperclip size={15} />
                     <span className="truncate">{value ? (Array.isArray(value) ? `${value.length} file(s) selected` : value.name) : f.placeholder || 'Choose file…'}</span>
                     <input type="file" className="hidden" accept={f.accept} multiple={f.multiple} capture={f.capture}
@@ -315,3 +318,70 @@ export function useHouses(enabled = true) {
     return houses.map((h) => ({ value: h.id, label: `${h.block ? h.block + '-' : ''}${h.house_no}${h.owner_name ? ' · ' + h.owner_name : ''}` }));
 }
 export const clearHouseCache = () => { houseCache = null; };
+
+/* ---------- URL-synced tab (so alerts can deep-link: /security?tab=approvals) ---------- */
+export function useTab(initial) {
+    const read = () => new URLSearchParams(window.location.search).get('tab') || initial;
+    const [tab, setTab] = useState(read);
+    const set = (t) => {
+        setTab(t);
+        const u = new URL(window.location.href);
+        u.searchParams.set('tab', t);
+        window.history.replaceState(null, '', u);
+    };
+    return [tab, set];
+}
+export const urlParam = (k) => new URLSearchParams(window.location.search).get(k) || '';
+
+/* ---------- QR code image ---------- */
+export function QrImage({ text, size = 200, className = '' }) {
+    const [src, setSrc] = useState(null);
+    useEffect(() => {
+        let alive = true;
+        import('qrcode').then((QR) => QR.toDataURL(text, { width: size * 2, margin: 1, color: { dark: '#0b2e2c', light: '#ffffff' } })).then((d) => alive && setSrc(d)).catch(() => {});
+        return () => { alive = false; };
+    }, [text, size]);
+    return src ? <img src={src} width={size} height={size} alt="QR code" className={`rounded-xl bg-white p-1 ${className}`} /> : <div style={{ width: size, height: size }} className="grid place-items-center rounded-xl bg-ink/5"><Spinner /></div>;
+}
+
+/* ---------- Camera QR scanner (falls back to typing / USB scanner) ---------- */
+export function QrScanner({ onResult, placeholder = 'Type or scan code…' }) {
+    const [cam, setCam] = useState(false);
+    const [err, setErr] = useState('');
+    const [code, setCode] = useState('');
+    const id = useRef('qr-' + Math.random().toString(36).slice(2));
+    const scanner = useRef(null);
+    useEffect(() => {
+        if (!cam) return;
+        let stopped = false;
+        import('html5-qrcode').then(({ Html5Qrcode }) => {
+            if (stopped) return;
+            const s = new Html5Qrcode(id.current);
+            scanner.current = s;
+            s.start({ facingMode: 'environment' }, { fps: 10, qrbox: { width: 220, height: 220 } }, (txt) => { onResult(txt); setCam(false); }, () => {})
+                .catch((e) => { setErr('Camera not available: ' + (e?.message || e)); setCam(false); });
+        });
+        return () => { stopped = true; scanner.current?.stop().catch(() => {}).finally(() => scanner.current?.clear?.()); };
+    }, [cam]); // eslint-disable-line
+    return (
+        <div>
+            <form className="flex gap-2" onSubmit={(e) => { e.preventDefault(); if (code.trim()) { onResult(code.trim()); setCode(''); } }}>
+                <input autoFocus className="input font-mono uppercase" placeholder={placeholder} value={code} onChange={(e) => setCode(e.target.value)} />
+                <button className="btn-primary">Check</button>
+                <button type="button" className="btn-outline" onClick={() => { setErr(''); setCam(!cam); }}>{cam ? 'Stop' : '📷 Camera'}</button>
+            </form>
+            {cam && <div id={id.current} className="mt-3 overflow-hidden rounded-xl bg-black" />}
+            {err && <p className="mt-2 text-xs text-red-600">{err}</p>}
+        </div>
+    );
+}
+
+/* ---------- Simple CSV export ---------- */
+export function exportCsv(filename, rows, columns) {
+    const esc = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`;
+    const csv = [columns.map((c) => esc(c.label)).join(','), ...rows.map((r) => columns.map((c) => esc(c.value(r))).join(','))].join('\n');
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob(['﻿' + csv], { type: 'text/csv' }));
+    a.download = filename;
+    a.click();
+}

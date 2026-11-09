@@ -3,7 +3,7 @@ import { MessageSquareWarning, Plus, UserCheck, CheckCircle2, Star, BarChart3, W
 import { useList, useGet, PageHeader, Table, Modal, Form, Badge, SearchBox, Select, Tabs, Stat, FileLink, useAction, useToast, useHouses } from '../components/ui';
 import { post, dt, ago, title } from '../lib/api';
 import { useAuth } from '../lib/auth';
-import { useAlerts } from '../lib/alerts';
+import { useLive } from '../lib/alerts';
 
 const CATS = ['plumbing', 'electrical', 'cleaning', 'security', 'gardening', 'construction', 'noise', 'parking', 'other'];
 const PRI = ['low', 'normal', 'high', 'urgent'];
@@ -12,14 +12,13 @@ export default function Complaints() {
     const { can, isResident } = useAuth();
     const manage = can('complaints', true);
     const [tab, setTab] = useState('list');
-    const list = useList('complaints', { status: '' });
+    const list = useList('complaints', { status: '', q: new URLSearchParams(location.search).get('q') || '' });
     const report = useGet(manage && tab === 'report' ? 'complaints/report' : null);
     const houses = useHouses(!isResident);
     const [modal, setModal] = useState(null);
     const act = useAction();
     const toast = useToast();
-    const { tick } = useAlerts();
-    useEffect(() => { if (tick) list.reload(); }, [tick]); // eslint-disable-line
+    useLive('complaints', () => { list.reload(); });
 
     const done = (msg) => { toast(msg); setModal(null); list.reload(); };
 
@@ -39,10 +38,10 @@ export default function Complaints() {
                         {manage && <Select value={list.params.priority} onChange={(priority) => list.set({ priority })} placeholder="Any priority" options={PRI} />}
                     </div>
                     <Table list={list} empty="No complaints." onRow={(c) => setModal({ mode: 'view', ...c })} columns={[
-                        { label: 'Ticket', render: (c) => <div><div className="font-mono text-xs font-semibold">{c.ticket_no}</div><div className="text-[11px] text-black/45">{ago(c.created_at)}</div></div> },
-                        { label: 'Complaint', render: (c) => <div><div className="font-semibold">{c.title}</div><div className="text-xs text-black/50">{title(c.category)}{!isResident && c.house ? ' · ' + c.house.label : ''}</div></div> },
+                        { label: 'Ticket', render: (c) => <div><div className="font-mono text-xs font-semibold">{c.ticket_no}</div><div className="text-[11px] text-ink/45">{ago(c.created_at)}</div></div> },
+                        { label: 'Complaint', render: (c) => <div><div className="font-semibold">{c.title}</div><div className="text-xs text-ink/50">{title(c.category)}{!isResident && c.house ? ' · ' + c.house.label : ''}</div></div> },
                         { label: 'Priority', render: (c) => <Badge value={c.priority} /> },
-                        { label: 'Worker', render: (c) => c.assigned_worker ? <span className="flex items-center gap-1"><Wrench size={13} className="text-black/40" />{c.assigned_worker}</span> : '—' },
+                        { label: 'Worker', render: (c) => c.assigned_worker ? <span className="flex items-center gap-1"><Wrench size={13} className="text-ink/40" />{c.assigned_worker}</span> : '—' },
                         { label: 'Status', render: (c) => <Badge value={c.status} /> },
                     ]} />
                 </>
@@ -62,7 +61,7 @@ export default function Complaints() {
                             <div key={c.category} className="mb-2 grid grid-cols-[120px_1fr_70px] items-center gap-3 text-sm">
                                 <span>{title(c.category)}</span>
                                 <div className="h-2.5 overflow-hidden rounded-full bg-red-100"><div className="h-full bg-emerald-500" style={{ width: `${(c.resolved / c.total) * 100}%` }} /></div>
-                                <span className="text-right text-black/60">{c.resolved}/{c.total}</span>
+                                <span className="text-right text-ink/60">{c.resolved}/{c.total}</span>
                             </div>
                         ))}
                     </div>
@@ -84,17 +83,17 @@ export default function Complaints() {
                 {modal?.mode === 'view' && (
                     <div className="space-y-4 text-sm">
                         <div className="flex flex-wrap gap-2"><Badge value={modal.status} /><Badge value={modal.priority} /><Badge>{title(modal.category)}</Badge></div>
-                        {modal.description && <p className="whitespace-pre-line rounded-xl bg-black/[.03] p-3">{modal.description}</p>}
+                        {modal.description && <p className="whitespace-pre-line rounded-xl bg-ink/[.03] p-3">{modal.description}</p>}
                         {modal.photo_path && <img src={`/files/${modal.photo_path}`} className="max-h-56 rounded-xl" alt="" />}
                         <div className="grid grid-cols-2 gap-3">
                             {[['House', modal.house?.label], ['Raised by', modal.user?.name], ['Raised on', dt(modal.created_at)], ['Worker', modal.assigned_worker ? `${modal.assigned_worker}${modal.worker_phone ? ' · ' + modal.worker_phone : ''}` : null], ['Assigned', modal.assigned_at ? dt(modal.assigned_at) + ' by ' + (modal.assigner?.name || '') : null], ['Resolved', modal.resolved_at ? dt(modal.resolved_at) : null]].map(([k, v]) => (
-                                <div key={k}><div className="text-[11px] font-semibold text-black/45">{k}</div><div>{v || '—'}</div></div>
+                                <div key={k}><div className="text-[11px] font-semibold text-ink/45">{k}</div><div>{v || '—'}</div></div>
                             ))}
                         </div>
                         {modal.resolution && <div className="rounded-xl bg-emerald-50 p-3 text-emerald-900"><b>Resolution:</b> {modal.resolution}</div>}
 
                         {manage && !['resolved', 'closed'].includes(modal.status) && (
-                            <div className="space-y-3 border-t border-black/5 pt-4">
+                            <div className="space-y-3 border-t border-ink/5 pt-4">
                                 <div className="font-semibold">Align worker / labour</div>
                                 <Form initial={modal} submitLabel={modal.assigned_worker ? 'Re-assign' : 'Assign'} onSubmit={async (v) => { await post(`complaints/${modal.id}/assign`, v); done('Worker assigned'); }} fields={[
                                     { name: 'assigned_worker', label: 'Worker name', required: true, half: true },
@@ -107,7 +106,7 @@ export default function Complaints() {
                             </div>
                         )}
                         {isResident && modal.status === 'resolved' && !modal.rating && (
-                            <div className="border-t border-black/5 pt-4">
+                            <div className="border-t border-ink/5 pt-4">
                                 <div className="mb-2 font-semibold">How was the service?</div>
                                 <div className="flex gap-1">{[1, 2, 3, 4, 5].map((n) => <button key={n} className="btn-ghost btn-sm" onClick={() => act(() => post(`complaints/${modal.id}/rate`, { rating: n }), 'Thanks for your feedback', () => { setModal(null); list.reload(); })}><Star size={20} className="text-sand-400" /></button>)}</div>
                             </div>

@@ -33,7 +33,7 @@ export default function Login() {
                     <h1 className="max-w-md text-4xl font-bold leading-tight tracking-tight">Your whole community, managed from one place.</h1>
                     <div className="mt-8 grid max-w-lg grid-cols-2 gap-3">
                         {FEATURES.map(([Icon, t]) => (
-                            <div key={t} className="flex items-center gap-2.5 text-sm text-white/75"><span className="grid size-8 place-items-center rounded-lg bg-white/10"><Icon size={16} /></span>{t}</div>
+                            <div key={t} className="flex items-center gap-2.5 text-sm text-white/75"><span className="grid size-8 place-items-center rounded-lg bg-surface/10"><Icon size={16} /></span>{t}</div>
                         ))}
                     </div>
                 </div>
@@ -43,7 +43,7 @@ export default function Login() {
                 <form onSubmit={submit} className="w-full max-w-sm">
                     <img src="/icon.svg" className="mb-6 size-12 rounded-2xl lg:hidden" alt="" />
                     <h2 className="text-2xl font-bold tracking-tight">Sign in</h2>
-                    <p className="mt-1 text-sm text-black/55">Officials and residents use the same login.</p>
+                    <p className="mt-1 text-sm text-ink/55">Officials and residents use the same login.</p>
                     <div className="mt-7 space-y-4">
                         <div>
                             <label className="label">Email</label>
@@ -53,7 +53,7 @@ export default function Login() {
                             <label className="label">Password</label>
                             <input className="input py-2.5" type="password" autoComplete="current-password" required value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} />
                         </div>
-                        <label className="flex items-center gap-2 text-sm text-black/65"><input type="checkbox" className="size-4 accent-brand-600" checked={form.remember} onChange={(e) => setForm({ ...form, remember: e.target.checked })} />Keep me signed in</label>
+                        <label className="flex items-center gap-2 text-sm text-ink/65"><input type="checkbox" className="size-4 accent-brand-600" checked={form.remember} onChange={(e) => setForm({ ...form, remember: e.target.checked })} />Keep me signed in</label>
                         {error && <div className="rounded-xl bg-red-50 px-3 py-2 text-sm text-red-700">{error}</div>}
                         <button className="btn-primary w-full py-2.5" disabled={busy}>{busy && <Loader2 size={16} className="animate-spin" />}Sign in</button>
                     </div>

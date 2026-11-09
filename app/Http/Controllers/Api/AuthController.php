@@ -62,7 +62,7 @@ class AuthController extends Controller
     {
         $user = $request->user();
         $data = $request->validate([
-            'name' => 'required|string|max:120',
+            'name' => 'sometimes|required|string|max:120',
             'phone' => 'nullable|string|max:30',
             'theme' => 'nullable|in:light,dark,system',
             'current_password' => 'nullable|required_with:password|string',
@@ -74,7 +74,7 @@ class AuthController extends Controller
             }
             $user->password = $data['password'];
         }
-        $user->fill(['name' => $data['name'], 'phone' => $data['phone'] ?? null, 'theme' => $data['theme'] ?? $user->theme])->save();
+        $user->fill(collect($data)->only(['name', 'phone', 'theme'])->all())->save();
 
         return $this->me($request);
     }

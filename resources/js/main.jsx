@@ -18,6 +18,12 @@ const Complaints = lazy(() => import('./pages/Complaints'));
 const Noc = lazy(() => import('./pages/Noc'));
 const Records = lazy(() => import('./pages/Records'));
 const Users = lazy(() => import('./pages/Users'));
+const Crm = lazy(() => import('./pages/Crm'));
+const Gym = lazy(() => import('./pages/Gym'));
+const Announcements = lazy(() => import('./pages/Announcements'));
+const Emergency = lazy(() => import('./pages/Emergency'));
+const SettingsPage = lazy(() => import('./pages/SettingsPage'));
+const Workspace = lazy(() => import('./pages/Workspace'));
 const ActivityPage = lazy(() => import('./pages/ActivityPage'));
 const Profile = lazy(() => import('./pages/Profile'));
 
@@ -28,8 +34,11 @@ function Guard({ module, children }) {
     return can(module) ? children : <Navigate to="/" replace />;
 }
 
+const MODULE_PAGES = { security: Security, inventory: Inventory, library: Library, finance: Finance, events: Events, complaints: Complaints, noc: Noc,
+    records: Records, users: Users, crm: Crm, gym: Gym, announcements: Announcements, emergency: Emergency, settings: SettingsPage };
+
 function App() {
-    const { loading, user, isAdmin } = useAuth();
+    const { loading, user, isAdmin, employee } = useAuth();
     if (loading) return <Loading />;
     if (!user) return <Login />;
     return (
@@ -39,15 +48,8 @@ function App() {
                     <Route element={<Layout />}>
                         <Route index element={<Dashboard />} />
                         <Route path="map" element={<MapPage />} />
-                        <Route path="security" element={<Guard module="security"><Security /></Guard>} />
-                        <Route path="inventory" element={<Guard module="inventory"><Inventory /></Guard>} />
-                        <Route path="library" element={<Guard module="library"><Library /></Guard>} />
-                        <Route path="finance" element={<Guard module="finance"><Finance /></Guard>} />
-                        <Route path="events" element={<Guard module="events"><Events /></Guard>} />
-                        <Route path="complaints" element={<Guard module="complaints"><Complaints /></Guard>} />
-                        <Route path="noc" element={<Guard module="noc"><Noc /></Guard>} />
-                        <Route path="records" element={<Guard module="records"><Records /></Guard>} />
-                        <Route path="users" element={<Guard module="users"><Users /></Guard>} />
+                        {Object.entries(MODULE_PAGES).map(([m, Page]) => <Route key={m} path={m} element={<Guard module={m}><Page /></Guard>} />)}
+                        {employee && <Route path="workspace" element={<Workspace />} />}
                         {isAdmin && <Route path="activity" element={<ActivityPage />} />}
                         <Route path="profile" element={<Profile />} />
                         <Route path="*" element={<Navigate to="/" replace />} />

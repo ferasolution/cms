@@ -100,9 +100,8 @@ class CommsController extends Controller
         $where = $sos->house ? 'House '.$sos->house->label.($sos->house->street ? ', '.$sos->house->street : '') : 'Location not linked';
         $title = '🆘 SOS '.strtoupper($sos->type).' — '.$u->name;
         $body = $where.' · '.($u->phone ?: 'no phone').($sos->message ? ' · '.$sos->message : '');
+        // One alert: everyone with Emergency edit access (security templates include it) — admins always qualify.
         Activity::alertModule('emergency', 2, $title, $body, 'danger', '/emergency');
-        Activity::alertModule('security', 2, $title, $body, 'danger', '/emergency');
-        Activity::alertAdmins('emergency', $title, $body, 'danger', '/emergency');
         Activity::log('emergency', 'sos', "SOS ({$sos->type}) raised by {$u->name} — {$where}", $sos);
 
         return $sos->load('user:id,name,phone');

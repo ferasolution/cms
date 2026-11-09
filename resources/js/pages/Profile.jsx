@@ -22,7 +22,7 @@ export default function Profile() {
                 <Smartphone className="shrink-0 text-brand-600" />
                 <div>
                     <div className="font-semibold">Install as a mobile app</div>
-                    <p className="mt-1 text-black/60"><b>Android (Chrome):</b> menu ⋮ → “Install app”. <b>iPhone (Safari):</b> Share → “Add to Home Screen”. Alerts arrive while the app is open; allow notifications when asked.</p>
+                    <p className="mt-1 text-ink/60"><b>Android (Chrome):</b> menu ⋮ → “Install app”. <b>iPhone (Safari):</b> Share → “Add to Home Screen”. Alerts arrive while the app is open; allow notifications when asked.</p>
                 </div>
             </div>
         </div>

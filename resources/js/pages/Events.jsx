@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
 import { CalendarHeart, Plus, Calculator, Check, X, ScanLine, Settings2, Flag, BellRing } from 'lucide-react';
-import { useList, useGet, PageHeader, Table, Modal, Form, Badge, SearchBox, Select, Tabs, Confirm, useAction, useToast, useHouses } from '../components/ui';
+import { useList, useGet, PageHeader, Table, Modal, Form, Badge, SearchBox, Select, Tabs, Confirm, useAction, useToast, useHouses, QrImage, QrScanner } from '../components/ui';
 import { get, post, put, del, dt, money, title, today } from '../lib/api';
 import { useAuth } from '../lib/auth';
-import { useAlerts, ringAlarm } from '../lib/alerts';
+import { useLive, ringAlarm } from '../lib/alerts';
 
 const TYPES = ['private', 'wedding', 'birthday', 'religious', 'community', 'sports', 'other'];
 const hm = (t) => (t || '').slice(0, 5);
@@ -30,17 +30,18 @@ function Quote({ values }) {
     return (
         <div className="rounded-xl bg-brand-50 p-3 text-sm">
             <div className="mb-1.5 flex items-center gap-1.5 font-semibold text-brand-700"><Calculator size={15} />Event calculator</div>
-            {q.lines.map((l) => <div key={l.label} className="flex justify-between text-black/65"><span>{l.label}</span><span>{money(l.amount)}</span></div>)}
+            {q.lines.map((l) => <div key={l.label} className="flex justify-between text-ink/65"><span>{l.label}</span><span>{money(l.amount)}</span></div>)}
             <div className="mt-1.5 flex justify-between border-t border-brand-200 pt-1.5 font-bold"><span>Estimated charges</span><span>{money(q.total)}</span></div>
         </div>
     );
 }
 
 export default function Events() {
-    const { can, isAdmin, isResident, user } = useAuth();
+    const { can, approve, isResident, user } = useAuth();
+    const isAdmin = approve('events');
     const manage = can('events', true);
-    const [tab, setTab] = useState(isResident ? 'mine' : 'upcoming');
-    const list = useList('events', { when: isResident ? '' : 'upcoming', status: '' });
+    const [tab, setTab] = useState(isResident ? 'mine' : new URLSearchParams(location.search).get('tab') || 'upcoming');
+    const list = useList('events', { when: isResident || tab !== 'upcoming' ? (tab === 'today' ? 'today' : '') : 'upcoming', status: tab === 'pending' ? 'pending' : '', q: new URLSearchParams(location.search).get('q') || '' });
     const rates = useGet('events/rates');
     const houses = useHouses(!isResident);
     const [modal, setModal] = useState(null);
@@ -48,8 +49,7 @@ export default function Events() {
     const [verified, setVerified] = useState(null);
     const act = useAction();
     const toast = useToast();
-    const { tick } = useAlerts();
-    useEffect(() => { if (tick) list.reload(); }, [tick]); // eslint-disable-line
+    useLive('events', () => { list.reload(); });
 
     const switchTab = (t) => { setTab(t); list.set({ when: t === 'upcoming' ? 'upcoming' : t === 'today' ? 'today' : '', status: t === 'pending' ? 'pending' : '' }); };
     const venues = Object.keys(rates.data?.venues || {});
@@ -83,12 +83,10 @@ export default function Events() {
             </PageHeader>
 
             {!isResident && (
-                <div className="card mb-4 flex flex-wrap items-center gap-2 p-3">
-                    <ScanLine size={18} className="text-brand-600" />
-                    <span className="text-sm font-semibold">Verify event code at gate</span>
-                    <input className="input w-40 font-mono uppercase" placeholder="EVT-XXXXXX" value={code} onChange={(e) => setCode(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.nextSibling.click()} />
-                    <button className="btn-outline btn-sm" onClick={() => code && get(`events/verify/${code.trim()}`).then(setVerified).catch((e) => toast(e.message, 'error'))}>Check</button>
-                    <button className="btn-ghost btn-sm ml-auto" title="Test the alarm sound" onClick={() => ringAlarm(2)}><BellRing size={14} />Test alarm</button>
+                <div className="card mb-4 p-4">
+                    <div className="mb-2 flex items-center gap-2 text-sm font-semibold"><ScanLine size={18} className="text-brand-600" />Gate check — scan the guest's event QR or type the code
+                        <button className="btn-ghost btn-sm ml-auto" title="Test the alarm sound" onClick={() => ringAlarm(2)}><BellRing size={14} />Test alarm</button></div>
+                    <QrScanner placeholder="EVT-XXXXXX" onResult={(c) => { const m = c.toUpperCase().match(/EVT-[A-Z0-9]{6}/); get(`events/verify/${m ? m[0] : c.trim()}`).then(setVerified).catch((e) => toast(e.message, 'error')); }} />
                 </div>
             )}
 
@@ -98,9 +96,9 @@ export default function Events() {
             <div className="mb-3"><SearchBox value={list.params.q} onChange={(q) => list.set({ q })} placeholder="Title, code, venue…" /></div>
 
             <Table list={list} empty="No events." onRow={(e) => setModal({ mode: 'view', ...e })} columns={[
-                { label: 'Event', render: (e) => <div><div className="font-semibold">{e.title}</div><div className="text-xs text-black/50">{title(e.type)} · {e.house?.label || e.requester?.name}</div></div> },
-                { label: 'When', render: (e) => <div>{dt(e.date, false)}<div className="text-xs text-black/50">{fmtTime(e.start_time)} – {fmtTime(e.end_time)}</div></div> },
-                { label: 'Venue', render: (e) => <div>{e.venue}<div className="text-xs text-black/50">{e.guests} guests</div></div> },
+                { label: 'Event', render: (e) => <div><div className="font-semibold">{e.title}</div><div className="text-xs text-ink/50">{title(e.type)} · {e.house?.label || e.requester?.name}</div></div> },
+                { label: 'When', render: (e) => <div>{dt(e.date, false)}<div className="text-xs text-ink/50">{fmtTime(e.start_time)} – {fmtTime(e.end_time)}</div></div> },
+                { label: 'Venue', render: (e) => <div>{e.venue}<div className="text-xs text-ink/50">{e.guests} guests</div></div> },
                 { label: 'Code', render: (e) => (e.code ? <span className="font-mono text-xs font-semibold">{e.code}</span> : '—') },
                 { label: 'Charges', render: (e) => money(e.charges) },
                 { label: 'Status', render: (e) => <div className="flex flex-col items-start gap-1">{e.live ? <Badge value="live">● Live</Badge> : e.overtime ? <Badge value="urgent">Time over</Badge> : <Badge value={e.status} />}{(e.live || e.overtime) && <Countdown to={e.ends_at} />}</div> },
@@ -125,17 +123,23 @@ export default function Events() {
                 {modal?.mode === 'view' && (
                     <div className="space-y-4 text-sm">
                         <div className="flex flex-wrap gap-2"><Badge value={modal.status} />{modal.code && <span className="rounded-lg bg-brand-900 px-2.5 py-1 font-mono text-xs font-bold text-white">{modal.code}</span>}</div>
+                        {modal.code && modal.status === 'approved' && (
+                            <div className="flex items-center gap-4 rounded-2xl bg-brand-50 p-3">
+                                <QrImage text={modal.code} size={120} />
+                                <div className="text-xs text-ink/65"><div className="mb-1 text-sm font-bold text-ink">Guest QR pass</div>Share this QR with guests (screenshot / WhatsApp). Security scans it at the gate to confirm the guest belongs to this event.<div className="mt-1 font-mono font-bold">{modal.code}</div>{modal.checked_in > 0 && <div className="mt-1">{modal.checked_in} guests checked in so far</div>}</div>
+                            </div>
+                        )}
                         <div className="grid grid-cols-2 gap-3">
                             {[['Type', title(modal.type)], ['Venue', modal.venue], ['Date', dt(modal.date, false)], ['Time', `${fmtTime(modal.start_time)} – ${fmtTime(modal.end_time)}`], ['Guests', modal.guests], ['Vehicles', modal.vehicles], ['Household', modal.house?.label], ['Requested by', modal.requester?.name], ['Approved by', modal.approver?.name]].map(([k, v]) => (
-                                <div key={k}><div className="text-[11px] font-semibold text-black/45">{k}</div><div>{v || '—'}</div></div>
+                                <div key={k}><div className="text-[11px] font-semibold text-ink/45">{k}</div><div>{v || '—'}</div></div>
                             ))}
                         </div>
-                        {modal.details && <p className="rounded-xl bg-black/[.03] p-3">{modal.details}</p>}
+                        {modal.details && <p className="rounded-xl bg-ink/[.03] p-3">{modal.details}</p>}
                         {modal.charge_breakdown && (
-                            <div className="rounded-xl border border-black/5 p-3">
+                            <div className="rounded-xl border border-ink/5 p-3">
                                 <div className="mb-1 font-semibold">Event allowance report</div>
-                                {modal.charge_breakdown.lines.map((l) => <div key={l.label} className="flex justify-between text-black/60"><span>{l.label}</span><span>{money(l.amount)}</span></div>)}
-                                <div className="mt-1 flex justify-between border-t border-black/5 pt-1 font-bold"><span>Total</span><span>{money(modal.charges)}</span></div>
+                                {modal.charge_breakdown.lines.map((l) => <div key={l.label} className="flex justify-between text-ink/60"><span>{l.label}</span><span>{money(l.amount)}</span></div>)}
+                                <div className="mt-1 flex justify-between border-t border-ink/5 pt-1 font-bold"><span>Total</span><span>{money(modal.charges)}</span></div>
                             </div>
                         )}
                         <div className="flex gap-2">

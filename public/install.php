@@ -41,7 +41,7 @@ $allOk = ! in_array(false, $checks, true);
 $list = '<ul>'.implode('', array_map(fn ($k, $v) => '<li class="'.($v ? 'ok' : 'bad').'">'.($v ? '✓' : '✗').' '.$h($k).'</li>', array_keys($checks), $checks)).'</ul>';
 
 $error = '';
-$v = array_map('strval', $_POST) + ['app_name' => 'Community Portal', 'app_url' => 'https://'.($_SERVER['HTTP_HOST'] ?? 'cms.ferasolution.com'), 'db_host' => 'localhost', 'db_port' => '3306', 'db_name' => '', 'db_user' => '', 'db_pass' => '', 'admin_name' => 'ADH Administrator', 'admin_email' => '', 'admin_pass' => '', 'demo' => '1'];
+$v = array_map('strval', $_POST) + ['app_name' => 'Community Portal', 'app_url' => 'https://'.($_SERVER['HTTP_HOST'] ?? 'cms.ferasolution.com'), 'db_host' => 'localhost', 'db_port' => '3306', 'db_name' => '', 'db_user' => '', 'db_pass' => '', 'admin_name' => 'Super Admin', 'admin_email' => '', 'admin_pass' => '', 'demo' => '1'];
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $v['demo'] = isset($_POST['demo']) ? '1' : '';
 }
@@ -106,11 +106,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $allOk) {
             $kernel->call('db:seed', ['--class' => 'Database\\Seeders\\DemoSeeder', '--force' => true]);
             $log .= $kernel->output();
         }
-        App\Models\User::updateOrCreate(['email' => strtolower($v['admin_email'])], ['name' => $v['admin_name'], 'role' => 'admin', 'password' => $v['admin_pass'], 'active' => true]);
+        App\Models\User::updateOrCreate(['email' => strtolower($v['admin_email'])], ['name' => $v['admin_name'], 'role' => 'super_admin', 'password' => $v['admin_pass'], 'active' => true]);
         file_put_contents($lock, date('c'));
 
         page('<h1>Installed successfully 🎉</h1><p>Your portal is ready at <a href="/">'.$h($v['app_url']).'</a>. Sign in with the admin email and password you just set.</p>'
-            .(! empty($v['demo']) ? '<p>Demo logins (password <code>password</code>): manager@demo.local, security@demo.local, inventory@demo.local, librarian@demo.local, finance@demo.local, resident@demo.local — remove or change them before going live.</p>' : '')
+            .(! empty($v['demo']) ? '<p>Demo logins (password <code>password</code>): admin@demo.local (Admin), manager@ / security@ / guard@ / finance@ / hr@ / gym@ / inventory@ / librarian@demo.local (Editors), resident@demo.local (User) — remove or change them before going live.</p>' : '')
             .'<h2>One last step — automatic deploys</h2><p>Add this as a GitHub secret named <code>DEPLOY_TOKEN</code> (repo → Settings → Secrets and variables → Actions) so every update also runs database changes automatically:</p><div class="box"><code>'.$deployToken.'</code></div>'
             .'<p style="font-size:12px">This page is now locked. Copy the token now — it is also saved in the .env file.</p>');
     } catch (Throwable $e) {
@@ -129,6 +129,6 @@ page('<h1>Community Portal — Setup</h1><p>Runs once. You need the MySQL databa
     .'<form method="post">'
     .'<h2>Portal</h2><div class="row">'.$f('app_name', 'Community / portal name', 'text', 'required').$f('app_url', 'Website URL', 'url', 'required').'</div>'
     .'<h2>Database</h2><div class="row">'.$f('db_host', 'Host', 'text', 'required').$f('db_port', 'Port', 'text', 'required').'</div><div class="row">'.$f('db_name', 'Database name', 'text', 'required placeholder="cpaneluser_cms"').$f('db_user', 'Database user', 'text', 'required').'</div>'.$f('db_pass', 'Database password', 'password')
-    .'<h2>ADH (admin) account</h2><div class="row">'.$f('admin_name', 'Name', 'text', 'required').$f('admin_email', 'Email', 'email', 'required').'</div>'.$f('admin_pass', 'Password (min 8 characters)', 'password', 'required minlength="8"')
+    .'<h2>Super Admin account</h2><div class="row">'.$f('admin_name', 'Name', 'text', 'required').$f('admin_email', 'Email', 'email', 'required').'</div>'.$f('admin_pass', 'Password (min 8 characters)', 'password', 'required minlength="8"')
     .'<label style="display:flex;gap:8px;align-items:center;font-size:14px;color:#333;margin-top:16px"><input type="checkbox" name="demo" value="1" style="width:auto" '.(! empty($v['demo']) ? 'checked' : '').'> Load demo data (72 houses, sample records in every module)</label>'
     .'<button '.($allOk ? '' : 'disabled').'>Install portal</button></form>');

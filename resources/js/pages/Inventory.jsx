@@ -3,6 +3,7 @@ import { Boxes, Plus, ArrowUpRight, Undo2, AlertTriangle, Pencil } from 'lucide-
 import { useList, PageHeader, Table, Modal, Form, Badge, SearchBox, Select, Tabs, Confirm, useAction, useToast } from '../components/ui';
 import { post, put, del, dt, money } from '../lib/api';
 import { useAuth } from '../lib/auth';
+import { useLive } from '../lib/alerts';
 
 export default function Inventory() {
     const { user } = useAuth();
@@ -11,6 +12,7 @@ export default function Inventory() {
     const issues = useList(tab === 'issues' ? 'inventory/issues' : null);
     const all = useList('inventory', { all: 1 });
     const [modal, setModal] = useState(null);
+    useLive('inventory', () => { items.reload(); issues.reload(); all.reload(); });
     const act = useAction();
     const toast = useToast();
 
@@ -58,7 +60,7 @@ export default function Inventory() {
                         <label className="btn-outline cursor-pointer"><input type="checkbox" className="accent-brand-600" checked={!!items.params.low} onChange={(e) => items.set({ low: e.target.checked ? 1 : '' })} />Low stock only</label>
                     </div>
                     <Table list={items} empty="No items yet." columns={[
-                        { label: 'Item', render: (i) => <div><div className="font-semibold">{i.name}</div><div className="text-xs text-black/45">{i.sku}</div></div> },
+                        { label: 'Item', render: (i) => <div><div className="font-semibold">{i.name}</div><div className="text-xs text-ink/45">{i.sku}</div></div> },
                         { label: 'Category', key: 'category' },
                         { label: 'In stock', render: (i) => <span className={`font-semibold ${i.quantity <= i.min_quantity ? 'text-red-600' : ''}`}>{i.quantity <= i.min_quantity && <AlertTriangle size={13} className="mr-1 inline" />}{i.quantity} {i.unit}</span> },
                         { label: 'Issued out', render: (i) => i.out_count || '—' },
@@ -83,7 +85,7 @@ export default function Inventory() {
                     </div>
                     <Table list={issues} empty="No items issued yet." columns={[
                         { label: 'Item', render: (r) => <span className="font-semibold">{r.quantity} × {r.item?.name}</span> },
-                        { label: 'Taken by', render: (r) => <div>{r.issued_to}<div className="text-xs text-black/45">{r.issued_to_contact}</div></div> },
+                        { label: 'Taken by', render: (r) => <div>{r.issued_to}<div className="text-xs text-ink/45">{r.issued_to_contact}</div></div> },
                         { label: 'Purpose', key: 'purpose', className: 'max-w-56' },
                         { label: 'Issued by', render: (r) => r.issuer?.name },
                         { label: 'Issued', render: (r) => dt(r.issued_at) },

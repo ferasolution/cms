@@ -2,17 +2,16 @@ import { Activity } from 'lucide-react';
 import { useList, PageHeader, SearchBox, Select, Spinner } from '../components/ui';
 import { ActivityFeed } from './Dashboard';
 import { useAuth } from '../lib/auth';
-import { useAlerts } from '../lib/alerts';
+import { useLive } from '../lib/alerts';
 import { useEffect } from 'react';
 
 export default function ActivityPage() {
     const { modules } = useAuth();
     const list = useList('activity');
-    const { tick } = useAlerts();
-    useEffect(() => { if (tick) list.reload(); }, [tick]); // eslint-disable-line
+    useLive(["security", "inventory", "library", "finance", "events", "complaints", "noc", "records", "crm", "gym", "announcements", "emergency", "users", "settings"], () => { list.reload(); });
     return (
         <div className="mx-auto max-w-4xl">
-            <PageHeader icon={Activity} title="Activity Log" subtitle="Everything that happens in every module, as it happens (ADH parental view)." />
+            <PageHeader icon={Activity} title="Audit & Activity Log" subtitle="Every action by every user in every module — live. Filter by module or date, export to CSV." />
             <div className="mb-3 flex flex-wrap gap-2">
                 <SearchBox value={list.params.q} onChange={(q) => list.set({ q })} />
                 <Select value={list.params.module} onChange={(module) => list.set({ module })} placeholder="All modules" options={modules.map((m) => ({ value: m.key, label: m.label }))} />

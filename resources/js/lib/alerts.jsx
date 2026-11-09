@@ -34,23 +34,31 @@ function chime() {
     } catch { /* ignore */ }
 }
 
-/** Polls /api/alerts every few seconds — live updates that work on shared hosting. */
-export function AlertProvider({ children, interval = 8000 }) {
-    const [state, setState] = useState({ alerts: [], unread: 0 });
+/**
+ * The live pulse — polls /api/alerts every few seconds (works on shared hosting).
+ * Returns new alerts, active SOS calls and which modules changed, so every open page refreshes itself.
+ */
+export function AlertProvider({ children, interval = 5000 }) {
+    const [state, setState] = useState({ alerts: [], unread: 0, sos: [], online: true, lastSync: null });
     const [ringing, setRinging] = useState(false);
-    const [tick, setTick] = useState(0); // bumps on each new alert so pages can refresh
+    const [tick, setTick] = useState(0);
+    const [changes, setChanges] = useState({ n: 0, modules: [] });
     const since = useRef(0);
+    const cursor = useRef(0);
     const toast = useToast();
 
     const poll = useCallback(async () => {
         try {
-            const r = await get('alerts', { since: since.current });
+            const r = await get('alerts', { since: since.current, cursor: cursor.current });
             const fresh = since.current ? r.new : [];
             since.current = r.latest_id || since.current;
-            setState({ alerts: r.alerts, unread: r.unread });
+            const first = !cursor.current;
+            cursor.current = r.cursor || cursor.current;
+            setState({ alerts: r.alerts, unread: r.unread, sos: r.sos || [], online: true, lastSync: new Date() });
+            if (!first && r.changed?.length) setChanges((c) => ({ n: c.n + 1, modules: r.changed }));
             if (fresh.length) {
                 setTick((t) => t + 1);
-                fresh.slice(0, 3).forEach((a) => toast(a.title, a.level, a.body));
+                [...new Map(fresh.map((a) => [a.title, a])).values()].slice(0, 3).forEach((a) => toast(a.title, a.level, a.body));
                 if (fresh.some((a) => a.level === 'danger')) {
                     ringAlarm(4);
                     setRinging(true);
@@ -60,7 +68,7 @@ export function AlertProvider({ children, interval = 8000 }) {
                     fresh.slice(0, 2).forEach((a) => new Notification(a.title, { body: a.body || '', icon: '/icon.svg' }));
                 }
             }
-        } catch { /* offline — try next tick */ }
+        } catch { setState((s) => ({ ...s, online: false })); }
     }, [toast]);
 
     useEffect(() => {
@@ -74,5 +82,17 @@ export function AlertProvider({ children, interval = 8000 }) {
     const markRead = async (id) => { await post(`alerts/${id}/read`); poll(); };
     const markAll = async () => { await post('alerts/read-all'); poll(); };
 
-    return <AlertCtx.Provider value={{ ...state, ringing, tick, markRead, markAll, refresh: poll }}>{children}</AlertCtx.Provider>;
+    return <AlertCtx.Provider value={{ ...state, ringing, tick, changes, markRead, markAll, refresh: poll }}>{children}</AlertCtx.Provider>;
+}
+
+/** Re-run `reload` whenever any of the given modules changes anywhere in the community (live updates). */
+export function useLive(modules, reload) {
+    const { changes, tick } = useAlerts() || {};
+    const list = Array.isArray(modules) ? modules : [modules];
+    const r = useRef(reload);
+    r.current = reload;
+    useEffect(() => {
+        if (changes?.n && changes.modules.some((m) => list.includes(m))) r.current();
+    }, [changes?.n]); // eslint-disable-line
+    useEffect(() => { if (tick) r.current(); }, [tick]);
 }

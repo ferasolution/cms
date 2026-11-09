@@ -3,6 +3,7 @@ import { BookOpen, Plus, BookMarked, FileText, Check, X, Undo2, Pencil } from 'l
 import { useList, useGet, PageHeader, Table, Modal, Form, Badge, SearchBox, Select, Tabs, Confirm, useAction, useToast, Empty, Spinner } from '../components/ui';
 import { get, post, del, dt, fileUrl } from '../lib/api';
 import { useAuth } from '../lib/auth';
+import { useLive } from '../lib/alerts';
 
 export default function Library() {
     const { can } = useAuth();
@@ -12,6 +13,7 @@ export default function Library() {
     const issues = useList(tab === 'books' ? null : 'library/issues', { status: manage ? 'requested' : '' });
     const cats = useGet('library/categories');
     const [modal, setModal] = useState(null);
+    useLive('library', () => { books.reload(); issues.reload(); });
     const [reader, setReader] = useState(null);
     const act = useAction();
     const toast = useToast();
@@ -70,14 +72,14 @@ export default function Library() {
                                         <div className="grid h-20 w-14 shrink-0 place-items-center rounded-lg text-center text-[10px] font-bold leading-tight text-white" style={{ background: `hsl(${(b.id * 47) % 360} 35% 38%)` }}>{b.title.slice(0, 18)}</div>
                                         <div className="min-w-0">
                                             <div className="font-semibold leading-snug">{b.title}</div>
-                                            <div className="text-xs text-black/50">{b.author}</div>
+                                            <div className="text-xs text-ink/50">{b.author}</div>
                                             <div className="mt-1 flex flex-wrap gap-1">
                                                 {b.category && <Badge>{b.category}</Badge>}
                                                 {b.ebook_path && <Badge value="approved">E-book</Badge>}
                                             </div>
                                         </div>
                                     </div>
-                                    <div className="mt-auto flex items-center justify-between text-xs text-black/55">
+                                    <div className="mt-auto flex items-center justify-between text-xs text-ink/55">
                                         <span>{b.available}/{b.copies} available{b.shelf ? ' · ' + b.shelf : ''}</span>
                                         <div className="flex gap-1">
                                             {b.ebook_path && <button className="btn-ghost btn-sm" onClick={() => setReader(b)}><FileText size={13} />Read</button>}
@@ -105,8 +107,8 @@ export default function Library() {
                         <Select value={issues.params.status} onChange={(status) => issues.set({ status })} placeholder="All" options={['requested', 'issued', 'overdue', 'returned', 'rejected']} />
                     </div>
                     <Table list={issues} empty="Nothing here." columns={[
-                        { label: 'Book', render: (r) => <div><div className="font-semibold">{r.book?.title}</div><div className="text-xs text-black/45">{r.book?.author}</div></div> },
-                        manage && { label: 'Member', render: (r) => <div>{r.user?.name}<div className="text-xs text-black/45">{r.user?.house ? r.user.house.label : ''}</div></div> },
+                        { label: 'Book', render: (r) => <div><div className="font-semibold">{r.book?.title}</div><div className="text-xs text-ink/45">{r.book?.author}</div></div> },
+                        manage && { label: 'Member', render: (r) => <div>{r.user?.name}<div className="text-xs text-ink/45">{r.user?.house ? r.user.house.label : ''}</div></div> },
                         { label: 'Status', render: (r) => <Badge value={r.status === 'issued' && r.due_at && new Date(r.due_at) < new Date(new Date().toDateString()) ? 'overdue' : r.status} /> },
                         { label: 'Issued', render: (r) => (r.issued_at ? dt(r.issued_at) : '—') },
                         { label: 'Due', render: (r) => (r.due_at ? dt(r.due_at, false) : '—') },
@@ -134,14 +136,14 @@ export default function Library() {
                 {modal?.mode === 'book' && (
                     <>
                         <Form fields={bookFields} initial={modal} onSubmit={save} />
-                        {modal.id && <div className="mt-3 border-t border-black/5 pt-3"><Confirm className="btn-ghost btn-sm text-red-600" message="Delete this book?" onConfirm={() => act(() => del(`library/books/${modal.id}`), 'Book deleted', () => { setModal(null); refresh(); })}>Delete book</Confirm></div>}
+                        {modal.id && <div className="mt-3 border-t border-ink/5 pt-3"><Confirm className="btn-ghost btn-sm text-red-600" message="Delete this book?" onConfirm={() => act(() => del(`library/books/${modal.id}`), 'Book deleted', () => { setModal(null); refresh(); })}>Delete book</Confirm></div>}
                     </>
                 )}
             </Modal>
 
             <Modal open={!!reader} onClose={() => setReader(null)} title={reader?.title} wide>
                 {reader && (reader.ebook_path.endsWith('.pdf')
-                    ? <iframe src={fileUrl(reader.ebook_path)} className="h-[75vh] w-full rounded-xl border border-black/10" title="E-book" />
+                    ? <iframe src={fileUrl(reader.ebook_path)} className="h-[75vh] w-full rounded-xl border border-ink/10" title="E-book" />
                     : <a className="btn-primary" href={fileUrl(reader.ebook_path, true)}>Download EPUB</a>)}
             </Modal>
         </div>

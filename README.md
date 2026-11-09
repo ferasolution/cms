@@ -18,13 +18,23 @@ Web portal (installable on Android / iOS as an app) for running a housing commun
 | 7 | **NOC** — document upload with checklist, every status change logged & notified, certificate | Manager, residents |
 | 8 | **Record room** — every household's files in e-format; owners see only their own | Manager, residents |
 
-The **ADH (admin) account** is the parental account: it sees every module, the live activity log, all alerts, and approves expense requests.
+| 9 | **Staff CRM** — employee profiles & IDs, online check-in/out (web or RFID), automatic working hours / late / overtime, leave approvals, department tasks | HR; every staff member via *My Workspace* |
+| 10 | **Gym & Club** — plans, members, RFID door check (active · paid · not blocked), pay-by-QR with proof upload, dues alerts | Gym manager, residents |
+
+Also: visitor pre-registration with **QR passes**, household **approve / reject** at the gate, overstay alerts, blacklist / watchlist, vehicles, incident reports, event QR passes, **announcements**, **SOS emergency**, global search (Ctrl+K), dark mode, audit log, settings.
 
 **Live updates:** the portal polls for alerts every 8 seconds (works on shared hosting with no extra services). Event time checks run on that poll, so no cron job is needed. Danger alerts ring an alarm sound.
 
-## Roles
+## Roles & permissions
 
-`admin` (ADH) · `manager` · `security` · `inventory` · `librarian` · `finance` · `resident` — see `app/Support/Access.php`.
+| Role | Access |
+|---|---|
+| **Super Admin** | Everything, incl. system settings and other Super Admins |
+| **Admin** | Every module; settings read-only; cannot change Super Admins |
+| **Editor** | Staff — per-module level: None / View / Edit / Manage (templates: Security Guard, Finance Manager, HR Manager, …) |
+| **User** | Resident / household member — only their own household's data |
+
+Defined in `app/Support/Access.php`.
 
 ## Deploy pipeline
 

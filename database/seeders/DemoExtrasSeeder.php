@@ -42,7 +42,8 @@ class DemoExtrasSeeder extends Seeder
         // Gate log: statuses, expected exits, a couple waiting for approval and one overstay.
         Visitor::whereNotNull('exit_at')->update(['status' => 'exited']);
         foreach (Visitor::whereNull('exit_at')->get() as $i => $v) {
-            $v->update(['status' => 'inside', 'expected_exit_at' => $i === 0 ? now()->subMinutes(25) : $v->entry_at->copy()->addHours(4)]);
+            $entry = now()->subMinutes(35 + $i * 55);
+            $v->update(['status' => 'inside', 'entry_at' => $entry, 'expected_exit_at' => $i === 0 ? now()->subMinutes(20) : $entry->copy()->addHours(4)]);
         }
         foreach ([['Courier — TCS', 'delivery', 'Parcel delivery'], ['Imran Plumber', 'worker', 'Kitchen sink repair']] as $k => [$name, $cat, $purpose]) {
             Visitor::create(['house_id' => $residents[$k]->house_id, 'name' => $name, 'category' => $cat, 'purpose' => $purpose, 'status' => 'awaiting', 'gate' => 'Main Gate', 'phone' => '0345-'.rand(1000000, 9999999), 'logged_by' => $sec?->id, 'created_at' => now()->subMinutes(2 + $k)]);
