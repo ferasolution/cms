@@ -62,7 +62,7 @@ class RecordController extends Controller
 
     public function destroy(Request $request, RecordFile $record)
     {
-        abort_unless($request->user()->isAdmin(), 403, 'Only ADH can delete record room files.');
+        abort_unless($request->user()->canApprove('records'), 403, 'You need Manage access on Record Room to delete files.');
         Storage::disk('local')->delete($record->path);
         Activity::log('records', 'delete', "Deleted file \"{$record->title}\" from {$record->house->label}");
         $record->delete();

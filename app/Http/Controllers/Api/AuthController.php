@@ -22,10 +22,14 @@ class AuthController extends Controller
         }
         if (! Auth::attempt(['email' => $data['email'], 'password' => $data['password'], 'active' => true], $data['remember'] ?? false)) {
             RateLimiter::hit($key, 120);
+            if (RateLimiter::attempts($key) === 5) {
+                Activity::alertAdmins('system', 'Repeated failed logins', 'Account '.$data['email'].' from IP '.$request->ip(), 'warning', '/users');
+            }
             throw ValidationException::withMessages(['email' => 'Invalid email or password.']);
         }
         RateLimiter::clear($key);
         $request->session()->regenerate();
+        $request->user()->forceFill(['last_login_at' => now(), 'last_login_ip' => $request->ip()])->save();
         Activity::log('users', 'login', $request->user()->name.' signed in');
 
         return $this->me($request);
@@ -46,9 +50,11 @@ class AuthController extends Controller
 
         return response()->json([
             'user' => $user,
-            'role_label' => Access::ROLES[$user->role] ?? $user->role,
+            'role_label' => $user->designation ?: (Access::ROLES[$user->role] ?? $user->role),
             'modules' => Access::modulesFor($user),
             'roles' => Access::ROLES,
+            'community' => \App\Support\Settings::get('community_name'),
+            'employee' => $user->employee()->first(['id', 'code', 'name', 'department']),
         ]);
     }
 
@@ -58,6 +64,7 @@ class AuthController extends Controller
         $data = $request->validate([
             'name' => 'required|string|max:120',
             'phone' => 'nullable|string|max:30',
+            'theme' => 'nullable|in:light,dark,system',
             'current_password' => 'nullable|required_with:password|string',
             'password' => 'nullable|string|min:8|confirmed',
         ]);
@@ -67,7 +74,7 @@ class AuthController extends Controller
             }
             $user->password = $data['password'];
         }
-        $user->fill(['name' => $data['name'], 'phone' => $data['phone'] ?? null])->save();
+        $user->fill(['name' => $data['name'], 'phone' => $data['phone'] ?? null, 'theme' => $data['theme'] ?? $user->theme])->save();
 
         return $this->me($request);
     }

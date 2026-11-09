@@ -52,15 +52,18 @@ class DemoSeeder extends Seeder
             }
         }
 
-        $roles = ['manager' => 'Saad Manager', 'security' => 'Gate Security', 'inventory' => 'Store Keeper', 'librarian' => 'Librarian', 'finance' => 'Accounts Officer'];
+        // Demo staff = editors with a designation template (demo password for everyone: "password").
+        $roles = ['manager' => ['Saad Manager', 'Community Manager'], 'security' => ['Gate Security', 'Security Manager'], 'inventory' => ['Store Keeper', 'Inventory Manager'],
+            'librarian' => ['Librarian', 'Librarian'], 'finance' => ['Accounts Officer', 'Finance Manager'], 'hr' => ['Hina HR', 'HR Manager'], 'gym' => ['Club Manager', 'Gym Manager'], 'guard' => ['Guard Shift B', 'Security Guard']];
         $staff = [];
-        foreach ($roles as $role => $name) {
-            $staff[$role] = User::firstOrCreate(['email' => $role.'@demo.local'], ['name' => $name, 'role' => $role, 'password' => 'password', 'phone' => '0321-5550'.rand(100, 999)]);
+        User::firstOrCreate(['email' => 'admin@demo.local'], ['name' => 'Community Admin', 'role' => 'admin', 'password' => 'password', 'phone' => '0300-5550100']);
+        foreach ($roles as $key => [$name, $designation]) {
+            $staff[$key] = User::firstOrCreate(['email' => $key.'@demo.local'], ['name' => $name, 'role' => 'editor', 'designation' => $designation, 'permissions' => \App\Support\Access::TEMPLATES[$designation], 'password' => 'password', 'phone' => '0321-5550'.rand(100, 999)]);
         }
-        $resident = User::firstOrCreate(['email' => 'resident@demo.local'], ['name' => $houses[0]->owner_name, 'role' => 'resident', 'password' => 'password', 'house_id' => $houses[0]->id]);
+        $resident = User::firstOrCreate(['email' => 'resident@demo.local'], ['name' => $houses[0]->owner_name, 'role' => 'user', 'designation' => 'Household Owner', 'household_role' => 'owner', 'password' => 'password', 'house_id' => $houses[0]->id]);
         $residents = [$resident];
         foreach (array_slice($houses, 1, 7) as $h) {
-            $residents[] = User::create(['name' => $h->owner_name, 'email' => strtolower(str_replace(' ', '.', $h->owner_name)).$h->id.'@demo.local', 'role' => 'resident', 'password' => 'password', 'house_id' => $h->id]);
+            $residents[] = User::create(['name' => $h->owner_name, 'email' => strtolower(str_replace(' ', '.', $h->owner_name)).$h->id.'@demo.local', 'role' => 'user', 'household_role' => 'owner', 'password' => 'password', 'house_id' => $h->id]);
         }
 
         // Security
@@ -121,8 +124,8 @@ class DemoSeeder extends Seeder
                 }
                 Transaction::create(['type' => 'revenue', 'category' => 'maintenance', 'amount' => $h->monthly_maintenance, 'house_id' => $h->id, 'period' => $period, 'date' => (clone $d)->addDays(rand(0, 9)), 'reference' => 'MNT-'.$period.'-'.$h->id, 'recorded_by' => $staff['finance']->id]);
             }
-            foreach ($staff as $s) {
-                Transaction::create(['type' => 'salary', 'category' => 'salary', 'amount' => [55000, 45000, 38000, 40000, 60000][array_search($s->role, array_keys($staff))], 'staff_id' => $s->id, 'party' => $s->name, 'period' => $period, 'date' => (clone $d)->endOfMonth(), 'recorded_by' => $staff['finance']->id]);
+            foreach (array_values($staff) as $si => $s) {
+                Transaction::create(['type' => 'salary', 'category' => 'salary', 'amount' => [55000, 45000, 38000, 40000, 60000, 50000, 42000, 32000][$si % 8], 'staff_id' => $s->id, 'party' => $s->name, 'period' => $period, 'date' => (clone $d)->endOfMonth(), 'recorded_by' => $staff['finance']->id]);
             }
             Transaction::create(['type' => 'expense', 'category' => 'utilities', 'amount' => rand(60, 95) * 1000, 'party' => 'K-Electric', 'description' => 'Street lights & pumps', 'date' => (clone $d)->addDays(14), 'recorded_by' => $staff['finance']->id]);
             Transaction::create(['type' => 'expense', 'category' => 'repair', 'amount' => rand(10, 40) * 1000, 'party' => 'Local vendor', 'description' => 'General repairs', 'date' => (clone $d)->addDays(18), 'recorded_by' => $staff['finance']->id]);
@@ -165,5 +168,7 @@ class DemoSeeder extends Seeder
         foreach ($log as $k => [$mod, $act, $desc]) {
             ActivityLog::create(['user_id' => $staff[['security' => 'security', 'inventory' => 'inventory', 'library' => 'librarian', 'finance' => 'finance'][$mod] ?? 'manager']->id, 'module' => $mod, 'action' => $act, 'description' => $desc, 'created_at' => now()->subMinutes(15 * (7 - $k))]);
         }
+
+        $this->call(DemoExtrasSeeder::class);
     }
 }

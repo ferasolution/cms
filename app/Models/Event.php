@@ -16,6 +16,8 @@ class Event extends Model
             'date' => 'date:Y-m-d',
             'last_hour_alerted_at' => 'datetime',
             'end_alerted_at' => 'datetime',
+            'organizer_alerted_at' => 'datetime',
+            'closed_at' => 'datetime',
             'charge_breakdown' => 'array',
             'charges' => 'decimal:2',
         ];

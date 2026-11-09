@@ -68,7 +68,7 @@ class FinanceController extends Controller
 
     public function destroy(Request $request, Transaction $transaction)
     {
-        abort_unless($request->user()->isAdmin(), 403, 'Only ADH can delete financial entries.');
+        abort_unless($request->user()->canApprove('finance'), 403, 'You need Manage access on Finance to delete entries.');
         Activity::log('finance', 'delete', 'Deleted '.$transaction->type.' entry Rs '.number_format($transaction->amount));
         $transaction->delete();
 
@@ -114,7 +114,7 @@ class FinanceController extends Controller
         $period = $request->query('period', now()->format('Y-m'));
         $paid = Transaction::where('type', 'salary')->where('period', $period)->get()->keyBy('staff_id');
 
-        return \App\Models\User::where('role', '!=', 'resident')->orderBy('name')->get(['id', 'name', 'role'])->map(fn ($s) => [
+        return \App\Models\User::where('role', '!=', 'user')->orderBy('name')->get(['id', 'name', 'role'])->map(fn ($s) => [
             'staff' => $s,
             'paid' => isset($paid[$s->id]) ? (float) $paid[$s->id]->amount : 0,
             'paid_on' => isset($paid[$s->id]) ? $paid[$s->id]->date->toDateString() : null,
@@ -122,11 +122,33 @@ class FinanceController extends Controller
         ]);
     }
 
-    // ---- Expense request portal (officials request, ADH approves, finance pays) ----
+    // ---- Expense request portal (staff request, Admin approves, finance pays) ----
+
+    /** A household's own billing: monthly maintenance status for the last 12 months and all payments. */
+    public function my(Request $request)
+    {
+        $u = $request->user();
+        abort_unless($u->house_id, 404, 'Your account is not linked to a house.');
+        $house = House::findOrFail($u->house_id);
+        $paid = Transaction::where('house_id', $house->id)->where('category', 'maintenance')->get()->keyBy('period');
+        $months = collect(range(0, 11))->map(function ($i) use ($paid, $house) {
+            $p = now()->startOfMonth()->subMonths($i)->format('Y-m');
+
+            return ['period' => $p, 'due' => (float) $house->monthly_maintenance, 'paid' => isset($paid[$p]) ? (float) $paid[$p]->amount : 0, 'paid_on' => isset($paid[$p]) ? $paid[$p]->date->toDateString() : null];
+        });
+
+        return [
+            'house' => $house,
+            'months' => $months,
+            'outstanding' => $months->where('paid', 0)->sum('due'),
+            'payments' => Transaction::where('house_id', $house->id)->where('type', 'revenue')->latest('date')->limit(50)->get(),
+            'pay_to' => array_intersect_key(\App\Support\Settings::all(), array_flip(['payment_title', 'payment_bank', 'payment_account', 'payment_iban', 'payment_wallet'])),
+        ];
+    }
 
     public function expenseRequests(Request $request)
     {
-        $this->authorizeView($request, 'finance');
+        abort_if($request->user()->isResident(), 403);
         $q = ExpenseRequest::with(['requester:id,name,role', 'reviewer:id,name'])->latest('id');
         if (! $request->user()->canManage('finance')) {
             $q->where('requested_by', $request->user()->id);
@@ -140,7 +162,7 @@ class FinanceController extends Controller
 
     public function storeExpenseRequest(Request $request)
     {
-        $this->authorizeView($request, 'finance');
+        abort_if($request->user()->isResident(), 403, 'Expense requests are for staff.');
         $data = $request->validate([
             'title' => 'required|string|max:150',
             'amount' => 'required|numeric|min:1',
@@ -152,21 +174,21 @@ class FinanceController extends Controller
         unset($data['receipt']);
         $er = ExpenseRequest::create($data + ['requested_by' => $request->user()->id]);
         Activity::log('finance', 'request', "{$request->user()->name} requested Rs ".number_format($er->amount)." — {$er->title}", $er);
-        Activity::alertRole('admin', 'finance', 'Expense approval needed', "{$er->title} · Rs ".number_format($er->amount)." by {$request->user()->name}", 'warning', '/finance');
+        Activity::alertAdmins('finance', 'Expense approval needed', "{$er->title} · Rs ".number_format($er->amount)." by {$request->user()->name}", 'warning', '/finance');
 
         return $er;
     }
 
     public function reviewExpenseRequest(Request $request, ExpenseRequest $expenseRequest)
     {
-        abort_unless($request->user()->isAdmin(), 403, 'Only the ADH account can approve expense requests.');
+        abort_unless($request->user()->isAdmin(), 403, 'Only an Admin can approve expense requests.');
         $data = $request->validate(['status' => 'required|in:approved,rejected', 'review_note' => 'nullable|string|max:1000']);
         abort_if($expenseRequest->status !== 'pending', 422, 'Already reviewed.');
         $expenseRequest->update($data + ['reviewed_by' => $request->user()->id, 'reviewed_at' => now()]);
         Activity::log('finance', $data['status'], ucfirst($data['status'])." expense request \"{$expenseRequest->title}\" (Rs ".number_format($expenseRequest->amount).')', $expenseRequest);
         Activity::alertUser($expenseRequest->requested_by, 'finance', 'Expense request '.$data['status'], $expenseRequest->title, $data['status'] === 'approved' ? 'success' : 'danger', '/finance');
         if ($data['status'] === 'approved') {
-            Activity::alertRole('finance', 'finance', 'Approved expense to pay', $expenseRequest->title.' · Rs '.number_format($expenseRequest->amount), 'info', '/finance');
+            Activity::alertModule('finance', 2, 'Approved expense to pay', $expenseRequest->title.' · Rs '.number_format($expenseRequest->amount), 'info', '/finance');
         }
 
         return $expenseRequest->load('requester', 'reviewer');

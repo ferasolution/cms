@@ -6,7 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Event;
 use App\Models\Setting;
 use App\Models\Transaction;
-use App\Services\EventWatcher;
+use App\Services\Watchers;
 use App\Support\Activity;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -68,6 +68,7 @@ class EventController extends Controller
             'guests' => 'nullable|integer|min:0|max:10000',
             'vehicles' => 'nullable|integer|min:0|max:2000',
             'details' => 'nullable|string|max:2000',
+            'grace_minutes' => 'nullable|integer|min:0|max:240',
         ];
     }
 
@@ -91,7 +92,7 @@ class EventController extends Controller
         }
         $page = $this->paginate($q, $request, ['title', 'code', 'venue']);
         $page->getCollection()->transform(function (Event $e) {
-            $end = EventWatcher::endAt($e);
+            $end = Watchers::endAt($e);
             $e->setAttribute('ends_at', $end->toIso8601String());
             $e->setAttribute('live', $e->status === 'approved' && now()->between(Carbon::parse($e->date->toDateString().' '.$e->start_time), $end));
             $e->setAttribute('overtime', $e->status === 'approved' && now()->greaterThan($end) && now()->diffInHours($end, true) < 12);
@@ -121,7 +122,7 @@ class EventController extends Controller
         $calc = self::calculate($data);
         $event = Event::create($data + ['requested_by' => $request->user()->id, 'charges' => $calc['total'], 'charge_breakdown' => $calc, 'status' => 'pending']);
         Activity::log('events', 'request', "Event request \"{$event->title}\" on ".$event->date->format('d M').' at '.$event->venue, $event);
-        Activity::alertRole('manager', 'events', 'New event request', "{$event->title} · ".$event->date->format('d M').' · '.$event->venue, 'info', '/events');
+        Activity::alertModule('events', 3, 'New event request', "{$event->title} · ".$event->date->format('d M').' · '.$event->venue, 'info', '/events');
 
         return $event;
     }
@@ -150,6 +151,9 @@ class EventController extends Controller
             $patch['last_hour_alerted_at'] = null;
             $patch['end_alerted_at'] = null;
         }
+        if ($data['status'] === 'completed') {
+            $patch['closed_at'] = now();
+        }
         $event->update($patch);
         if ($data['status'] === 'approved' && ($data['record_payment'] ?? false) && $event->charges > 0) {
             Transaction::create(['type' => 'revenue', 'category' => 'event', 'amount' => $event->charges, 'house_id' => $event->house_id, 'reference' => $event->code, 'description' => 'Event: '.$event->title, 'date' => now()->toDateString(), 'recorded_by' => $request->user()->id]);
@@ -157,7 +161,7 @@ class EventController extends Controller
         Activity::log('events', $data['status'], ucfirst($data['status'])." event \"{$event->title}\"".($event->code ? " ({$event->code})" : ''), $event);
         Activity::alertUser($event->requested_by, 'events', 'Event '.$data['status'].': '.$event->title, $data['status'] === 'approved' ? 'Your event code is '.$event->code.'. Charges Rs '.number_format($event->charges) : null, $data['status'] === 'approved' ? 'success' : 'warning', '/events');
         if ($data['status'] === 'approved') {
-            Activity::alertRole('security', 'events', 'Event scheduled: '.$event->title, $event->code.' · '.$event->date->format('d M').' '.$event->start_time.'–'.$event->end_time.' · '.$event->venue.' · '.$event->guests.' guests', 'info', '/events');
+            Activity::alertModule('security', 2, 'Event scheduled: '.$event->title, $event->code.' · '.$event->date->format('d M').' '.$event->start_time.'–'.$event->end_time.' · '.$event->venue.' · '.$event->guests.' guests', 'info', '/events');
         }
 
         return $event->load('house', 'requester', 'approver');
@@ -177,7 +181,7 @@ class EventController extends Controller
     public function destroy(Request $request, Event $event)
     {
         $u = $request->user();
-        abort_unless($u->isAdmin() || ($event->requested_by === $u->id && $event->status === 'pending'), 403);
+        abort_unless($u->canApprove('events') || ($event->requested_by === $u->id && $event->status === 'pending'), 403);
         Activity::log('events', 'delete', "Deleted event \"{$event->title}\"");
         $event->delete();
 
@@ -193,7 +197,7 @@ class EventController extends Controller
 
     public function saveRates(Request $request)
     {
-        abort_unless($request->user()->isAdmin(), 403);
+        abort_unless($request->user()->canApprove('events'), 403);
         $data = $request->validate(['venues' => 'required|array', 'venues.*' => 'numeric|min:0', 'per_guest' => 'numeric|min:0', 'per_vehicle' => 'numeric|min:0', 'security_per_hour' => 'numeric|min:0', 'late_night_surcharge' => 'numeric|min:0', 'type_surcharge' => 'array']);
         Setting::put('event_rates', $data);
         Activity::log('events', 'settings', 'Updated event charge rates');

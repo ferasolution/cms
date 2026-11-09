@@ -100,7 +100,7 @@ class InventoryController extends Controller
             $issue = InventoryIssue::create($data + ['issued_by' => $request->user()->id, 'issued_at' => now()]);
             Activity::log('inventory', 'issue', "Issued {$data['quantity']} × {$item->name} to {$data['issued_to']} — {$data['purpose']}", $issue);
             if ($item->fresh()->quantity <= $item->min_quantity) {
-                Activity::alertRole(['inventory', 'admin'], 'inventory', 'Low stock: '.$item->name, 'Only '.$item->fresh()->quantity.' '.$item->unit.' left.', 'warning', '/inventory');
+                Activity::alertModule('inventory', 2, 'Low stock: '.$item->name, 'Only '.$item->fresh()->quantity.' '.$item->unit.' left.', 'warning', '/inventory');
             }
 
             return $issue->load('item', 'issuer');

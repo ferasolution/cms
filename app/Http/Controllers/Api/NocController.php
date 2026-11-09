@@ -68,7 +68,7 @@ class NocController extends Controller
         $this->saveDocs($request, $noc);
         NocStatusLog::create(['noc_id' => $noc->id, 'status' => 'submitted', 'note' => 'Application submitted', 'user_id' => $u->id]);
         Activity::log('noc', 'create', "NOC application {$noc->reference} — ".self::CHECKLISTS[$noc->type]['label'], $noc);
-        Activity::alertRole('manager', 'noc', 'New NOC application', $noc->reference.' · '.self::CHECKLISTS[$noc->type]['label'], 'info', '/noc');
+        Activity::alertModule('noc', 3, 'New NOC application', $noc->reference.' · '.self::CHECKLISTS[$noc->type]['label'], 'info', '/noc');
 
         return $this->show($request, $noc);
     }
@@ -93,7 +93,7 @@ class NocController extends Controller
         if ($noc->status === 'documents_required' && $noc->user_id === $request->user()->id) {
             $noc->update(['status' => 'under_review']);
             NocStatusLog::create(['noc_id' => $noc->id, 'status' => 'under_review', 'note' => "{$n} document(s) uploaded by applicant", 'user_id' => $request->user()->id]);
-            Activity::alertRole('manager', 'noc', 'Documents uploaded: '.$noc->reference, "{$n} new document(s)", 'info', '/noc');
+            Activity::alertModule('noc', 3, 'Documents uploaded: '.$noc->reference, "{$n} new document(s)", 'info', '/noc');
         }
         Activity::log('noc', 'upload', "{$n} document(s) added to {$noc->reference}", $noc);
 

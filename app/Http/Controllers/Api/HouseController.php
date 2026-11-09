@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Complaint;
 use App\Models\Event;
 use App\Models\House;
+use App\Models\SosAlert;
 use App\Models\Transaction;
 use App\Models\Visitor;
 use App\Support\Activity;
@@ -64,21 +65,28 @@ class HouseController extends Controller
         return response()->noContent();
     }
 
-    /** Data for the 3D community map — each house with its live status. */
+    /** Live data for the 3D community map: every house with its status + recent gate movements + SOS. */
     public function map(Request $request)
     {
         $u = $request->user();
         $official = ! $u->isResident();
         $period = now()->format('Y-m');
-        $inside = $official ? Visitor::whereNull('exit_at')->whereNotNull('entry_at')->selectRaw('house_id, count(*) c')->groupBy('house_id')->pluck('c', 'house_id') : collect();
+        $sec = $official && $u->canView('security');
+        $inside = $sec ? Visitor::where('status', 'inside')->selectRaw('house_id, count(*) c')->groupBy('house_id')->pluck('c', 'house_id') : collect();
+        $awaiting = $sec ? Visitor::where('status', 'awaiting')->selectRaw('house_id, count(*) c')->groupBy('house_id')->pluck('c', 'house_id') : collect();
+        $over = $sec ? Visitor::where('status', 'inside')->where('expected_exit_at', '<', now())->selectRaw('house_id, count(*) c')->groupBy('house_id')->pluck('c', 'house_id') : collect();
         $open = $official ? Complaint::whereIn('status', ['open', 'assigned', 'in_progress'])->selectRaw('house_id, count(*) c')->groupBy('house_id')->pluck('c', 'house_id') : collect();
-        $paid = $official ? Transaction::where('category', 'maintenance')->where('period', $period)->pluck('house_id')->flip() : collect();
+        $paid = $official && $u->canManage('finance') ? Transaction::where('category', 'maintenance')->where('period', $period)->pluck('house_id')->flip() : collect();
         $events = Event::where('status', 'approved')->whereDate('date', now()->toDateString())->pluck('house_id')->flip();
+        $sosRows = SosAlert::whereIn('status', ['active', 'responding'])->get(['id', 'house_id', 'type', 'status', 'created_at']);
+        $sos = $sosRows->keyBy('house_id');
+        $showSos = $official && ($u->canView('emergency') || $u->canView('security'));
 
-        return House::orderBy('id')->get()->map(fn (House $h) => [
+        $houses = House::orderBy('id')->get()->map(fn (House $h) => [
             'id' => $h->id,
             'label' => $h->label,
             'block' => $h->block,
+            'street' => $h->street,
             'owner' => $official || $h->id === $u->house_id ? $h->owner_name : null,
             'type' => $h->type,
             'x' => $h->grid_x,
@@ -86,10 +94,28 @@ class HouseController extends Controller
             'floors' => max(1, $h->floors),
             'mine' => $h->id === $u->house_id,
             'visitors' => (int) ($inside[$h->id] ?? 0),
+            'awaiting' => (int) ($awaiting[$h->id] ?? 0),
+            'overstay' => (int) ($over[$h->id] ?? 0),
             'complaints' => (int) ($open[$h->id] ?? 0),
-            'paid' => $official ? isset($paid[$h->id]) : null,
+            'paid' => $official && $u->canManage('finance') ? isset($paid[$h->id]) : null,
             'event' => isset($events[$h->id]),
+            'sos' => ($showSos || $h->id === $u->house_id) && isset($sos[$h->id]) ? $sos[$h->id]->type : null,
         ]);
+
+        // Recent gate movements drive the walking markers on the map.
+        $moves = $sec ? Visitor::where('updated_at', '>=', now()->subMinutes(15))->whereNotNull('house_id')->latest('updated_at')->limit(25)
+            ->get(['id', 'house_id', 'name', 'category', 'status', 'vehicle_no', 'updated_at']) : collect();
+
+        return [
+            'houses' => $houses,
+            'moves' => $moves,
+            'stats' => [
+                'inside' => $inside->sum(), 'awaiting' => $awaiting->sum(), 'overstay' => $over->sum(), 'complaints' => $official ? $open->sum() : null,
+                'events' => $events->count(), 'sos' => $showSos ? $sosRows->count() : 0,
+            ],
+            'feed' => $official ? \App\Models\ActivityLog::with('user:id,name')->latest('id')->limit(8)->get(['id', 'user_id', 'module', 'description', 'created_at']) : [],
+            'server_time' => now()->toIso8601String(),
+        ];
     }
 
     /** One household's full picture (used from the 3D map). */
@@ -97,11 +123,12 @@ class HouseController extends Controller
     {
         $u = $request->user();
         abort_if($u->isResident() && $u->house_id !== $house->id, 403);
-        $house->load('residents:id,name,email,phone,house_id,role');
+        $house->load('residents:id,name,email,phone,house_id,role,household_role');
 
         return [
             'house' => $house,
-            'visitors' => $u->canView('security') ? Visitor::where('house_id', $house->id)->latest('entry_at')->limit(8)->get() : [],
+            'visitors' => $u->canView('security') ? Visitor::where('house_id', $house->id)->latest('id')->limit(8)->get() : [],
+            'vehicles' => $u->canView('security') ? \App\Models\Vehicle::where('house_id', $house->id)->get() : [],
             'complaints' => Complaint::where('house_id', $house->id)->latest()->limit(5)->get(),
             'payments' => $u->canManage('finance') || $u->house_id === $house->id ? Transaction::where('house_id', $house->id)->latest('date')->limit(6)->get() : [],
         ];

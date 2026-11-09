@@ -49,7 +49,7 @@ class ComplaintController extends Controller
         $c = Complaint::create($data + ['user_id' => $u->id, 'priority' => $data['priority'] ?? 'normal', 'status' => 'open']);
         $c->update(['ticket_no' => 'CMP-'.str_pad((string) $c->id, 5, '0', STR_PAD_LEFT)]);
         Activity::log('complaints', 'create', "New complaint {$c->ticket_no}: {$c->title}", $c);
-        Activity::alertRole('manager', 'complaints', ($c->priority === 'urgent' ? '🚨 Urgent complaint: ' : 'New complaint: ').$c->title, $c->ticket_no.' · '.ucfirst($c->category), $c->priority === 'urgent' ? 'danger' : 'info', '/complaints');
+        Activity::alertModule('complaints', 3, ($c->priority === 'urgent' ? '🚨 Urgent complaint: ' : 'New complaint: ').$c->title, $c->ticket_no.' · '.ucfirst($c->category), $c->priority === 'urgent' ? 'danger' : 'info', '/complaints');
 
         return $c->load('house');
     }

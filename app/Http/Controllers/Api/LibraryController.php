@@ -103,7 +103,7 @@ class LibraryController extends Controller
         abort_if(BookIssue::where('book_id', $book->id)->where('user_id', $uid)->whereIn('status', ['requested', 'issued'])->exists(), 422, 'You already have this book or a pending request for it.');
         $issue = BookIssue::create(['book_id' => $book->id, 'user_id' => $uid, 'status' => 'requested', 'note' => $request->input('note')]);
         Activity::log('library', 'request', "{$request->user()->name} requested \"{$book->title}\"", $issue);
-        Activity::alertRole('librarian', 'library', 'New book request', "{$request->user()->name} requested \"{$book->title}\"", 'info', '/library');
+        Activity::alertModule('library', 2, 'New book request', "{$request->user()->name} requested \"{$book->title}\"", 'info', '/library');
 
         return $issue->load('book');
     }

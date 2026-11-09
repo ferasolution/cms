@@ -6,6 +6,8 @@ use App\Http\Controllers\Controller;
 use App\Models\Book;
 use App\Models\Complaint;
 use App\Models\ExpenseRequest;
+use App\Models\GymPayment;
+use App\Models\Incident;
 use App\Models\Noc;
 use App\Models\NocDocument;
 use App\Models\RecordFile;
@@ -24,13 +26,16 @@ class FileController extends Controller
         $folder = explode('/', $path)[0];
 
         $allowed = match ($folder) {
-            'visitors' => $u->canView('security') && Visitor::where('photo_path', $path)->orWhere('video_path', $path)->exists(),
+            'visitors' => $u->canView('security') && Visitor::where(fn ($q) => $q->where('photo_path', $path)->orWhere('video_path', $path))
+                ->when($u->isResident(), fn ($q) => $q->where('house_id', $u->house_id ?? 0))->exists(),
             'ebooks' => $u->canView('library') && Book::where('ebook_path', $path)->exists(),
             'receipts' => ($u->canManage('finance') && (Transaction::where('receipt_path', $path)->exists() || ExpenseRequest::where('receipt_path', $path)->exists()))
                 || ExpenseRequest::where('receipt_path', $path)->where('requested_by', $u->id)->exists(),
             'complaints' => ($c = Complaint::where('photo_path', $path)->first()) && ($u->canManage('complaints') || $c->user_id === $u->id),
             'noc' => ($n = NocDocument::where('path', $path)->first()?->noc ?? Noc::where('certificate_path', $path)->first())
                 && ($u->canManage('noc') || $n->user_id === $u->id),
+            'incidents' => $u->canManage('security') && Incident::where('photo_path', $path)->exists(),
+            'gym' => ($g = GymPayment::where('proof_path', $path)->first()) && ($u->canManage('gym') || $g->member?->user_id === $u->id || ($u->house_id && $g->member?->house_id === $u->house_id)),
             'records' => ($r = RecordFile::where('path', $path)->first()) && ($u->canManage('records') || ($u->house_id && $r->house_id === $u->house_id)),
             default => false,
         };

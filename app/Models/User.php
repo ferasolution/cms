@@ -13,7 +13,7 @@ class User extends Authenticatable
     /** @use HasFactory<UserFactory> */
     use HasFactory, Notifiable;
 
-    protected $fillable = ['name', 'email', 'password', 'role', 'phone', 'house_id', 'active'];
+    protected $fillable = ['name', 'email', 'password', 'role', 'permissions', 'designation', 'phone', 'house_id', 'household_role', 'active', 'last_login_at', 'last_login_ip', 'theme'];
 
     protected $hidden = ['password', 'remember_token'];
 
@@ -23,6 +23,8 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'active' => 'boolean',
+            'permissions' => 'array',
+            'last_login_at' => 'datetime',
         ];
     }
 
@@ -31,14 +33,36 @@ class User extends Authenticatable
         return $this->belongsTo(House::class);
     }
 
-    public function isAdmin(): bool
+    public function employee()
     {
-        return $this->role === 'admin';
+        return $this->hasOne(Employee::class);
     }
 
+    public function isSuperAdmin(): bool
+    {
+        return $this->role === 'super_admin';
+    }
+
+    /** Super Admin or Admin — community-wide authority. */
+    public function isAdmin(): bool
+    {
+        return in_array($this->role, ['super_admin', 'admin'], true);
+    }
+
+    /** Role "user": a resident / household member. */
     public function isResident(): bool
     {
-        return $this->role === 'resident';
+        return $this->role === 'user';
+    }
+
+    public function level(string $module): int
+    {
+        return Access::level($this, $module);
+    }
+
+    public function canApprove(string $module): bool
+    {
+        return Access::canApprove($this, $module);
     }
 
     public function canManage(string $module): bool
