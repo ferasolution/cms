@@ -15,7 +15,7 @@ class InventoryIssue extends Model
         return [
             'issued_at' => 'datetime',
             'returned_at' => 'datetime',
-            'expected_return' => 'date',
+            'expected_return' => 'date:Y-m-d',
         ];
     }
 

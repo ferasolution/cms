@@ -13,7 +13,7 @@ class Transaction extends Model
     protected function casts(): array
     {
         return [
-            'date' => 'date',
+            'date' => 'date:Y-m-d',
             'amount' => 'decimal:2',
         ];
     }

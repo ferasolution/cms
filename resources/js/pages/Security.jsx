@@ -53,7 +53,7 @@ export default function Security() {
             <div className="mb-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                 <Stat label="Inside right now" value={s?.inside ?? '—'} icon={Users} tone="green" onClick={() => list.set({ status: 'inside' })} />
                 <Stat label="Entries today" value={s?.today ?? '—'} icon={ShieldCheck} />
-                <Stat label="Avg. stay (30 days)" value={s ? duration(0, s.avg_stay_minutes * 60000) : '—'} icon={Clock} tone="sand" />
+                <Stat label="Avg. stay (30 days)" value={s ? (s.avg_stay_minutes < 60 ? `${s.avg_stay_minutes}m` : `${Math.floor(s.avg_stay_minutes / 60)}h ${s.avg_stay_minutes % 60}m`) : '—'} icon={Clock} tone="sand" />
                 <Stat label="Workers / Guests (30d)" value={s ? `${s.by_category?.worker || 0} / ${s.by_category?.guest || 0}` : '—'} icon={Users} tone="blue" />
             </div>
 

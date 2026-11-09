@@ -15,7 +15,7 @@ class BookIssue extends Model
         return [
             'issued_at' => 'datetime',
             'returned_at' => 'datetime',
-            'due_at' => 'date',
+            'due_at' => 'date:Y-m-d',
         ];
     }
 

@@ -13,7 +13,7 @@ class Event extends Model
     protected function casts(): array
     {
         return [
-            'date' => 'date',
+            'date' => 'date:Y-m-d',
             'last_hour_alerted_at' => 'datetime',
             'end_alerted_at' => 'datetime',
             'charge_breakdown' => 'array',
