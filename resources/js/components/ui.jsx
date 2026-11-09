@@ -1,0 +1,317 @@
+import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
+import { X, Search, ChevronLeft, ChevronRight, Loader2, Inbox, Paperclip } from 'lucide-react';
+import { get, fileUrl, title } from '../lib/api';
+
+/* ---------- Toasts ---------- */
+const ToastCtx = createContext(() => {});
+export const useToast = () => useContext(ToastCtx);
+
+export function ToastProvider({ children }) {
+    const [items, setItems] = useState([]);
+    const push = useCallback((message, level = 'success', body) => {
+        const id = Math.random();
+        setItems((s) => [...s, { id, message, level, body }]);
+        setTimeout(() => setItems((s) => s.filter((t) => t.id !== id)), level === 'danger' ? 12000 : 4500);
+    }, []);
+    const tone = { success: 'border-l-emerald-500', danger: 'border-l-red-500', warning: 'border-l-amber-500', info: 'border-l-brand-500', error: 'border-l-red-500' };
+    return (
+        <ToastCtx.Provider value={push}>
+            {children}
+            <div className="fixed right-4 top-4 z-[100] flex w-[min(380px,calc(100vw-2rem))] flex-col gap-2">
+                {items.map((t) => (
+                    <div key={t.id} className={`toast-in card border-l-4 px-4 py-3 ${tone[t.level] || tone.info}`}>
+                        <div className="text-sm font-semibold">{t.message}</div>
+                        {t.body && <div className="mt-0.5 text-xs text-black/60">{t.body}</div>}
+                    </div>
+                ))}
+            </div>
+        </ToastCtx.Provider>
+    );
+}
+
+/* ---------- Data loading ---------- */
+export function useList(url, initial = {}) {
+    const [params, setParams] = useState({ page: 1, ...initial });
+    const [data, setData] = useState(null);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
+    const key = JSON.stringify(params);
+    const reload = useCallback(() => {
+        if (!url) return;
+        setLoading(true);
+        get(url, params).then((d) => { setData(d); setError(null); }).catch(setError).finally(() => setLoading(false));
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [url, key]);
+    useEffect(() => { reload(); }, [reload]);
+    const set = (patch) => setParams((p) => ({ ...p, page: 1, ...patch }));
+    return { data, rows: data?.data ?? (Array.isArray(data) ? data : []), loading, error, reload, params, set, setPage: (page) => setParams((p) => ({ ...p, page })) };
+}
+
+export function useGet(url, deps = []) {
+    const [data, setData] = useState(null);
+    const [loading, setLoading] = useState(true);
+    const reload = useCallback(() => {
+        if (!url) return;
+        setLoading(true);
+        get(url).then(setData).catch(() => {}).finally(() => setLoading(false));
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [url, ...deps]);
+    useEffect(() => { reload(); }, [reload]);
+    return { data, loading, reload, setData };
+}
+
+/* ---------- Layout bits ---------- */
+export function PageHeader({ icon: Icon, title: t, subtitle, children }) {
+    return (
+        <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
+            <div className="flex items-center gap-3">
+                {Icon && <div className="grid size-11 place-items-center rounded-2xl bg-brand-600 text-white shadow-sm"><Icon size={22} /></div>}
+                <div>
+                    <h1 className="text-xl font-bold tracking-tight sm:text-2xl">{t}</h1>
+                    {subtitle && <p className="text-sm text-black/55">{subtitle}</p>}
+                </div>
+            </div>
+            <div className="flex flex-wrap items-center gap-2">{children}</div>
+        </div>
+    );
+}
+
+export function Tabs({ tabs, value, onChange }) {
+    return (
+        <div className="mb-4 flex gap-1 overflow-x-auto rounded-2xl bg-black/[.04] p-1">
+            {tabs.filter(Boolean).map((t) => (
+                <button key={t.key} onClick={() => onChange(t.key)}
+                    className={`flex shrink-0 items-center gap-1.5 rounded-xl px-3.5 py-2 text-sm font-semibold transition ${value === t.key ? 'bg-white text-brand-700 shadow-sm' : 'text-black/55 hover:text-black'}`}>
+                    {t.icon && <t.icon size={15} />}{t.label}
+                    {t.count > 0 && <span className="rounded-full bg-sand-400 px-1.5 text-[11px] text-white">{t.count}</span>}
+                </button>
+            ))}
+        </div>
+    );
+}
+
+export function Stat({ label, value, sub, icon: Icon, tone = 'brand', onClick }) {
+    const tones = { brand: 'bg-brand-50 text-brand-600', sand: 'bg-sand-100 text-sand-500', red: 'bg-red-50 text-red-600', green: 'bg-emerald-50 text-emerald-600', blue: 'bg-sky-50 text-sky-600' };
+    return (
+        <div onClick={onClick} className={`card p-4 ${onClick ? 'cursor-pointer transition hover:-translate-y-0.5' : ''}`}>
+            <div className="flex items-start justify-between gap-2">
+                <div className="text-xs font-semibold text-black/50">{label}</div>
+                {Icon && <div className={`grid size-8 place-items-center rounded-xl ${tones[tone]}`}><Icon size={16} /></div>}
+            </div>
+            <div className="mt-1 text-2xl font-bold tracking-tight">{value}</div>
+            {sub && <div className="mt-0.5 text-xs text-black/50">{sub}</div>}
+        </div>
+    );
+}
+
+const BADGE = {
+    open: 'bg-red-50 text-red-700', pending: 'bg-amber-50 text-amber-700', requested: 'bg-amber-50 text-amber-700', submitted: 'bg-amber-50 text-amber-700',
+    assigned: 'bg-sky-50 text-sky-700', in_progress: 'bg-sky-50 text-sky-700', under_review: 'bg-sky-50 text-sky-700', issued: 'bg-sky-50 text-sky-700',
+    documents_required: 'bg-orange-50 text-orange-700', approved: 'bg-emerald-50 text-emerald-700', resolved: 'bg-emerald-50 text-emerald-700',
+    completed: 'bg-emerald-50 text-emerald-700', returned: 'bg-emerald-50 text-emerald-700', paid: 'bg-emerald-50 text-emerald-700', inside: 'bg-emerald-50 text-emerald-700',
+    rejected: 'bg-black/5 text-black/60', closed: 'bg-black/5 text-black/60', cancelled: 'bg-black/5 text-black/60', exited: 'bg-black/5 text-black/60',
+    urgent: 'bg-red-600 text-white', high: 'bg-red-50 text-red-700', normal: 'bg-black/5 text-black/60', low: 'bg-black/5 text-black/45',
+    revenue: 'bg-emerald-50 text-emerald-700', expense: 'bg-red-50 text-red-700', salary: 'bg-violet-50 text-violet-700', overdue: 'bg-red-50 text-red-700', live: 'bg-emerald-600 text-white',
+};
+export function Badge({ value, children }) {
+    return <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold whitespace-nowrap ${BADGE[value] || 'bg-black/5 text-black/60'}`}>{children ?? title(value)}</span>;
+}
+
+export function Spinner({ className = '' }) {
+    return <Loader2 className={`animate-spin text-brand-500 ${className}`} size={20} />;
+}
+
+export function Empty({ text = 'Nothing here yet.' }) {
+    return <div className="flex flex-col items-center gap-2 py-12 text-sm text-black/40"><Inbox size={28} />{text}</div>;
+}
+
+export function SearchBox({ value, onChange, placeholder = 'Search…' }) {
+    const [v, setV] = useState(value || '');
+    const t = useRef();
+    useEffect(() => { clearTimeout(t.current); t.current = setTimeout(() => v !== (value || '') && onChange(v), 350); return () => clearTimeout(t.current); }, [v]); // eslint-disable-line
+    return (
+        <label className="relative block">
+            <Search size={15} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-black/35" />
+            <input className="input w-56 pl-9" value={v} onChange={(e) => setV(e.target.value)} placeholder={placeholder} />
+        </label>
+    );
+}
+
+export function Select({ value, onChange, options, placeholder, className = '' }) {
+    return (
+        <select className={`input w-auto ${className}`} value={value ?? ''} onChange={(e) => onChange(e.target.value)}>
+            {placeholder !== undefined && <option value="">{placeholder}</option>}
+            {options.map((o) => (typeof o === 'string' ? <option key={o} value={o}>{title(o)}</option> : <option key={o.value} value={o.value}>{o.label}</option>))}
+        </select>
+    );
+}
+
+/* ---------- Table ---------- */
+export function Table({ list, columns, empty, onRow, footer = true }) {
+    const { rows, loading, data } = list;
+    return (
+        <div className="card overflow-hidden">
+            <div className="overflow-x-auto">
+                <table className="w-full">
+                    <thead className="border-b border-black/5 bg-black/[.015]">
+                        <tr>{columns.map((c, i) => <th key={i} className={`th ${c.className || ''}`}>{c.label}</th>)}</tr>
+                    </thead>
+                    <tbody className="divide-y divide-black/5">
+                        {rows.map((r) => (
+                            <tr key={r.id} onClick={onRow ? () => onRow(r) : undefined} className={onRow ? 'cursor-pointer hover:bg-brand-50/40' : ''}>
+                                {columns.map((c, i) => <td key={i} className={`td ${c.className || ''}`}>{c.render ? c.render(r) : r[c.key] ?? '—'}</td>)}
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            </div>
+            {loading && !rows.length && <div className="grid place-items-center py-12"><Spinner /></div>}
+            {!loading && !rows.length && <Empty text={empty} />}
+            {footer && data?.last_page > 1 && (
+                <div className="flex items-center justify-between border-t border-black/5 px-4 py-2.5 text-xs text-black/55">
+                    <span>{data.from}–{data.to} of {data.total}</span>
+                    <div className="flex gap-1">
+                        <button className="btn-ghost btn-sm" disabled={data.current_page <= 1} onClick={() => list.setPage(data.current_page - 1)}><ChevronLeft size={14} /></button>
+                        <span className="px-2 py-1.5">Page {data.current_page} / {data.last_page}</span>
+                        <button className="btn-ghost btn-sm" disabled={data.current_page >= data.last_page} onClick={() => list.setPage(data.current_page + 1)}><ChevronRight size={14} /></button>
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+}
+
+/* ---------- Modal + form ---------- */
+export function Modal({ open, onClose, title: t, children, wide }) {
+    useEffect(() => {
+        if (!open) return;
+        const k = (e) => e.key === 'Escape' && onClose();
+        window.addEventListener('keydown', k);
+        return () => window.removeEventListener('keydown', k);
+    }, [open, onClose]);
+    if (!open) return null;
+    return (
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-ink/40 p-0 backdrop-blur-[2px] sm:items-center sm:p-4" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
+            <div className={`card max-h-[92vh] w-full overflow-y-auto rounded-b-none sm:rounded-2xl ${wide ? 'sm:max-w-3xl' : 'sm:max-w-lg'}`}>
+                <div className="sticky top-0 z-10 flex items-center justify-between border-b border-black/5 bg-white px-5 py-3.5">
+                    <h3 className="font-bold">{t}</h3>
+                    <button className="btn-ghost btn-sm" onClick={onClose}><X size={16} /></button>
+                </div>
+                <div className="p-5">{children}</div>
+            </div>
+        </div>
+    );
+}
+
+/**
+ * Declarative form. fields: [{ name, label, type, options, required, half, accept, multiple, hint, show(values) }]
+ */
+export function Form({ fields, initial = {}, onSubmit, submitLabel = 'Save', onChange, children }) {
+    const [values, setValues] = useState(() => {
+        const v = { ...initial };
+        fields.forEach((f) => { if (v[f.name] === undefined || v[f.name] === null) v[f.name] = f.default ?? (f.type === 'checkbox' ? false : ''); });
+        return v;
+    });
+    const [errors, setErrors] = useState({});
+    const [busy, setBusy] = useState(false);
+    const toast = useToast();
+    const set = (name, val) => {
+        setValues((s) => ({ ...s, [name]: val }));
+        onChange?.({ ...values, [name]: val });
+    };
+
+    const submit = async (e) => {
+        e.preventDefault();
+        setBusy(true);
+        setErrors({});
+        try {
+            await onSubmit(values);
+        } catch (err) {
+            setErrors(err.errors || {});
+            toast(err.message, 'error');
+        } finally {
+            setBusy(false);
+        }
+    };
+
+    return (
+        <form onSubmit={submit} className="grid grid-cols-2 gap-3">
+            {fields.filter((f) => !f.show || f.show(values)).map((f) => (
+                <div key={f.name} className={f.half ? 'col-span-2 sm:col-span-1' : 'col-span-2'}>
+                    {f.type !== 'checkbox' && <label className="label">{f.label}{f.required && <span className="text-red-500"> *</span>}</label>}
+                    <Field f={f} value={values[f.name]} set={(v) => set(f.name, v)} />
+                    {f.hint && <p className="mt-1 text-[11px] text-black/45">{f.hint}</p>}
+                    {(errors[f.name] || errors[f.name + '.0']) && <p className="mt-1 text-xs text-red-600">{(errors[f.name] || errors[f.name + '.0'])[0]}</p>}
+                </div>
+            ))}
+            {children && <div className="col-span-2">{typeof children === 'function' ? children(values, set) : children}</div>}
+            <div className="col-span-2 mt-1 flex justify-end">
+                <button className="btn-primary" disabled={busy}>{busy && <Loader2 size={15} className="animate-spin" />}{submitLabel}</button>
+            </div>
+        </form>
+    );
+}
+
+function Field({ f, value, set }) {
+    const common = { className: 'input', required: f.required, placeholder: f.placeholder, disabled: f.disabled };
+    switch (f.type) {
+        case 'textarea':
+            return <textarea {...common} rows={f.rows || 3} value={value} onChange={(e) => set(e.target.value)} />;
+        case 'select':
+            return (
+                <select {...common} value={value ?? ''} onChange={(e) => set(e.target.value)}>
+                    <option value="">{f.placeholder || 'Select…'}</option>
+                    {(f.options || []).map((o) => (typeof o === 'string' ? <option key={o} value={o}>{title(o)}</option> : <option key={o.value} value={o.value}>{o.label}</option>))}
+                </select>
+            );
+        case 'checkbox':
+            return <label className="flex items-center gap-2 text-sm"><input type="checkbox" className="size-4 accent-brand-600" checked={!!value} onChange={(e) => set(e.target.checked)} />{f.label}</label>;
+        case 'file':
+            return (
+                <label className="flex cursor-pointer items-center gap-2 rounded-xl border border-dashed border-black/15 bg-black/[.015] px-3 py-2.5 text-sm text-black/60 hover:border-brand-500">
+                    <Paperclip size={15} />
+                    <span className="truncate">{value ? (Array.isArray(value) ? `${value.length} file(s) selected` : value.name) : f.placeholder || 'Choose file…'}</span>
+                    <input type="file" className="hidden" accept={f.accept} multiple={f.multiple} capture={f.capture}
+                        onChange={(e) => set(f.multiple ? [...e.target.files] : e.target.files[0] || '')} />
+                </label>
+            );
+        default:
+            return <input {...common} type={f.type || 'text'} min={f.min} max={f.max} step={f.step} value={value ?? ''} onChange={(e) => set(e.target.value)} />;
+    }
+}
+
+export function FileLink({ path, label = 'View file' }) {
+    if (!path) return null;
+    return <a href={fileUrl(path)} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-xs font-semibold text-brand-600 hover:underline"><Paperclip size={12} />{label}</a>;
+}
+
+export function Confirm({ children, onConfirm, message = 'Are you sure?', className = 'btn-ghost btn-sm' }) {
+    return <button className={className} onClick={(e) => { e.stopPropagation(); if (window.confirm(message)) onConfirm(); }}>{children}</button>;
+}
+
+/** Run an action, toast the result, then reload. */
+export function useAction() {
+    const toast = useToast();
+    return async (fn, ok, after) => {
+        try {
+            const r = await fn();
+            if (ok) toast(ok, 'success');
+            after?.(r);
+            return r;
+        } catch (e) {
+            toast(e.message, 'error');
+        }
+    };
+}
+
+/** Shared house dropdown options (officials only). */
+let houseCache = null;
+export function useHouses(enabled = true) {
+    const [houses, setHouses] = useState(houseCache || []);
+    useEffect(() => {
+        if (!enabled || houseCache) return;
+        get('houses', { all: 1 }).then((h) => { houseCache = h; setHouses(h); }).catch(() => {});
+    }, [enabled]);
+    return houses.map((h) => ({ value: h.id, label: `${h.block ? h.block + '-' : ''}${h.house_no}${h.owner_name ? ' · ' + h.owner_name : ''}` }));
+}
+export const clearHouseCache = () => { houseCache = null; };

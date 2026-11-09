@@ -1,0 +1,121 @@
+name: Test & deploy to Bluehost
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: mbstring, pdo_sqlite, pdo_mysql, fileinfo, openssl, bcmath, gd
+          coverage: none
+
+      - name: Install PHP dependencies
+        run: composer install --no-interaction --prefer-dist --no-progress
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Build frontend (needed by views in tests)
+        run: npm ci && npm run build
+
+      - name: Run tests
+        run: |
+          cp .env.example .env
+          php artisan key:generate
+          php artisan test
+
+  deploy:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check FTP secrets
+        id: secrets
+        env:
+          FTP_SERVER: ${{ secrets.FTP_SERVER }}
+        run: |
+          if [ -z "$FTP_SERVER" ]; then
+            echo "::warning::FTP secrets are not set yet — skipping upload. Add FTP_SERVER, FTP_USERNAME and FTP_PASSWORD in repo Settings → Secrets."
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: shivammathur/setup-php@v2
+        if: steps.secrets.outputs.ready == 'true'
+        with:
+          php-version: '8.3'
+          extensions: mbstring, pdo_mysql, fileinfo, openssl
+          coverage: none
+
+      - name: Install production PHP dependencies
+        if: steps.secrets.outputs.ready == 'true'
+        run: composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader --no-progress
+
+      - uses: actions/setup-node@v4
+        if: steps.secrets.outputs.ready == 'true'
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Build frontend
+        if: steps.secrets.outputs.ready == 'true'
+        run: |
+          npm ci
+          npm run build
+          echo "${GITHUB_SHA::7} $(date -u +%FT%TZ)" > VERSION
+
+      - name: Upload to Bluehost via FTP
+        if: steps.secrets.outputs.ready == 'true'
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ secrets.FTP_SERVER }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          port: ${{ secrets.FTP_PORT || 21 }}
+          protocol: ${{ secrets.FTP_PROTOCOL || 'ftps' }}
+          server-dir: ${{ secrets.FTP_DIR || './' }}
+          timeout: 600000
+          exclude: |
+            **/.git*
+            **/.git*/**
+            **/node_modules/**
+            .github/**
+            tests/**
+            .env
+            .env.*
+            storage/logs/**
+            storage/framework/cache/data/**
+            storage/framework/sessions/**
+            storage/framework/views/**
+            storage/app/private/**
+            storage/installed.lock
+            phpunit.xml
+            README.md
+
+      - name: Run migrations on server
+        if: steps.secrets.outputs.ready == 'true'
+        env:
+          DEPLOY_TOKEN: ${{ secrets.DEPLOY_TOKEN }}
+          APP_URL: ${{ secrets.APP_URL || 'https://cms.ferasolution.com' }}
+        run: |
+          if [ -z "$DEPLOY_TOKEN" ]; then
+            echo "::notice::DEPLOY_TOKEN not set yet. Open $APP_URL/install.php once, then add the token it shows as a secret."
+            exit 0
+          fi
+          curl -fsS -X POST -H "X-Deploy-Token: $DEPLOY_TOKEN" -H "Accept: application/json" "$APP_URL/system/deploy"

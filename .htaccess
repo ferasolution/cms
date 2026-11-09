@@ -1,0 +1,11 @@
+# If the subdomain's document root is this project folder (not /public),
+# send every request into /public and keep the rest of the app private.
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteRule ^(\.env|\.git|composer\.(json|lock)|package(-lock)?\.json|artisan|vendor/|storage/|bootstrap/|config/|database/|routes/|app/|resources/|tests/) - [F,L,NC]
+    RewriteCond %{REQUEST_URI} !^/public/
+    RewriteRule ^(.*)$ public/$1 [L]
+</IfModule>
+<FilesMatch "^\.">
+    Require all denied
+</FilesMatch>
