@@ -1,7 +1,7 @@
 <?php
 /**
  * One-time web installer for shared hosting (Bluehost / cPanel) where there is no SSH.
- * Writes .env, creates the database tables, the ADH admin account and (optionally) demo data.
+ * Writes .env, creates the database tables, the Super Admin account and (optionally) demo data.
  * Locks itself after a successful run (storage/installed.lock).
  */
 declare(strict_types=1);

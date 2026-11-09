@@ -250,7 +250,7 @@ function FinanceStaff() {
                 {modal?.mode === 'tx' && <Form fields={txFields(modal.type)} initial={modal} onSubmit={saveTx} onChange={(values) => setModal((m) => (m.values?.type === values.type ? m : { ...m, values }))} />}
             </Modal>
             <Modal open={modal?.mode === 'request'} onClose={() => setModal(null)} title="Expense request">
-                {modal?.mode === 'request' && <Form onSubmit={async (v) => { await post('finance/expense-requests', v); toast('Request sent to ADH for approval'); setModal(null); setTab('requests'); reqs.reload(); }} submitLabel="Submit request" fields={[
+                {modal?.mode === 'request' && <Form onSubmit={async (v) => { await post('finance/expense-requests', v); toast('Request sent to Admin for approval'); setModal(null); setTab('requests'); reqs.reload(); }} submitLabel="Submit request" fields={[
                     { name: 'title', label: 'What is it for?', required: true },
                     { name: 'amount', label: 'Amount (Rs)', type: 'number', min: 1, required: true, half: true },
                     { name: 'category', label: 'Category', type: 'select', options: CATS.expense, required: true, half: true, default: 'other' },

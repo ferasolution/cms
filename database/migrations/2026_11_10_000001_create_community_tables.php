@@ -231,7 +231,7 @@ return new class extends Migration
             $table->timestamps();
         });
 
-        // Cross-cutting: ADH activity feed + realtime alerts
+        // Cross-cutting: activity / audit feed + realtime alerts
         Schema::create('activity_logs', function (Blueprint $table) {
             $table->id();
             $table->foreignId('user_id')->nullable()->constrained()->nullOnDelete();

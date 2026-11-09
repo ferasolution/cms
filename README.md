@@ -55,7 +55,7 @@ GitHub secrets (repo → Settings → Secrets and variables → Actions):
 1. cPanel → **Domains**: `cms.ferasolution.com` document root = the folder the FTP account uploads to (the root `.htaccess` forwards into `/public`; pointing it at `/public` directly also works).
 2. cPanel → **MultiPHP Manager**: PHP **8.3** for the subdomain.
 3. cPanel → **MySQL Databases**: create a database + user, give the user ALL PRIVILEGES.
-4. After the first successful deploy, open `https://cms.ferasolution.com/install.php`, enter the DB details and the ADH account. Copy the `DEPLOY_TOKEN` it shows into GitHub secrets.
+4. After the first successful deploy, open `https://cms.ferasolution.com/install.php`, enter the DB details and the Super Admin account. Copy the `DEPLOY_TOKEN` it shows into GitHub secrets.
 5. cPanel → **SSL/TLS Status**: make sure the subdomain has a certificate (needed for the installable mobile app).
 
 ## Local development
