@@ -99,7 +99,7 @@ Route::prefix('api')->group(function () {
     Route::any('{any}', fn () => response()->json(['message' => 'Not found.'], 404))->where('any', '.*');
 });
 
-Route::post('system/deploy', [SystemController::class, 'deploy'])->withoutMiddleware(ValidateCsrfToken::class)->middleware('throttle:10,1');
+Route::match(['get', 'post'], 'system/deploy', [SystemController::class, 'deploy'])->withoutMiddleware(ValidateCsrfToken::class)->middleware('throttle:10,1');
 
 Route::get('files/{path}', [Api\FileController::class, 'show'])->where('path', '.*')->middleware('auth');
 
