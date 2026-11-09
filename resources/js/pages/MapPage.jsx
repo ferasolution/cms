@@ -13,7 +13,7 @@ const LAYERS = {
     overview: { label: 'Overview', icon: Home },
     visitors: { label: 'Visitors inside', icon: Users, official: true },
     complaints: { label: 'Open complaints', icon: MessageSquareWarning },
-    maintenance: { label: 'Maintenance paid', icon: Wallet, official: true },
+    maintenance: { label: 'Maintenance dues', icon: Wallet, official: true },
     events: { label: 'Events today', icon: CalendarHeart },
 };
 

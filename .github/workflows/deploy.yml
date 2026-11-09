@@ -22,9 +22,7 @@ jobs:
           coverage: none
 
       - name: Install PHP dependencies
-        run: |
-          composer install --no-interaction --prefer-dist --no-progress
-          if ! git ls-files --error-unmatch composer.lock >/dev/null 2>&1; then echo "LOCKSTART"; base64 -w0 composer.lock; echo; echo "LOCKEND"; fi
+        run: composer install --no-interaction --prefer-dist --no-progress
 
       - uses: actions/setup-node@v4
         with:

@@ -137,7 +137,7 @@ class DemoSeeder extends Seeder
         foreach ($evs as $k => [$t, $type, $venue, $days, $status, $guests]) {
             $start = $days === 0 ? now()->subHours(2)->format('H:00') : '19:00';
             $end = $days === 0 ? now()->addMinutes(50)->format('H:i') : '23:00';
-            Event::create(['code' => 'EVT-'.strtoupper(substr(md5($t), 0, 6)), 'house_id' => $houses[$k + 2]->id, 'requested_by' => $residents[$k]->id, 'title' => $t, 'type' => $type, 'venue' => $venue, 'date' => now()->addDays($days)->toDateString(), 'start_time' => $start, 'end_time' => $end, 'guests' => $guests, 'vehicles' => intdiv($guests, 5), 'charges' => 5000 + $guests * 50, 'status' => $status, 'approved_by' => $status !== 'pending' ? $staff['manager']->id : null]);
+            Event::create(['code' => $status === 'pending' ? null : 'EVT-'.strtoupper(substr(md5($t), 0, 6)), 'house_id' => $houses[$k + 2]->id, 'requested_by' => $residents[$k]->id, 'title' => $t, 'type' => $type, 'venue' => $venue, 'date' => now()->addDays($days)->toDateString(), 'start_time' => $start, 'end_time' => $end, 'guests' => $guests, 'vehicles' => intdiv($guests, 5), 'charges' => 5000 + $guests * 50, 'status' => $status, 'approved_by' => $status !== 'pending' ? $staff['manager']->id : null]);
         }
 
         // Complaints
