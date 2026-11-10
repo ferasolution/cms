@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
-import { NavLink, Outlet, useNavigate } from 'react-router-dom';
+import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import {
     LayoutDashboard, ShieldCheck, Boxes, BookOpen, Wallet, CalendarHeart, MessageSquareWarning, FileCheck2, Archive,
     Users, Map, Bell, LogOut, Menu, X, Activity, BellRing, Search, Siren, Moon, Sun, Megaphone, Dumbbell, BriefcaseBusiness,
-    Settings, Briefcase, Loader2, CornerDownLeft, Wifi, WifiOff,
+    Settings, Briefcase, Loader2, CornerDownLeft, Wifi, WifiOff, MapPin, Workflow, Home as HomeIcon, Menu as MenuIcon,
 } from 'lucide-react';
 import { useAuth, applyTheme } from '../lib/auth';
 import { useAlerts } from '../lib/alerts';
@@ -58,6 +58,7 @@ function Bell2() {
                                         {a.body && <span className="block text-xs text-ink/55">{a.body}</span>}
                                         <span className="mt-0.5 block text-[11px] text-ink/40">{ago(a.created_at)} · {a.module}</span>
                                     </span>
+                                    {a.house_id && <span role="button" title="Locate on map" onClick={(e) => { e.stopPropagation(); markRead(a.id); setOpen(false); nav('/map?house=' + a.house_id); }} className="ml-auto grid size-8 shrink-0 place-items-center self-center rounded-lg bg-brand-50 text-brand-600 hover:bg-brand-100"><MapPin size={15} /></span>}
                                 </button>
                             ))}
                         </div>
@@ -187,7 +188,32 @@ function SosBanner() {
     );
 }
 
+/** App-style bottom bar on phones. */
+function BottomNav({ onMenu }) {
+    const { can, isResident } = useAuth();
+    const { unread, sos } = useAlerts();
+    const items = [
+        ['/', HomeIcon, 'Home', true],
+        ['/map', Map, 'Map'],
+        can('security') && ['/security' + (isResident ? '?tab=approvals' : ''), ShieldCheck, isResident ? 'Gate' : 'Security'],
+        can('complaints') && ['/complaints', MessageSquareWarning, 'Requests'],
+    ].filter(Boolean);
+    return (
+        <nav className="fixed inset-x-0 bottom-0 z-30 grid border-t border-ink/8 bg-surface/95 pb-[env(safe-area-inset-bottom)] backdrop-blur lg:hidden" style={{ gridTemplateColumns: `repeat(${items.length + 1}, 1fr)` }}>
+            {items.map(([to, Icon, label, end]) => (
+                <NavLink key={to} to={to} end={end} className={({ isActive }) => `relative flex flex-col items-center gap-0.5 py-2 text-[10px] font-semibold ${isActive ? 'text-brand-600' : 'text-ink/50'}`}>
+                    <Icon size={21} />{label}
+                    {to === '/map' && sos.length > 0 && <span className="absolute right-[30%] top-1.5 size-2.5 animate-ping rounded-full bg-red-500" />}
+                </NavLink>
+            ))}
+            <button onClick={onMenu} className="relative flex flex-col items-center gap-0.5 py-2 text-[10px] font-semibold text-ink/50"><MenuIcon size={21} />More
+                {unread > 0 && <span className="absolute right-[28%] top-1 rounded-full bg-red-500 px-1 text-[9px] font-bold text-white">{unread > 9 ? '9+' : unread}</span>}</button>
+        </nav>
+    );
+}
+
 export default function Layout() {
+    const location = useLocation();
     const { user, modules, roleLabel, logout, isAdmin, employee, community } = useAuth();
     const [open, setOpen] = useState(false);
     const [search, setSearch] = useState(false);
@@ -234,6 +260,7 @@ export default function Layout() {
                             {items.map((m) => link(m.to, m.icon, m.label))}
                         </div>
                     ))}
+                    {isAdmin && link('/automations', Workflow, 'Automations')}
                     {isAdmin && link('/activity', Activity, 'Audit & Activity Log')}
                 </nav>
                 <div className="mt-3 rounded-xl bg-white/6 p-3">
@@ -266,7 +293,8 @@ export default function Layout() {
                         <SosButton />
                     </div>
                 </header>
-                <main className="flex-1 overflow-y-auto px-3 py-5 sm:px-6 lg:px-8"><Outlet /></main>
+                <main className="flex-1 overflow-y-auto px-3 pb-24 pt-5 sm:px-6 lg:px-8 lg:pb-6"><div key={location.pathname} className="rise h-full"><Outlet /></div></main>
+                <BottomNav onMenu={() => setOpen(true)} />
             </div>
             <SearchPalette open={search} onClose={() => setSearch(false)} />
         </div>

@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useFrame } from '@react-three/fiber';
-import { Html } from '@react-three/drei';
+import { Html, Line } from '@react-three/drei';
+import { gatesOf, routeTo, signalsByHouse, SIGNAL_META } from '../lib/siteplan';
 import * as THREE from 'three';
 
 /**
@@ -28,6 +29,7 @@ const PAINT = ['#f4efe6', '#ece6da', '#f7f3ec', '#e3ddd2', '#efe2cf', '#e8d9c4',
 export function houseColor(h, layer) {
     if (h.sos) return '#ef4444';
     switch (layer) {
+        case 'requests': return h.sig ? SIGNAL_META[h.sig]?.color || '#f59e0b' : '#d9dedd';
         case 'visitors': return h.awaiting ? '#f59e0b' : h.overstay ? '#ef4444' : h.visitors ? '#22c55e' : '#cfd6d5';
         case 'complaints': return h.complaints ? ['#fca5a5', '#f87171', '#ef4444', '#dc2626'][Math.min(3, h.complaints - 1)] : '#cfd6d5';
         case 'maintenance': return h.paid ? '#1f7a74' : '#f59e0b';
@@ -255,7 +257,7 @@ function Gate({ g, to, night }) {
             <mesh position={[0, 2.3, 0]} castShadow><boxGeometry args={[3.8, 0.38, 0.5]} /><meshStandardMaterial color="#124f4b" emissive={night ? '#e0a94f' : '#000'} emissiveIntensity={night ? 0.3 : 0} /></mesh>
             <group ref={bar} position={[-1.4, 0.85, 0.4]}><mesh position={[1.4, 0, 0]}><boxGeometry args={[2.8, 0.08, 0.08]} /><meshStandardMaterial color="#ef4444" /></mesh></group>
             <mesh position={[2.7, 0.7, 0.6]} castShadow><boxGeometry args={[1, 1.4, 1]} /><meshStandardMaterial color="#e8e2d4" /></mesh>
-            <Label text="MAIN GATE" pos={[0, 3.2, 0]} />
+            <Label text={(g.label || 'Main Gate').toUpperCase()} pos={[0, 3.2, 0]} />
         </group>
     );
 }
@@ -316,19 +318,99 @@ function Walker({ path, color, car, onDone }) {
     );
 }
 
-function walkPath(site, to, h) {
-    const road = (site.roads || []).find((r) => r.main);
-    const gate = to(site.gate.x, site.gate.y);
-    const dest = to(h.mx, h.my);
-    if (!road) return [gate, dest];
-    const pts = road.pts.map((p) => to(...p));
-    let best = 0, bd = Infinity;
-    pts.forEach((p, i) => { const dd = Math.hypot(p[0] - dest[0], p[1] - dest[1]); if (dd < bd) { bd = dd; best = i; } });
-    return [gate, ...pts.slice(0, best + 1), dest];
+function walkPath(site, to, houses, h) {
+    const r = routeTo(site, houses, h);
+    if (r) return r.path.map(([x, y]) => to(x, y));
+    const g = gatesOf(site)[0];
+    return [to(g.x, g.y), to(h.mx, h.my)];
+}
+
+/** Plot numbers painted above roofs — only near the camera target, so hundreds of plots stay fast. */
+function PlotNumbers({ houses, to, all }) {
+    const [list, setList] = useState([]);
+    const last = useRef(0);
+    useFrame(({ camera, controls, clock }) => {
+        if (clock.elapsedTime - last.current < 0.3) return;
+        last.current = clock.elapsedTime;
+        const t = controls?.getTarget ? controls.getTarget(new THREE.Vector3()) : (controls?.target || new THREE.Vector3());
+        const dist = camera.position.distanceTo(t);
+        if (!all && dist > 55) { if (list.length) setList([]); return; }
+        const r = all ? 1e9 : Math.max(10, dist * 0.55);
+        const next = houses.filter((h) => { const [x, z] = to(h.mx, h.my); return Math.hypot(x - t.x, z - t.z) < r; }).slice(0, 90).map((h) => h.id);
+        if (next.join() !== list.join()) setList(next);
+    });
+    const byId = useMemo(() => Object.fromEntries(houses.map((h) => [h.id, h])), [houses]);
+    return list.map((id) => {
+        const h = byId[id]; const [x, z] = to(h.mx, h.my);
+        return (
+            <Html key={id} position={[x, Math.max(1, h.floors) * FLOOR + 0.25, z]} center style={{ pointerEvents: 'none' }} zIndexRange={[4, 0]}>
+                <div className="rounded bg-white/85 px-1 text-[9px] font-extrabold leading-tight text-[#3b1f3a] shadow-sm">{h.house_no}</div>
+            </Html>
+        );
+    });
+}
+
+function StreetNames({ site, to }) {
+    const [show, setShow] = useState(false);
+    useFrame(({ camera, controls }) => {
+        const t = controls?.getTarget ? controls.getTarget(new THREE.Vector3()) : (controls?.target || new THREE.Vector3());
+        const v = camera.position.distanceTo(t) < 95;
+        if (v !== show) setShow(v);
+    });
+    if (!show) return null;
+    return (site.streets || []).map((st) => {
+        const [x, z] = to(st.x, st.y);
+        return (
+            <Html key={st.text} position={[x, 0.15, z]} center style={{ pointerEvents: 'none' }} zIndexRange={[3, 0]}>
+                <div className="whitespace-nowrap rounded bg-[#0b1514]/55 px-1 text-[8.5px] font-bold uppercase tracking-wider text-white/90" style={{ transform: `rotate(${st.ang > 45 ? st.ang - 90 : st.ang}deg)` }}>{st.text}</div>
+            </Html>
+        );
+    });
+}
+
+/** Request pin above a house: icon of the most urgent request + count; flashes when new. */
+function SignalPin({ pos, group, flash, onClick }) {
+    const ring = useRef();
+    const m = SIGNAL_META[group.top.type] || {};
+    useFrame(({ clock }) => {
+        if (!ring.current) return;
+        const t = (clock.elapsedTime % 1.4) / 1.4;
+        ring.current.scale.setScalar(1 + t * (flash ? 7 : 3));
+        ring.current.material.opacity = (flash ? 0.9 : 0.5) * (1 - t);
+    });
+    return (
+        <group position={pos}>
+            <Beacon pos={[0, 0, 0]} color={m.color} />
+            {(flash || group.top.type === 'sos' || group.top.level === 'danger') && (
+                <mesh ref={ring} rotation={[-Math.PI / 2, 0, 0]} position={[0, -pos[1] + 0.12, 0]}><ringGeometry args={[0.9, 1.15, 40]} /><meshBasicMaterial color={m.color} transparent side={THREE.DoubleSide} depthWrite={false} /></mesh>
+            )}
+            <Html position={[0, 1.1, 0]} center zIndexRange={[30, 20]}>
+                <button onClick={onClick} className={`flex items-center gap-1 whitespace-nowrap rounded-full border-2 border-white px-2 py-0.5 text-[11px] font-bold text-white shadow-lg ${flash ? 'animate-bounce' : ''}`} style={{ background: m.color }}>
+                    <span>{m.icon}</span>{group.list.length > 1 ? group.list.length : m.label}
+                </button>
+            </Html>
+        </group>
+    );
+}
+
+/** Animated route (gate → house) — used for emergencies and "show route". */
+function RouteLine({ path, to }) {
+    const ref = useRef();
+    const pts = useMemo(() => path.map(([x, y]) => { const [a, b] = to(x, y); return [a, 0.35, b]; }), [path, to]);
+    useFrame((_, dt) => { if (ref.current?.material) ref.current.material.dashOffset -= dt * 3; });
+    const end = pts[pts.length - 1];
+    return (
+        <group>
+            <Line points={pts} color="#38bdf8" lineWidth={9} transparent opacity={0.25} />
+            <Line ref={ref} points={pts} color="#0ea5e9" lineWidth={4} dashed dashSize={1.1} gapSize={0.7} />
+            <mesh position={[pts[0][0], 0.5, pts[0][2]]}><sphereGeometry args={[0.45, 16, 16]} /><meshBasicMaterial color="#0ea5e9" /></mesh>
+            <mesh position={[end[0], 0.2, end[2]]} rotation={[-Math.PI / 2, 0, 0]}><ringGeometry args={[1.1, 1.5, 40]} /><meshBasicMaterial color="#0ea5e9" side={THREE.DoubleSide} /></mesh>
+        </group>
+    );
 }
 
 /* ---------------- whole site ---------------- */
-export default function SiteScene({ data, layer, selected, onSelect, night, walkers, setWalkers }) {
+export default function SiteScene({ data, layer, selected, onSelect, night, walkers, setWalkers, signals = [], flash = [], route, allNumbers }) {
     const site = data.site;
     const { to, w, d } = useMemo(() => siteTransform(site), [site]);
     const ground = useMemo(() => shapeOf(site.boundary, to), [site, to]);
@@ -337,7 +419,11 @@ export default function SiteScene({ data, layer, selected, onSelect, night, walk
     useEffect(() => () => { document.body.style.cursor = ''; }, []);
 
     const top = (h) => { const [x, z] = to(h.mx, h.my); return [x, Math.max(1, h.floors) * FLOOR + 1.1, z]; };
-    const status = data.houses.filter((h) => h.mx != null && (h.sos || h.visitors || h.awaiting || h.overstay || h.complaints || h.event));
+    const placedHouses = useMemo(() => data.houses.filter((h) => h.mx != null), [data.houses]);
+    const groups = useMemo(() => signalsByHouse(signals), [signals]);
+    const flashSet = useMemo(() => new Set(flash), [flash]);
+    const pinned = useMemo(() => new Set(groups.map((g) => g.house_id)), [groups]);
+    const status = data.houses.filter((h) => h.mx != null && !pinned.has(h.id) && (h.visitors || h.event));
     const tip = hover || selected;
 
     return (
@@ -352,25 +438,28 @@ export default function SiteScene({ data, layer, selected, onSelect, night, walk
             {(site.roads || []).map((r) => <Road key={r.name} r={r} to={to} night={night} />)}
             {site.zones.map((z, i) => <Zone key={i} z={z} to={to} night={night} />)}
             {(site.labels || []).map((l, i) => { const [x, z] = to(l.x, l.y); return <Label key={i} text={l.text} pos={[x, 0.6, z]} dim size={l.size} />; })}
-            <Gate g={site.gate} to={to} night={night} />
+            {gatesOf(site).map((g) => <Gate key={g.label} g={g} to={to} night={night} />)}
+            <StreetNames site={site} to={to} />
+            <PlotNumbers houses={placedHouses} to={to} all={allNumbers} />
+            {route && <RouteLine path={route.path} to={to} />}
+            {groups.map((g) => byId[g.house_id]?.mx != null && <SignalPin key={g.house_id} pos={top(byId[g.house_id])} group={g} flash={flashSet.has(g.house_id)} onClick={() => onSelect(byId[g.house_id])} />)}
             <Houses houses={data.houses} site={site} layer={layer} night={night} hover={hover} setHover={setHover} selected={selected} onSelect={onSelect} />
             <Highlight h={selected && byId[selected.id]} site={site} color="#e0a94f" />
             {hover && hover.id !== selected?.id && <Highlight h={hover} site={site} color="#ffffff" />}
 
             {status.map((h) => {
                 const p = top(h), list = [];
-                if (layer === 'overview' || layer === 'visitors') { if (h.awaiting) list.push('#f59e0b'); else if (h.overstay) list.push('#ef4444'); else if (h.visitors) list.push('#22c55e'); }
-                if ((layer === 'overview' || layer === 'complaints') && h.complaints) list.push('#f43f5e');
+                if ((layer === 'overview' || layer === 'visitors') && h.visitors) list.push('#22c55e');
                 if ((layer === 'overview' || layer === 'events') && h.event) list.push('#e0a94f');
                 return (
                     <group key={h.id}>
                         {list.map((c, i) => <Beacon key={c} pos={[p[0] + (i - (list.length - 1) / 2) * 0.9, p[1], p[2]]} color={c} />)}
-                        {h.sos && <SosPillar pos={[p[0], 0, p[2]]} />}
                     </group>
                 );
             })}
+            {data.houses.filter((h) => h.sos && h.mx != null).map((h) => { const p = top(h); return <SosPillar key={'sos' + h.id} pos={[p[0], 0, p[2]]} />; })}
             {walkers.map((wk) => byId[wk.house_id]?.mx != null && (
-                <Walker key={wk.key} path={walkPath(site, to, byId[wk.house_id])} car={!!wk.vehicle_no} color={wk.status === 'awaiting' ? '#f59e0b' : '#22c55e'}
+                <Walker key={wk.key} path={walkPath(site, to, data.houses, byId[wk.house_id])} car={!!wk.vehicle_no} color={wk.status === 'awaiting' ? '#f59e0b' : '#22c55e'}
                     onDone={() => setWalkers((ws) => ws.filter((x) => x.key !== wk.key))} />
             ))}
 

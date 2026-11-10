@@ -76,3 +76,15 @@ body { @apply bg-canvas text-ink antialiased; }
 .dark .text-brand-700 { color: #7fd1c9; }
 .dark .text-brand-600 { color: #5ec2b8; }
 .dark .text-sand-500 { color: #e9bd6f; }
+
+/* ---- site plan (2D map) ---- */
+:root { --plan-bg: #e9ece6; --plan-ground: #d4d8d6; --plan-road: #9aa3a1; --plan-plot: #f3cdee; --plan-plot-n: #f6d9f1; --plan-out: #e4dcb4; --plan-grave: #a9acb3; --plan-label: rgba(20,40,40,.55); }
+.dark { --plan-bg: #0d1716; --plan-ground: #26302f; --plan-road: #47524f; --plan-plot: #6b4a66; --plan-plot-n: #7a5674; --plan-out: #3a3726; --plan-grave: #33363d; --plan-label: rgba(230,240,238,.55); }
+@keyframes route-dash { to { stroke-dashoffset: -28; } }
+.route-dash { animation: route-dash 1s linear infinite; }
+@keyframes pin-pulse { 0% { transform: scale(1); opacity: .9 } 100% { transform: scale(3.2); opacity: 0 } }
+.pin-pulse { transform-box: fill-box; transform-origin: center; animation: pin-pulse 1.6s ease-out infinite; }
+@keyframes flash-in { 0% { background: rgba(224,169,79,.35) } 100% { background: transparent } }
+.flash-in { animation: flash-in 2.5s ease-out; }
+@keyframes rise { from { opacity: 0; transform: translateY(6px) } to { opacity: 1; transform: none } }
+.rise { animation: rise .35s ease-out both; }

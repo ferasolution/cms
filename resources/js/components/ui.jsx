@@ -9,22 +9,30 @@ export const useToast = () => useContext(ToastCtx);
 
 export function ToastProvider({ children }) {
     const [items, setItems] = useState([]);
-    const push = useCallback((message, level = 'success', body) => {
+    const push = useCallback((message, level = 'success', body, action) => {
         const id = Math.random();
-        setItems((s) => [...s, { id, message, level, body }]);
-        setTimeout(() => setItems((s) => s.filter((t) => t.id !== id)), level === 'danger' ? 12000 : 4500);
+        setItems((s) => [...s.slice(-4), { id, message, level, body, action }]);
+        setTimeout(() => setItems((s) => s.filter((t) => t.id !== id)), level === 'danger' ? 14000 : action ? 8000 : 4500);
     }, []);
-    const tone = { success: 'border-l-emerald-500', danger: 'border-l-red-500', warning: 'border-l-amber-500', info: 'border-l-brand-500', error: 'border-l-red-500' };
+    const tone = { success: ['bg-emerald-500', '✓'], danger: ['bg-red-500', '!'], warning: ['bg-amber-500', '!'], info: ['bg-brand-500', 'i'], error: ['bg-red-500', '×'] };
     return (
         <ToastCtx.Provider value={push}>
             {children}
-            <div className="fixed right-4 top-4 z-[100] flex w-[min(380px,calc(100vw-2rem))] flex-col gap-2">
-                {items.map((t) => (
-                    <div key={t.id} className={`toast-in card border-l-4 px-4 py-3 ${tone[t.level] || tone.info}`}>
-                        <div className="text-sm font-semibold">{t.message}</div>
-                        {t.body && <div className="mt-0.5 text-xs text-ink/60">{t.body}</div>}
-                    </div>
-                ))}
+            <div className="fixed right-3 top-3 z-[100] flex w-[min(390px,calc(100vw-1.5rem))] flex-col gap-2">
+                {items.map((t) => {
+                    const [bg, ic] = tone[t.level] || tone.info;
+                    return (
+                        <div key={t.id} className="toast-in card flex items-start gap-3 overflow-hidden px-3.5 py-3 shadow-xl">
+                            <span className={`mt-0.5 grid size-6 shrink-0 place-items-center rounded-full text-xs font-black text-white ${bg}`}>{ic}</span>
+                            <div className="min-w-0 flex-1">
+                                <div className="text-sm font-semibold leading-snug">{t.message}</div>
+                                {t.body && <div className="mt-0.5 text-xs text-ink/60">{t.body}</div>}
+                                {t.action && <button className="mt-1.5 inline-flex items-center gap-1 rounded-lg bg-brand-600 px-2.5 py-1 text-xs font-bold text-white hover:bg-brand-700" onClick={() => { t.action.onClick(); setItems((s) => s.filter((x) => x.id !== t.id)); }}>{t.action.label}</button>}
+                            </div>
+                            <button className="text-ink/30 hover:text-ink" onClick={() => setItems((s) => s.filter((x) => x.id !== t.id))}><X size={14} /></button>
+                        </div>
+                    );
+                })}
             </div>
         </ToastCtx.Provider>
     );

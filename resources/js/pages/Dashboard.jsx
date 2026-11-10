@@ -2,6 +2,9 @@ import { useNavigate } from 'react-router-dom';
 import { Area, AreaChart, Bar, BarChart, CartesianGrid, Legend, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { LayoutDashboard, Home, Users, AlertTriangle, Megaphone, Siren, Wifi, ArrowRight, Plus, QrCode, MessageSquareWarning, CalendarHeart, FileCheck2 } from 'lucide-react';
 import { useGet, Spinner, Empty } from '../components/ui';
+import PlanMap from '../components/PlanMap';
+import { signalsByHouse, SIGNAL_META, locateInfo } from '../lib/siteplan';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { MODULE_META } from '../components/Layout';
 import { useAuth } from '../lib/auth';
 import { useLive, useAlerts } from '../lib/alerts';
@@ -41,6 +44,64 @@ function KpiCard({ c, onClick }) {
             <div className="mt-1 text-2xl font-bold tracking-tight">{c.money ? money(c.value) : c.value}</div>
             {c.sub && <div className="mt-0.5 text-xs text-ink/50">{c.sub}</div>}
         </button>
+    );
+}
+
+/** Live 2D plan of the community: every request pinned on its house, new ones pulse. */
+function LiveMapCard() {
+    const { data, reload } = useGet('map');
+    const { isResident } = useAuth();
+    const nav = useNavigate();
+    const [flash, setFlash] = useState([]);
+    const [sel, setSel] = useState(null);
+    const seen = useRef(null);
+    useLive(['security', 'complaints', 'events', 'emergency', 'noc', 'gym', 'library'], reload);
+    const signals = data?.signals || [];
+    useEffect(() => {
+        if (!data) return;
+        if (!seen.current) { seen.current = new Set(signals.map((s) => s.key)); return; }
+        const ids = [...new Set(signals.filter((s) => !seen.current.has(s.key)).map((s) => s.house_id))];
+        signals.forEach((s) => seen.current.add(s.key));
+        if (ids.length) { setFlash((f) => [...f, ...ids]); setTimeout(() => setFlash((f) => f.filter((x) => !ids.includes(x))), 12000); }
+    }, [data]); // eslint-disable-line
+    const byId = useMemo(() => Object.fromEntries((data?.houses || []).map((h) => [h.id, h])), [data]);
+    if (!data?.site?.boundary) return null;
+    const groups = signalsByHouse(signals);
+    const mine = isResident ? data.houses.find((h) => h.mine) : null;
+    const h = sel && byId[sel];
+    const info = h ? locateInfo(data.site, data.houses, h) : null;
+    return (
+        <div className="card overflow-hidden">
+            <div className="flex flex-wrap items-center justify-between gap-2 px-5 pt-4">
+                <span className="flex items-center gap-2 font-bold"><span className="relative flex size-2"><span className="absolute inline-flex size-full animate-ping rounded-full bg-emerald-400 opacity-75" /><span className="relative inline-flex size-2 rounded-full bg-emerald-500" /></span>Live community map <span className="text-xs font-normal text-ink/45">{data.site.name}</span></span>
+                <button className="text-xs font-semibold text-brand-600" onClick={() => nav('/map')}>Open 3D map →</button>
+            </div>
+            <div className="grid gap-0 lg:grid-cols-[1fr_300px]">
+                <div className="p-3"><PlanMap site={data.site} houses={data.houses} signals={signals} flash={flash} selectedId={sel || mine?.id} focus={mine?.id} onSelect={(x) => setSel(x.id)} height={380} compact /></div>
+                <div className="max-h-[400px] overflow-y-auto border-t border-ink/5 lg:border-l lg:border-t-0">
+                    {h ? (
+                        <div className="space-y-2 p-4 text-sm">
+                            <div className="flex items-center justify-between"><b className="text-base">Plot {h.label}</b><button className="text-xs text-ink/45" onClick={() => setSel(null)}>back</button></div>
+                            <div className="text-ink/60">{h.owner || ''}{h.street ? ' · ' + h.street : ''}{info?.landmark ? ' · near ' + info.landmark : ''}</div>
+                            {info?.route && <div className="text-xs text-ink/55">{info.route.metres} m from {info.route.gate.label} · ~{info.route.walkMin} min walk</div>}
+                            {groups.find((g) => g.house_id === h.id)?.list.map((s) => <button key={s.key} onClick={() => nav(s.link)} className="block w-full rounded-xl bg-ink/[.03] p-2 text-left hover:bg-ink/[.06]"><b>{SIGNAL_META[s.type]?.icon} {s.title}</b><div className="text-xs text-ink/55">{s.sub}</div></button>)}
+                            <button className="btn-primary btn-sm w-full" onClick={() => nav(`/map?house=${h.id}&route=1`)}>📍 Locate in 3D with route</button>
+                        </div>
+                    ) : (
+                        <>
+                            <div className="sticky top-0 bg-surface px-4 py-2.5 text-xs font-bold uppercase tracking-wider text-ink/45">{signals.length} live request{signals.length === 1 ? '' : 's'}</div>
+                            {!signals.length && <div className="px-4 pb-6 text-sm text-ink/45">All quiet. New requests appear here and pulse on the map.</div>}
+                            {[...signals].sort((a, b) => (a.type === 'sos' ? 0 : 1) - (b.type === 'sos' ? 0 : 1) || new Date(b.at) - new Date(a.at)).slice(0, 30).map((s) => (
+                                <button key={s.key} onClick={() => setSel(s.house_id)} className={`flex w-full gap-2.5 border-t border-ink/5 px-4 py-2 text-left hover:bg-ink/[.03] ${s.type === 'sos' ? 'bg-red-50 dark:bg-red-500/10' : ''} ${flash.includes(s.house_id) ? 'flash-in' : ''}`}>
+                                    <span className="text-base">{SIGNAL_META[s.type]?.icon}</span>
+                                    <span className="min-w-0"><span className="block truncate text-sm font-semibold">{s.title}</span><span className="block truncate text-xs text-ink/50">Plot {byId[s.house_id]?.label} · {ago(s.at)}</span></span>
+                                </button>
+                            ))}
+                        </>
+                    )}
+                </div>
+            </div>
+        </div>
     );
 }
 
@@ -104,6 +165,8 @@ export default function Dashboard() {
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                 {data?.cards.map((c) => <KpiCard key={c.module + c.label} c={c} onClick={() => nav(MODULE_META[c.module]?.to || '/')} />)}
             </div>
+
+            <LiveMapCard />
 
             <div className="grid gap-5 lg:grid-cols-5">
                 <div className="space-y-5 lg:col-span-3">

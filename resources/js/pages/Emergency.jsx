@@ -1,10 +1,43 @@
-import { Siren, Phone, MapPin, Check, Truck } from 'lucide-react';
-import { useList, PageHeader, Table, Badge, useAction } from '../components/ui';
+import { useEffect, useMemo, useState } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { Siren, Phone, MapPin, Check, Truck, Navigation, Copy, Box } from 'lucide-react';
+import { useList, useGet, PageHeader, Table, Badge, useAction, useToast } from '../components/ui';
+import PlanMap from '../components/PlanMap';
+import { locateInfo, mapsLink } from '../lib/siteplan';
 import { post, dt, ago, title } from '../lib/api';
 import { useAuth } from '../lib/auth';
 import { useLive } from '../lib/alerts';
 
 const ICON = { medical: '🚑', fire: '🔥', security: '🚨', other: '⚠️' };
+
+/** Where is this emergency? Plan with the house pulsing, the route from the nearest gate, GPS and directions. */
+function LocatePanel({ sos, map }) {
+    const nav = useNavigate();
+    const toast = useToast();
+    const h = map.houses.find((x) => x.id === sos.house_id);
+    const info = useMemo(() => (h ? locateInfo(map.site, map.houses, h) : null), [h, map]);
+    const gps = sos.lat ? { lat: +sos.lat, lng: +sos.lng } : info?.gps;
+    const steps = info?.route ? `Enter from ${info.route.gate.label}${info.route.gate.road ? ' (' + info.route.gate.road + ')' : ''}, go ${info.route.metres} m to Plot ${h.label}${h.street ? ', ' + h.street : ''}${info.landmark ? ' — near ' + info.landmark : ''}.` : '';
+    const sig = [{ key: 'sos-' + sos.id, type: 'sos', id: sos.id, house_id: sos.house_id, title: 'SOS', level: 3 }];
+    return (
+        <div className="grid border-t border-ink/5 md:grid-cols-[1fr_260px]">
+            {h ? <div className="p-2"><PlanMap site={map.site} houses={map.houses} signals={sig} flash={sos.status === 'active' ? [h.id] : []} selectedId={h.id} focus={h.id} route={info?.route} height={300} compact /></div>
+                : <div className="grid place-items-center p-6 text-sm text-ink/50">This caller is not linked to a house — use the GPS link.</div>}
+            <div className="space-y-2 p-4 text-sm md:border-l md:border-ink/5">
+                {h && <><div className="text-2xl font-black">Plot {h.label}</div>
+                    <div className="text-ink/65">{h.street || ''}{info?.series ? ' · ' + info.series : ''}</div>
+                    {info?.landmark && <div className="text-ink/65">Near <b>{info.landmark}</b></div>}
+                    {info?.route && <div className="rounded-xl bg-sky-50 p-2.5 text-sky-900 dark:bg-sky-500/10 dark:text-sky-200"><b>{info.route.metres} m</b> from {info.route.gate.label} · ~{info.route.walkMin} min walk · ~{info.route.driveMin} min drive</div>}</>}
+                <div className="flex flex-wrap gap-2 pt-1">
+                    {gps && <a className="btn-primary btn-sm" target="_blank" rel="noreferrer" href={mapsLink(gps)}><Navigation size={13} />Navigate</a>}
+                    {steps && <button className="btn-outline btn-sm" onClick={() => { navigator.clipboard?.writeText(steps + (gps ? ' ' + mapsLink(gps) : '')); toast('Directions copied — paste to responder'); }}><Copy size={13} />Copy directions</button>}
+                    {h && <button className="btn-outline btn-sm" onClick={() => nav(`/map?sos=${sos.id}`)}><Box size={13} />3D view</button>}
+                </div>
+                {sos.lat && <div className="text-[11px] text-ink/45">Caller shared phone GPS ({(+sos.lat).toFixed(5)}, {(+sos.lng).toFixed(5)})</div>}
+            </div>
+        </div>
+    );
+}
 
 export default function Emergency() {
     const { can, isResident, user } = useAuth();
@@ -13,6 +46,10 @@ export default function Emergency() {
     const act = useAction();
     useLive(['emergency', 'security'], list.reload);
     const active = list.rows.filter((s) => s.status !== 'resolved');
+    const map = useGet('map').data;
+    const [params] = useSearchParams();
+    const focusId = Number(params.get('sos')) || null;
+    useEffect(() => { if (focusId) document.getElementById('sos-' + focusId)?.scrollIntoView({ behavior: 'smooth', block: 'center' }); }, [focusId, list.rows.length]);
 
     return (
         <div className="mx-auto max-w-6xl">
@@ -21,7 +58,7 @@ export default function Emergency() {
                 <div className="space-y-3 lg:col-span-2">
                     {active.length === 0 && <div className="card p-6 text-center text-sm text-ink/50">✅ No active emergencies.</div>}
                     {active.map((s) => (
-                        <div key={s.id} className={`card overflow-hidden ${s.status === 'active' ? 'ring-2 ring-red-500' : 'ring-2 ring-amber-400'}`}>
+                        <div key={s.id} id={'sos-' + s.id} className={`card overflow-hidden ${s.status === 'active' ? 'ring-2 ring-red-500' : 'ring-2 ring-amber-400'}`}>
                             <div className={`flex items-center justify-between px-5 py-3 text-white ${s.status === 'active' ? 'animate-pulse bg-red-600' : 'bg-amber-600'}`}>
                                 <span className="text-lg font-bold">{ICON[s.type]} {s.type.toUpperCase()} — {s.status === 'active' ? 'NEEDS RESPONSE' : 'RESPONDING'}</span><span className="text-sm">{ago(s.created_at)}</span>
                             </div>
@@ -31,6 +68,7 @@ export default function Emergency() {
                                     {s.lat && <a target="_blank" rel="noreferrer" href={`https://maps.google.com/?q=${s.lat},${s.lng}`} className="inline-flex items-center gap-1 text-brand-600"><MapPin size={13} />Open GPS location</a>}</div>
                                 {s.message && <div className="sm:col-span-2 rounded-xl bg-ink/[.03] p-3">“{s.message}”</div>}
                                 {s.responder && <div className="sm:col-span-2 text-ink/60">Responder: <b>{s.responder.name}</b> since {dt(s.responded_at)}</div>}
+                                {map?.site?.boundary && <div className="-mx-5 sm:col-span-2"><LocatePanel sos={s} map={map} /></div>}
                                 <div className="flex gap-2 sm:col-span-2">
                                     {respond && s.status === 'active' && <button className="btn-danger" onClick={() => act(() => post(`sos/${s.id}`, { status: 'responding' }), 'Marked responding — caller notified', list.reload)}><Truck size={15} />I'm responding</button>}
                                     {(respond || s.user_id === user.id) && <button className="btn-outline" onClick={() => { const r = window.prompt(s.user_id === user.id && !respond ? 'Cancel SOS — reason?' : 'Resolution notes'); if (r !== null) act(() => post(`sos/${s.id}`, { status: 'resolved', resolution: r }), 'Resolved', list.reload); }}><Check size={15} />{s.user_id === user.id && !respond ? 'Cancel my SOS' : 'Resolve'}</button>}

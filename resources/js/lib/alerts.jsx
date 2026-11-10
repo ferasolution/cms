@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { get, post } from './api';
+import { useNavigate } from 'react-router-dom';
 import { useToast } from '../components/ui';
 
 const AlertCtx = createContext(null);
@@ -46,6 +47,7 @@ export function AlertProvider({ children, interval = 5000 }) {
     const since = useRef(0);
     const cursor = useRef(0);
     const toast = useToast();
+    const nav = useNavigate();
 
     const poll = useCallback(async () => {
         try {
@@ -58,7 +60,8 @@ export function AlertProvider({ children, interval = 5000 }) {
             if (!first && r.changed?.length) setChanges((c) => ({ n: c.n + 1, modules: r.changed }));
             if (fresh.length) {
                 setTick((t) => t + 1);
-                [...new Map(fresh.map((a) => [a.title, a])).values()].slice(0, 3).forEach((a) => toast(a.title, a.level, a.body));
+                [...new Map(fresh.map((a) => [a.title, a])).values()].slice(0, 3).forEach((a) => toast(a.title, a.level, a.body,
+                    a.house_id ? { label: '📍 Locate on map', onClick: () => nav(a.module === 'emergency' && a.link?.includes('sos=') ? '/map?' + a.link.split('?')[1] : '/map?house=' + a.house_id) } : a.link ? { label: 'Open', onClick: () => nav(a.link) } : undefined));
                 if (fresh.some((a) => a.level === 'danger')) {
                     ringAlarm(4);
                     setRinging(true);
@@ -69,7 +72,7 @@ export function AlertProvider({ children, interval = 5000 }) {
                 }
             }
         } catch { setState((s) => ({ ...s, online: false })); }
-    }, [toast]);
+    }, [toast, nav]);
 
     useEffect(() => {
         poll();

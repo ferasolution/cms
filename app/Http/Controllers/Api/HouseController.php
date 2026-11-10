@@ -87,6 +87,7 @@ class HouseController extends Controller
         $houses = House::orderBy('id')->get()->map(fn (House $h) => [
             'id' => $h->id,
             'label' => $h->label,
+            'house_no' => $h->house_no,
             'block' => $h->block,
             'series' => $h->block,
             'street' => $h->street,
