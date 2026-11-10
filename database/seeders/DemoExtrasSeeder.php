@@ -129,5 +129,8 @@ class DemoExtrasSeeder extends Seeder
             SosAlert::create(['user_id' => $r->id, 'house_id' => $r->house_id, 'type' => 'medical', 'message' => 'Elderly father fainted', 'status' => 'resolved', 'responder_id' => $sec?->id,
                 'responded_at' => now()->subDays(3)->addMinutes(2), 'resolved_at' => now()->subDays(3)->addMinutes(25), 'resolution' => 'Ambulance called, patient shifted to hospital.', 'created_at' => now()->subDays(3)]);
         }
+
+        // Place the demo community on the real Block 19 site plan (3D map).
+        \App\Services\SitePlan::apply(adoptExisting: true, demo: true);
     }
 }

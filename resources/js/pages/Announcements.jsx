@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Megaphone, Plus, Pin, Pencil, Trash2, Eye } from 'lucide-react';
-import { useList, PageHeader, Modal, Form, Badge, SearchBox, Select, Confirm, useAction, useToast, Spinner, Empty } from '../components/ui';
+import { useList, useGet, PageHeader, Modal, Form, Badge, SearchBox, Select, Confirm, useAction, useToast, Spinner, Empty } from '../components/ui';
 import { post, put, del, ago, title } from '../lib/api';
 import { useAuth } from '../lib/auth';
 import { useLive } from '../lib/alerts';
@@ -16,7 +16,8 @@ export default function Announcements() {
     const act = useAction();
     const toast = useToast();
     useLive('announcements', list.reload);
-    const blocks = ['A', 'B', 'C', 'D'];
+    const houses = useGet(manage ? 'houses?all=1' : null);
+    const blocks = [...new Set((houses.data || []).map((h) => h.block).filter(Boolean))].sort();
 
     return (
         <div className="mx-auto max-w-4xl">

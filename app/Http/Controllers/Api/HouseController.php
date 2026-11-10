@@ -23,6 +23,7 @@ class HouseController extends Controller
         'type' => 'required|in:house,flat,commercial,plot',
         'grid_x' => 'nullable|integer|min:0|max:200',
         'grid_y' => 'nullable|integer|min:0|max:200',
+        'map_x' => 'nullable|numeric', 'map_y' => 'nullable|numeric', 'map_w' => 'nullable|numeric|min:1', 'map_h' => 'nullable|numeric|min:1', 'map_angle' => 'nullable|numeric|min:-180|max:180',
         'floors' => 'nullable|integer|min:0|max:20',
         'monthly_maintenance' => 'nullable|numeric|min:0',
     ];
@@ -86,11 +87,13 @@ class HouseController extends Controller
             'id' => $h->id,
             'label' => $h->label,
             'block' => $h->block,
+            'series' => $h->block,
             'street' => $h->street,
             'owner' => $official || $h->id === $u->house_id ? $h->owner_name : null,
             'type' => $h->type,
             'x' => $h->grid_x,
             'y' => $h->grid_y,
+            'mx' => $h->map_x, 'my' => $h->map_y, 'mw' => $h->map_w, 'mh' => $h->map_h, 'ma' => $h->map_angle,
             'floors' => max(1, $h->floors),
             'mine' => $h->id === $u->house_id,
             'visitors' => (int) ($inside[$h->id] ?? 0),
@@ -114,6 +117,7 @@ class HouseController extends Controller
                 'events' => $events->count(), 'sos' => $showSos ? $sosRows->count() : 0,
             ],
             'feed' => $official ? \App\Models\ActivityLog::with('user:id,name')->latest('id')->limit(8)->get(['id', 'user_id', 'module', 'description', 'created_at']) : [],
+            'site' => \App\Models\Setting::get('site_plan'),
             'server_time' => now()->toIso8601String(),
         ];
     }

@@ -1,10 +1,10 @@
-import { Settings } from 'lucide-react';
+import { Settings, Map as MapIcon } from 'lucide-react';
 import { useGet, PageHeader, Form, Spinner, useToast } from '../components/ui';
-import { put } from '../lib/api';
+import { put, post } from '../lib/api';
 import { useAuth } from '../lib/auth';
 
 export default function SettingsPage() {
-    const { can, refresh } = useAuth();
+    const { can, refresh, isSuper } = useAuth();
     const s = useGet('settings');
     const toast = useToast();
     const edit = can('settings', true);
@@ -28,6 +28,13 @@ export default function SettingsPage() {
                     { name: 'emergency_contacts', label: 'Emergency contacts (one per line)', type: 'textarea', rows: 5, disabled: !edit },
                 ]} />
             </div>
+            {isSuper && (
+                <div className="card mt-4 flex flex-wrap items-center gap-4 p-5">
+                    <MapIcon className="text-brand-600" />
+                    <div className="flex-1 text-sm"><div className="font-bold">3D map site plan — Gulistan-e-Jauhar Block 19</div><div className="text-ink/55">Places a household on every plot of the society plan (North 1–157, East 101–236, West blocks). Existing houses keep their data; missing plots are created empty.</div></div>
+                    <button className="btn-outline" onClick={async () => { if (!window.confirm('Load the Block 19 site plan into the 3D map?')) return; try { const r = await post('settings/site-plan'); toast(`Site plan loaded — ${r.plots} plots, ${r.created} new houses`); } catch (e) { toast(e.message, 'error'); } }}>Load site plan</button>
+                </div>
+            )}
         </div>
     );
 }

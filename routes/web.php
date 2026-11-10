@@ -26,6 +26,7 @@ Route::prefix('api')->group(function () {
         Route::get('search', Api\SearchController::class);
         Route::get('settings', [Api\SettingsController::class, 'show']);
         Route::put('settings', [Api\SettingsController::class, 'update']);
+        Route::post('settings/site-plan', [Api\SettingsController::class, 'applySitePlan']);
 
         Route::get('map', [Api\HouseController::class, 'map']);
         Route::apiResource('houses', Api\HouseController::class);

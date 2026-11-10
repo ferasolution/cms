@@ -33,4 +33,14 @@ class SettingsController extends Controller
 
         return $all;
     }
+
+    /** Load the Block 19 site plan: stores the plan and places a house on every plot (existing labels are kept). */
+    public function applySitePlan(Request $request)
+    {
+        abort_unless($request->user()->isSuperAdmin(), 403, 'Only a Super Admin can load a site plan.');
+        $r = \App\Services\SitePlan::apply();
+        Activity::log('settings', 'site_plan', "Loaded Block 19 site plan — {$r['plots']} plots ({$r['created']} new houses)");
+
+        return $r;
+    }
 }

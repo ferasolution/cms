@@ -282,7 +282,7 @@ class PortalTest extends TestCase
         $this->actingAs($this->as('guard'))->getJson('/api/alerts')->assertSuccessful()->assertJsonCount(1, 'sos');
         $this->actingAs($this->as('guard'))->postJson('/api/sos/'.$sos->json('id'), ['status' => 'responding'])->assertSuccessful();
         $this->actingAs($resident)->getJson('/api/sos')->assertSuccessful()->assertJsonStructure(['data', 'contacts']);
-        $this->actingAs($this->admin)->getJson('/api/map')->assertSuccessful()->assertJsonPath('stats.sos', 1);
+        $this->actingAs($this->admin)->getJson('/api/map')->assertSuccessful()->assertJsonPath('stats.sos', 1)->assertJsonPath('site.name', 'Gulistan-e-Jauhar Block 19')->assertJsonCount(397, 'houses');
 
         $a = $this->actingAs($this->as('manager'))->postJson('/api/announcements', ['title' => 'Water off', 'body' => 'Sat', 'category' => 'utility', 'priority' => 'important', 'audience' => 'residents'])->assertSuccessful();
         $this->actingAs($resident)->getJson('/api/announcements')->assertSuccessful()->assertJsonFragment(['title' => 'Water off']);
@@ -290,7 +290,7 @@ class PortalTest extends TestCase
         $this->actingAs($resident)->postJson('/api/announcements/'.$a->json('id').'/read')->assertSuccessful();
         $this->actingAs($resident)->postJson('/api/announcements', ['title' => 'x', 'body' => 'y', 'category' => 'general', 'priority' => 'normal', 'audience' => 'all'])->assertForbidden();
 
-        $this->actingAs($this->admin)->getJson('/api/search?q=A-101')->assertSuccessful()->assertJsonFragment(['type' => 'House']);
+        $this->actingAs($this->admin)->getJson('/api/search?q=N-1')->assertSuccessful()->assertJsonFragment(['type' => 'House']);
         $this->actingAs($resident)->getJson('/api/search?q=Ahmed')->assertSuccessful()->assertJsonMissing(['type' => 'House']);
         $s = $this->actingAs($this->admin)->getJson('/api/settings')->assertSuccessful()->json();
         $this->actingAs($this->admin)->putJson('/api/settings', array_merge($s, ['community_name' => 'Green Valley']))->assertSuccessful()->assertJsonPath('community_name', 'Green Valley');

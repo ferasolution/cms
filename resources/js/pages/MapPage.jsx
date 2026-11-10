@@ -6,6 +6,7 @@ import { Map as MapIcon, X, Users, MessageSquareWarning, Wallet, CalendarHeart, 
 import { useGet, Spinner, Badge, Tabs } from '../components/ui';
 import { get, dt, money, title, ago } from '../lib/api';
 import { useAuth } from '../lib/auth';
+import SiteScene, { housePos } from '../components/SiteScene';
 import { useLive } from '../lib/alerts';
 
 const GAP = 2.4;
@@ -264,12 +265,13 @@ function Gate({ z, night }) {
     );
 }
 
-function FlyTo({ target, controls }) {
+function FlyTo({ target, controls, near }) {
     useEffect(() => {
         if (!target || !controls.current) return;
         const [x, z] = target;
-        controls.current.setLookAt(x + 7, 9, z + 10, x, 0.8, z, true);
-    }, [target, controls]);
+        if (near) controls.current.setLookAt(x + 9, 13, z + 15, x, 0.6, z, true);
+        else controls.current.setLookAt(x + 7, 9, z + 10, x, 0.8, z, true);
+    }, [target, controls, near]);
     return null;
 }
 
@@ -347,6 +349,25 @@ function Scene({ data, layer, selected, onSelect, sun, walkers, setWalkers, fly,
     );
 }
 
+function SiteWorld({ data, layer, selected, onSelect, sun, walkers, setWalkers, fly, autoRotate }) {
+    const controls = useRef();
+    return (
+        <>
+            <Sky sunPosition={sun.sun} turbidity={sun.night ? 20 : 6} rayleigh={sun.night ? 0.2 : sun.dusk ? 3 : 1.2} mieCoefficient={0.006} mieDirectionalG={0.85} distance={4000} />
+            {sun.night && <Stars radius={260} depth={60} count={3000} factor={6} fade speed={0.6} />}
+            <fog attach="fog" args={[sun.night ? '#0a1424' : sun.dusk ? '#f0c9a0' : '#cfe4ea', 110, 320]} />
+            <ambientLight intensity={sun.night ? 0.42 : sun.ambient} />
+            <hemisphereLight args={[sun.night ? '#4a5f96' : '#fdf6e8', '#3f6f5a', sun.night ? 0.55 : 0.45]} />
+            <directionalLight position={sun.night ? [-60, 80, 40] : sun.sun.map((v) => v * 1.6)} intensity={sun.light} color={sun.color} castShadow shadow-mapSize={[4096, 4096]}
+                shadow-camera-left={-80} shadow-camera-right={80} shadow-camera-top={60} shadow-camera-bottom={-60} shadow-camera-far={300} shadow-bias={-0.0003} />
+            <SiteScene data={data} layer={layer} selected={selected} onSelect={onSelect} night={sun.night} walkers={walkers} setWalkers={setWalkers} />
+            <CameraControls ref={controls} makeDefault minDistance={4} maxDistance={220} maxPolarAngle={Math.PI / 2.15} smoothTime={0.6} />
+            <FlyTo target={fly} controls={controls} near />
+            <AutoRotate enabled={autoRotate} controls={controls} />
+        </>
+    );
+}
+
 function HousePanel({ id, onClose }) {
     const [d, setD] = useState(null);
     useEffect(() => { setD(null); get(`houses/${id}`).then(setD).catch(() => setD({ error: true })); }, [id]);
@@ -409,12 +430,14 @@ export default function MapPage() {
         if (id && data?.houses) { const h = data.houses.find((x) => x.id === id); if (h) setSelected(h); }
     }, [data?.houses?.length]); // eslint-disable-line
 
+    const siteMode = !!(data?.site && data.houses?.some((h) => h.mx != null));
     const housesPos = useMemo(() => {
         if (!data?.houses?.length) return {};
+        if (siteMode) return Object.fromEntries(data.houses.filter((h) => h.mx != null).map((h) => [h.id, housePos(data.site, h)]));
         const xs = data.houses.map((h) => h.x), ys = data.houses.map((h) => h.y);
         const cx = ((Math.min(...xs) + Math.max(...xs)) / 2) * GAP, cz = ((Math.min(...ys) + Math.max(...ys)) / 2) * GAP;
         return Object.fromEntries(data.houses.map((h) => [h.id, [h.x * GAP - cx, h.y * GAP - cz]]));
-    }, [data?.houses]);
+    }, [data?.houses, siteMode]); // eslint-disable-line
     useEffect(() => { if (selected) setFly(housesPos[selected.id]); }, [selected, housesPos]);
 
     const st = data?.stats || {};
@@ -428,7 +451,8 @@ export default function MapPage() {
     const findHouse = (e) => {
         e.preventDefault();
         const q = search.trim().toUpperCase().replace(/\s/g, '');
-        const h = data?.houses.find((x) => x.label.toUpperCase().replace(/\s/g, '') === q || x.label.toUpperCase().endsWith(q) || (x.owner || '').toUpperCase().includes(q));
+        const h = data?.houses.find((x) => x.label.toUpperCase().replace(/\s/g, '') === q) || data?.houses.find((x) => x.label.toUpperCase().endsWith('-' + q))
+            || data?.houses.find((x) => (x.owner || '').toUpperCase().includes(q));
         if (h) setSelected(h);
     };
     const toggleFull = () => { if (!document.fullscreenElement) { wrap.current?.requestFullscreen?.(); setFull(true); } else { document.exitFullscreen?.(); setFull(false); } };
@@ -438,19 +462,21 @@ export default function MapPage() {
             <div className="mb-3 flex flex-wrap items-end justify-between gap-3">
                 <div className="flex items-center gap-3">
                     <div className="grid size-11 place-items-center rounded-2xl bg-brand-600 text-white shadow-sm"><MapIcon size={22} /></div>
-                    <div><h1 className="text-xl font-bold tracking-tight sm:text-2xl">3D Community Map</h1><p className="text-sm text-ink/55">Live — gate movements walk in, beacons show what's happening, SOS lights up red.</p></div>
+                    <div><h1 className="text-xl font-bold tracking-tight sm:text-2xl">3D Community Map{data?.site ? <span className="ml-2 text-base font-semibold text-ink/45">· {data.site.name}</span> : null}</h1><p className="text-sm text-ink/55">Live — real plot layout, gate movements walk in, beacons show what's happening, SOS lights up red.</p></div>
                 </div>
                 <form onSubmit={findHouse} className="flex gap-2">
-                    <label className="relative"><Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-ink/35" /><input className="input w-44 pl-9" placeholder="Fly to house A-101" value={search} onChange={(e) => setSearch(e.target.value)} /></label>
+                    <label className="relative"><Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-ink/35" /><input className="input w-44 pl-9" placeholder="Plot e.g. N-143 or 143" value={search} onChange={(e) => setSearch(e.target.value)} /></label>
                     <button className="btn-outline">Go</button>
                 </form>
             </div>
             <Tabs value={layer} onChange={setLayer} tabs={Object.entries(LAYERS).filter(([, l]) => !(l.official && isResident) && !(l.finance && !can('finance', true))).map(([key, l]) => ({ key, label: l.label, icon: l.icon, count: { visitors: st.inside, complaints: st.complaints, events: st.events }[key] }))} />
             <div ref={wrap} className="card relative min-h-[520px] flex-1 overflow-hidden bg-[#0b1514]">
                 {!data ? <div className="grid h-full place-items-center"><Spinner /></div> : !data.houses.length ? <div className="grid h-full place-items-center text-sm text-white/60">Add houses with map positions to see the community map.</div> : (
-                    <Canvas shadows dpr={[1, 2]} camera={{ position: [0, 34, 42], fov: 42 }} gl={{ antialias: true, toneMapping: THREE.ACESFilmicToneMapping }}>
+                    <Canvas shadows dpr={[1, 2]} camera={siteMode ? { position: [-8, 62, 70], fov: 42, far: 2000 } : { position: [0, 34, 42], fov: 42 }} gl={{ antialias: true, toneMapping: THREE.ACESFilmicToneMapping }}>
                         <Suspense fallback={null}>
-                            <Scene data={data} layer={layer} selected={selected} onSelect={(h) => setSelected(h)} sun={sun} walkers={walkers} setWalkers={setWalkers} fly={fly} autoRotate={autoRotate} />
+                            {siteMode
+                                ? <SiteWorld data={data} layer={layer} selected={selected} onSelect={(h) => setSelected(h)} sun={sun} walkers={walkers} setWalkers={setWalkers} fly={fly} autoRotate={autoRotate} />
+                                : <Scene data={data} layer={layer} selected={selected} onSelect={(h) => setSelected(h)} sun={sun} walkers={walkers} setWalkers={setWalkers} fly={fly} autoRotate={autoRotate} />}
                         </Suspense>
                     </Canvas>
                 )}
