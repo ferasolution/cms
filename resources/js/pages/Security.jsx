@@ -1,5 +1,11 @@
 import { useEffect, useState } from 'react';
-import { ShieldCheck, Plus, LogOut, Video, Camera, Clock, Users, QrCode, ScanLine, Car, Ban, AlertOctagon, Check, X, BellRing, Hourglass, Share2 } from 'lucide-react';
+import { ShieldCheck, Plus, LogOut, LogIn, Video, Camera, Clock, Users, QrCode, ScanLine, Car, Ban, AlertOctagon, Check, X, BellRing, Hourglass, Share2, Printer, Timer, Siren, Cctv, Footprints, CalendarClock, HardHat, ShieldAlert } from 'lucide-react';
+import GateSlip from './security/GateSlip';
+import { TemporaryTab, VehicleRegister, EmergencyTab } from './security/GateTabs';
+import StaffTab from './security/StaffTab';
+import CctvTab, { FootageLinks } from './security/CctvTab';
+import PatrolTab from './security/PatrolTab';
+import ShiftsTab from './security/ShiftsTab';
 import { useList, useGet, PageHeader, Table, Modal, Form, Badge, SearchBox, Select, Stat, FileLink, Confirm, useAction, useHouses, useToast, Tabs, useTab, urlParam, QrImage, QrScanner } from '../components/ui';
 import { post, put, del, dt, duration, title } from '../lib/api';
 import { useAuth } from '../lib/auth';
@@ -43,13 +49,15 @@ export default function Security() {
     const watch = useList(tab === 'watchlist' ? 'gate/watchlist' : null);
     const incidents = useList(tab === 'incidents' ? 'gate/incidents' : null);
     const stats = useGet('visitors/stats');
+    const ov = useGet('security/overview');
+    const gates = ov.data?.gates?.length ? ov.data.gates : ['Main Gate', 'Gate 2'];
     const houses = useHouses(!isResident);
     const [modal, setModal] = useState(null);
     const [view, setView] = useState(null);
     const [scan, setScan] = useState(null);
     const act = useAction();
     const toast = useToast();
-    const refresh = () => { list.reload(); stats.reload(); passes.reload(); vehicles.reload(); watch.reload(); incidents.reload(); };
+    const refresh = () => { list.reload(); stats.reload(); ov.reload(); passes.reload(); vehicles.reload(); watch.reload(); incidents.reload(); };
     useLive('security', refresh);
 
     const entryFields = [
@@ -59,21 +67,23 @@ export default function Security() {
         { name: 'purpose', label: 'Purpose of visit', required: true, half: true },
         { name: 'cnic', label: 'CNIC', half: true, placeholder: '42101-1234567-1' },
         { name: 'phone', label: 'Phone', half: true },
-        { name: 'vehicle_no', label: 'Vehicle no.', half: true },
+        { name: 'vehicle_type', label: 'Vehicle type', type: 'select', options: ['car', 'bike', 'rickshaw', 'van', 'suv', 'truck', 'other'], half: true, placeholder: 'On foot' },
+        { name: 'vehicle_no', label: 'Vehicle no.', half: true, show: (v) => !!v.vehicle_type },
         { name: 'persons', label: 'Persons', type: 'number', min: 1, default: 1, half: true },
-        { name: 'gate', label: 'Gate', type: 'select', options: ['Main Gate', 'Gate 2', 'Service Gate'], default: 'Main Gate', half: true },
+        { name: 'gate', label: 'Gate', type: 'select', options: gates, default: gates[0], half: true },
         { name: 'stay_minutes', label: 'Allowed stay (minutes)', type: 'number', min: 5, half: true, placeholder: 'default from settings' },
         { name: 'request_approval', label: 'Ask the household to approve before entry', type: 'checkbox', default: true, show: (v) => v.house_id && !['emergency', 'staff'].includes(v.category) && !modal?.id && !v.pass_code },
         { name: 'pass_code', label: 'QR pass code (if visitor has one)', placeholder: 'VP-XXXXXX', show: () => !modal?.id },
         { name: 'photo', label: 'Photo', type: 'file', accept: 'image/*', capture: 'environment', half: true, placeholder: 'Take / choose photo' },
         { name: 'video', label: 'Video clip', type: 'file', accept: 'video/*', capture: 'environment', half: true, placeholder: 'Record (max 50MB)' },
         { name: 'remarks', label: 'Remarks', type: 'textarea', rows: 2 },
+        { name: 'print_slip', label: 'Print the gate slip with QR right away', type: 'checkbox', default: true, show: () => !modal?.id },
     ];
 
     const save = async (v) => {
         const r = modal?.id ? await post(`visitors/${modal.id}`, v) : await post('visitors', v);
         toast(modal?.id ? 'Visitor updated' : r.status === 'awaiting' ? 'Household notified — waiting for approval' : 'Entry recorded', r.watchlist_hit ? 'warning' : 'success', r.watchlist_hit ? 'Watchlist match — supervisor alerted' : undefined);
-        setModal(null);
+        setModal(modal?.id ? null : { mode: 'slip', visitor: r, print: !!v.print_slip });
         refresh();
     };
     const respond = (v, decision) => act(() => post(`visitors/${v.id}/respond`, { decision, note: decision === 'reject' ? window.prompt('Reason (optional)') || '' : '' }), decision === 'approve' ? 'Approved — gate informed' : 'Rejected — gate informed', refresh);
@@ -81,9 +91,13 @@ export default function Security() {
 
     const s = stats.data;
     const tabs = isResident
-        ? [{ key: 'approvals', label: 'At the gate', icon: BellRing, count: s?.awaiting }, { key: 'log', label: 'My visitors', icon: Users }, { key: 'passes', label: 'QR passes', icon: QrCode }, { key: 'vehicles', label: 'My vehicles', icon: Car }]
-        : [{ key: 'gate', label: 'Inside now', icon: Users, count: s?.inside }, { key: 'approvals', label: 'Awaiting approval', icon: Hourglass, count: s?.awaiting }, { key: 'log', label: 'Gate log', icon: Clock },
-            { key: 'passes', label: 'QR passes', icon: QrCode }, manage && { key: 'scan', label: 'Scanner', icon: ScanLine }, { key: 'vehicles', label: 'Vehicles', icon: Car },
+        ? [{ key: 'approvals', label: 'At the gate', icon: BellRing, count: s?.awaiting }, { key: 'log', label: 'My visitors', icon: Users }, { key: 'temporary', label: 'Time limits', icon: Timer, count: ov.data?.temporary },
+            { key: 'passes', label: 'QR passes', icon: QrCode }, { key: 'staff', label: 'My staff', icon: HardHat, count: ov.data?.staff_inside }, { key: 'vehicles', label: 'My vehicles', icon: Car }]
+        : [{ key: 'gate', label: 'Inside now', icon: Users, count: s?.inside }, { key: 'approvals', label: 'Awaiting approval', icon: Hourglass, count: s?.awaiting }, manage && { key: 'scan', label: 'Scanner', icon: ScanLine },
+            { key: 'temporary', label: 'Temporary access', icon: Timer, count: ov.data?.temporary }, { key: 'log', label: 'Gate log', icon: Clock }, { key: 'passes', label: 'QR passes', icon: QrCode },
+            { key: 'vehicles', label: 'Vehicles', icon: Car, count: ov.data?.vehicles_inside }, { key: 'staff', label: 'Domestic staff', icon: HardHat, count: ov.data?.staff_pending },
+            manage && { key: 'emergency', label: 'Emergency access', icon: Siren, count: ov.data?.emergency_inside }, manage && { key: 'cctv', label: 'CCTV', icon: Cctv },
+            manage && { key: 'patrol', label: 'Patrol', icon: Footprints }, manage && { key: 'shifts', label: 'Shifts', icon: CalendarClock },
             manage && { key: 'watchlist', label: 'Blacklist', icon: Ban }, manage && { key: 'incidents', label: 'Incidents', icon: AlertOctagon }];
 
     const visitorCols = [
@@ -101,6 +115,7 @@ export default function Security() {
                     <button className="btn-primary btn-sm" onClick={() => respond(v, 'approve')}><Check size={13} />{isResident ? 'Approve' : 'Admit'}</button>
                     <button className="btn-ghost btn-sm text-red-600" onClick={() => respond(v, 'reject')}><X size={13} /></button>
                 </>}
+                {v.token && v.status !== 'rejected' && <button className="btn-ghost btn-sm" title="Gate slip" onClick={() => setModal({ mode: 'slip', visitor: v })}><Printer size={13} /></button>}
                 {manage && v.status === 'inside' && <button className="btn-outline btn-sm" onClick={() => act(() => post(`visitors/${v.id}/checkout`), `${v.name} checked out`, refresh)}><LogOut size={13} />Exit</button>}
             </div>
         ) },
@@ -108,10 +123,11 @@ export default function Security() {
 
     return (
         <div className="mx-auto max-w-7xl">
-            <PageHeader icon={ShieldCheck} title={isResident ? 'My Gate & Visitors' : 'Security Management'} subtitle={isResident ? 'Approve visitors at the gate, pre-register guests with QR passes, register your vehicles.' : 'Gate approvals, QR passes, stay tracking, blacklist, vehicles and incidents — live.'}>
+            <PageHeader icon={ShieldCheck} title={isResident ? 'My Gate & Visitors' : 'Security Management'} subtitle={isResident ? 'Approve visitors at the gate, give or limit their time, pre-register guests, register your staff and vehicles.' : 'Walk-in entries with QR slips, approvals, time limits, vehicles, domestic staff, emergency access, CCTV, patrol and guard shifts — live.'}>
                 {isResident && <button className="btn-primary" onClick={() => setModal({ mode: 'pass' })}><QrCode size={16} />Pre-register visitor</button>}
                 {manage && <button className="btn-outline" onClick={() => { setTab('scan'); }}><ScanLine size={16} />Scan</button>}
-                {manage && <button className="btn-primary" onClick={() => setModal({ mode: 'entry' })}><Plus size={16} />New entry</button>}
+                {manage && <button className="btn-danger" onClick={() => setTab('emergency')}><Siren size={16} />Emergency</button>}
+                {manage && <button className="btn-primary" onClick={() => setModal({ mode: 'entry' })}><Plus size={16} />Walk-in entry</button>}
             </PageHeader>
 
             <div className="mb-5 grid grid-cols-2 gap-3 lg:grid-cols-4">
@@ -120,6 +136,14 @@ export default function Security() {
                 <Stat label="Overstaying" value={s?.overstay ?? '—'} icon={Hourglass} tone={s?.overstay ? 'red' : 'brand'} />
                 <Stat label="Avg. stay (30 days)" value={s ? (s.avg_stay_minutes < 60 ? `${s.avg_stay_minutes}m` : `${Math.floor(s.avg_stay_minutes / 60)}h ${s.avg_stay_minutes % 60}m`) : '—'} icon={Clock} tone="blue" />
             </div>
+            {ov.data && !isResident && (
+                <div className="-mt-2 mb-5 flex flex-wrap gap-2 text-xs font-semibold">
+                    {[[Car, `${ov.data.vehicles_inside} vehicles inside`, 'vehicles'], [HardHat, `${ov.data.staff_inside} staff inside`, 'staff'], [ShieldAlert, `${ov.data.on_duty ?? 0} guard${ov.data.on_duty === 1 ? "" : "s"} on duty`, 'shifts'],
+                        [Footprints, ov.data.patrol_coverage == null ? 'Patrol not set up' : `Patrol coverage ${ov.data.patrol_coverage}%`, 'patrol'], [Cctv, `${ov.data.cameras ?? 0} cameras`, 'cctv']].map(([I, l, t]) => (
+                        <button key={t} onClick={() => setTab(t)} className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 ring-1 ring-ink/10 hover:bg-ink/[.04] ${t === 'patrol' && ov.data.patrol_coverage != null && ov.data.patrol_coverage < 70 ? 'bg-red-50 text-red-700' : t === 'shifts' && !ov.data.on_duty ? 'bg-red-50 text-red-700' : 'bg-surface'}`}><I size={13} />{l}</button>
+                    ))}
+                </div>
+            )}
 
             <Tabs value={tab} onChange={(t) => { setTab(t); list.set({ status: t === 'approvals' ? 'awaiting' : t === 'gate' ? 'inside' : '' }); }} tabs={tabs} />
 
@@ -180,28 +204,53 @@ export default function Security() {
                 <div className="grid gap-5 lg:grid-cols-2">
                     <div className="card p-5">
                         <div className="mb-1 font-bold">Gate scanner</div>
-                        <p className="mb-3 text-sm text-ink/55">Scan a visitor QR pass, an event pass, or type a number plate. USB / Bluetooth scanners work too — just scan into the box.</p>
-                        <QrScanner onResult={doScan} placeholder="VP-… / EVT-… / plate" />
+                        <p className="mb-3 text-sm text-ink/55">One box for everything: <b>exit slip</b> (GV-…), visitor pass (VP-…), <b>staff card</b> (DS-…), event pass (EVT-…) or a <b>number plate</b>. USB / Bluetooth scanners work too.</p>
+                        <QrScanner onResult={doScan} placeholder="GV-… / VP-… / DS-… / plate" />
+                        <div className="mt-4 grid grid-cols-2 gap-2">
+                            <button className="btn-primary py-3" onClick={() => setModal({ mode: 'entry' })}><Plus size={15} />Walk-in entry</button>
+                            <button className="btn-danger py-3" onClick={() => setTab('emergency')}><Siren size={15} />Emergency</button>
+                        </div>
                     </div>
                     <div className={`card p-5 ${scan ? (scan.error ? 'ring-2 ring-red-400' : scan.valid ? 'ring-2 ring-emerald-500' : 'ring-2 ring-red-500') : ''}`}>
                         {!scan && <div className="grid h-full place-items-center py-10 text-sm text-ink/40"><ScanLine size={36} className="mb-2" />Result appears here</div>}
                         {scan?.error && <div className="text-center"><div className="text-4xl">❓</div><div className="mt-2 font-bold text-red-600">{scan.error}</div></div>}
                         {scan && !scan.error && (
                             <div className="space-y-3 text-sm">
-                                <div className={`rounded-2xl p-4 text-center text-lg font-bold ${scan.valid ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-700'}`}>{scan.valid ? '✓ ALLOW ENTRY' : '✗ DO NOT ALLOW'}<div className="text-xs font-semibold">{scan.reason}</div></div>
+                                <div className={`rounded-2xl p-4 text-center text-lg font-bold ${scan.valid ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-700'}`}>{scan.kind === 'exit' ? (scan.valid ? '✓ EXIT SLIP VALID' : '✗ SLIP NOT ACTIVE') : scan.kind === 'staff' && scan.inside ? '↩ STAFF LEAVING' : scan.valid ? '✓ ALLOW ENTRY' : '✗ DO NOT ALLOW'}<div className="text-xs font-semibold">{scan.reason}</div></div>
                                 {scan.pass && <div><b>{scan.pass.visitor_name}</b> · {title(scan.pass.category)} → House {scan.pass.house?.label}<div className="text-xs text-ink/55">Registered by {scan.pass.creator?.name} · {scan.pass.persons} person(s){scan.pass.vehicle_no ? ' · ' + scan.pass.vehicle_no : ''}</div>
                                     {scan.valid && <button className="btn-primary mt-3 w-full" onClick={() => setModal({ mode: 'entry', name: scan.pass.visitor_name, category: scan.pass.category, house_id: scan.pass.house_id, purpose: scan.pass.purpose || 'Pre-registered visit', phone: scan.pass.phone, cnic: scan.pass.cnic, vehicle_no: scan.pass.vehicle_no, persons: scan.pass.persons, pass_code: scan.pass.code })}>Record entry</button>}</div>}
                                 {scan.event && <div><b>{scan.event.title}</b> · {scan.event.venue}<div className="text-xs text-ink/55">Host {scan.event.house?.label} {scan.event.requester?.name} · {scan.event.guests} guests expected · {scan.event.checked_in} checked in</div>
                                     {scan.valid && <button className="btn-outline mt-3 w-full" onClick={() => post('gate/scan', { code: scan.event.code, checkin: true, guests: Number(window.prompt('How many guests entering?', '1') || 1) }).then((r) => { setScan(r); toast('Guests checked in'); })}>Check in guests</button>}</div>}
-                                {scan.kind === 'vehicle' && <div>{scan.vehicle ? <><b>{scan.vehicle.plate}</b> · {scan.vehicle.make} {scan.vehicle.color}<div className="text-xs text-ink/55">Resident vehicle · House {scan.vehicle.house?.label} · slot {scan.vehicle.parking_slot || '—'}</div></> : 'Not a registered resident vehicle.'}</div>}
+                                {scan.kind === 'vehicle' && <div>{scan.vehicle ? <><b>{scan.vehicle.plate}</b> · {scan.vehicle.make} {scan.vehicle.color}<div className="text-xs text-ink/55">Resident vehicle · House {scan.vehicle.house?.label} · slot {scan.vehicle.parking_slot || '—'}</div></> : <><b>{scan.plate}</b> — not a registered resident vehicle.</>}
+                                    <div className="mt-1 text-xs text-ink/55">{scan.inside_log ? `Inside since ${dt(scan.inside_log.entry_at)}` : 'Not inside right now'}</div>
+                                    <button className="btn-primary mt-3 w-full" onClick={() => act(() => post('gate/vehicle-logs', { plate: scan.vehicle?.plate || scan.plate, kind: scan.vehicle ? 'resident' : 'visitor', gate: gates[0] }), scan.inside_log ? 'Vehicle exit recorded' : 'Vehicle entry recorded', () => { setScan(null); refresh(); })}>{scan.inside_log ? <><LogOut size={15} />Record exit</> : <><LogIn size={15} />Record entry</>}</button></div>}
+                                {scan.kind === 'exit' && <div>
+                                    <div className="text-lg font-bold">{scan.visitor.name}</div>
+                                    <div className="text-xs text-ink/55">{[scan.visitor.house && 'Plot ' + scan.visitor.house.label, title(scan.visitor.category), scan.visitor.vehicle_no, 'in ' + (scan.visitor.entry_at ? dt(scan.visitor.entry_at) : '—'), scan.visitor.entry_at && 'stayed ' + duration(scan.visitor.entry_at)].filter(Boolean).join(' · ')}</div>
+                                    {scan.overstay && <div className="mt-2 rounded-xl bg-amber-50 p-2 text-xs font-semibold text-amber-800">Overstayed — note it in the log if needed.</div>}
+                                    {scan.valid && <button className="btn-primary mt-3 w-full py-3 text-base" onClick={() => act(() => post(`visitors/${scan.visitor.id}/checkout`, { scanned: true, gate: gates[0] }), `${scan.visitor.name} left — household informed`, () => { setScan(null); refresh(); })}><LogOut size={16} />Confirm exit</button>}</div>}
+                                {scan.kind === 'staff' && <div className="flex gap-3">
+                                    {scan.staff.photo_path ? <img src={`/files/${scan.staff.photo_path}`} className="h-20 w-16 rounded-lg object-cover" alt="" /> : <div className="grid h-20 w-16 place-items-center rounded-lg bg-ink/5 text-2xl">👤</div>}
+                                    <div className="flex-1"><div className="font-bold">{scan.staff.name}</div><div className="text-xs text-ink/55">{title(scan.staff.type)} · Plot {scan.staff.house?.label} · {title(scan.staff.verification)}</div>
+                                        <div className="text-xs text-ink/55">{scan.inside ? 'Inside now' : 'Outside'}</div>
+                                        {(scan.valid || scan.inside) && <button className={`mt-2 w-full ${scan.inside ? 'btn-outline' : 'btn-primary'}`} onClick={() => act(() => post(`staff/${scan.staff.id}/move`, { gate: gates[0] }), scan.inside ? 'Staff checked out' : 'Staff checked in — household informed', () => { setScan(null); refresh(); })}>{scan.inside ? <><LogOut size={14} />Check out</> : <><LogIn size={14} />Check in</>}</button>}</div></div>}
                             </div>
                         )}
                     </div>
                 </div>
             )}
 
+            {tab === 'temporary' && <TemporaryTab manage={manage} isResident={isResident} />}
+            {tab === 'staff' && <StaffTab manage={manage} approve={approve('security')} isResident={isResident} houses={houses} gates={gates} />}
+            {tab === 'emergency' && manage && <EmergencyTab manage={manage} houses={houses} gates={gates} />}
+            {tab === 'cctv' && manage && <CctvTab approve={approve('security')} gates={gates} />}
+            {tab === 'patrol' && manage && <PatrolTab />}
+            {tab === 'shifts' && manage && <ShiftsTab />}
+
             {tab === 'vehicles' && (
                 <>
+                    <VehicleRegister manage={manage} isResident={isResident} houses={houses} gates={gates} />
+                    <div className="mb-2 font-bold">Registered vehicles (stickers)</div>
                     <div className="mb-3 flex flex-wrap gap-2">
                         <SearchBox value={vehicles.params.q} onChange={(q) => vehicles.set({ q })} placeholder="Plate, make, sticker…" />
                         <button className="btn-primary ml-auto" onClick={() => setModal({ mode: 'vehicle' })}><Car size={15} />Register vehicle</button>
@@ -250,6 +299,12 @@ export default function Security() {
             <Modal open={modal?.mode === 'entry'} onClose={() => setModal(null)} title={modal?.id ? 'Edit visitor' : 'New gate entry'} wide>
                 {modal?.mode === 'entry' && <Form fields={entryFields} initial={modal} onSubmit={save} submitLabel={modal.id ? 'Update' : 'Record'} />}
             </Modal>
+            <Modal open={modal?.mode === 'slip'} onClose={() => setModal(null)} title="Gate slip">
+                {modal?.mode === 'slip' && <GateSlip initial={modal.visitor} autoPrint={modal.print} />}
+            </Modal>
+            <Modal open={modal?.mode === 'footage'} onClose={() => setModal(null)} title="CCTV footage">
+                {modal?.mode === 'footage' && <FootageLinks at={modal.at} gate={modal.gate} />}
+            </Modal>
             <Modal open={modal?.mode === 'pass'} onClose={() => setModal(null)} title="Pre-register a visitor">
                 {modal?.mode === 'pass' && <Form submitLabel="Create QR pass" onSubmit={async (v) => { const p = await post('gate/passes', v); toast('QR pass created'); setTab('passes'); refresh(); setModal({ mode: 'showpass', pass: p }); }}
                     initial={{ valid_from: local(new Date()), valid_until: local(new Date(Date.now() + 6 * 3600e3)) }} fields={[
@@ -296,6 +351,7 @@ export default function Security() {
                         <p className="whitespace-pre-line rounded-xl bg-ink/[.03] p-3">{modal.description}</p>
                         {modal.photo_path && <img src={`/files/${modal.photo_path}`} className="max-h-56 rounded-xl" alt="" />}
                         {modal.action_taken && <div className="rounded-xl bg-emerald-50 p-3"><b>Action:</b> {modal.action_taken}</div>}
+                        <details className="rounded-xl bg-ink/[.03] p-3"><summary className="cursor-pointer text-sm font-semibold">📹 CCTV around this time</summary><div className="mt-2"><FootageLinks at={modal.created_at} /></div></details>
                         {modal.status !== 'resolved' && <Form initial={{ status: modal.status === 'open' ? 'investigating' : 'resolved' }} submitLabel="Update" onSubmit={async (v) => { await put(`gate/incidents/${modal.id}`, v); toast('Updated'); setModal(null); refresh(); }} fields={[
                             { name: 'status', label: 'Status', type: 'select', options: ['open', 'investigating', 'resolved'], required: true }, { name: 'action_taken', label: 'Action taken', type: 'textarea', rows: 2 },
                         ]} />}
@@ -308,7 +364,7 @@ export default function Security() {
                         <div className="grid grid-cols-2 gap-3">
                             {[['Type', title(view.category)], ['House', view.house?.label], ['Purpose', view.purpose], ['CNIC', view.cnic], ['Phone', view.phone], ['Vehicle', view.vehicle_no], ['Persons', view.persons], ['Gate', view.gate],
                                 ['Status', title(view.status)], ['Arrived', dt(view.created_at)], ['Entered', view.entry_at ? dt(view.entry_at) : '—'], ['Allowed until', view.expected_exit_at ? dt(view.expected_exit_at) : '—'],
-                                ['Exit', view.exit_at ? dt(view.exit_at) : view.status === 'inside' ? 'Still inside' : '—'], ['Duration of stay', view.entry_at ? duration(view.entry_at, view.exit_at) : '—'], ['Decision by', view.responder?.name], ['Logged by', view.logger?.name]].map(([k, v]) => (
+                                ['Exit', view.exit_at ? dt(view.exit_at) + (view.exit_gate ? ' · ' + view.exit_gate : '') : view.status === 'inside' ? 'Still inside' : '—'], ['Slip', view.token], ['Vehicle type', title(view.vehicle_type || '')], ['Duration of stay', view.entry_at ? duration(view.entry_at, view.exit_at) : '—'], ['Decision by', view.responder?.name], ['Logged by', view.logger?.name]].map(([k, v]) => (
                                 <div key={k}><div className="text-[11px] font-semibold text-ink/45">{k}</div><div>{v || '—'}</div></div>
                             ))}
                         </div>
@@ -317,6 +373,9 @@ export default function Security() {
                         {view.photo_path && <img src={`/files/${view.photo_path}`} className="max-h-64 rounded-xl" alt="" />}
                         {view.video_path && <video src={`/files/${view.video_path}`} controls className="w-full rounded-xl bg-black" />}
                         <div className="flex flex-wrap gap-2">
+                            {view.token && <button className="btn-outline btn-sm" onClick={() => { setModal({ mode: 'slip', visitor: view }); setView(null); }}><Printer size={13} />Gate slip</button>}
+                            {manage && (view.entry_at || view.created_at) && <button className="btn-outline btn-sm" onClick={() => { setModal({ mode: 'footage', at: view.entry_at || view.created_at, gate: view.gate }); setView(null); }}><Cctv size={13} />CCTV at entry</button>}
+                            {manage && view.exit_at && <button className="btn-outline btn-sm" onClick={() => { setModal({ mode: 'footage', at: view.exit_at, gate: view.exit_gate || view.gate }); setView(null); }}><Cctv size={13} />CCTV at exit</button>}
                             {manage && <button className="btn-outline btn-sm" onClick={() => { setModal({ mode: 'entry', ...view, house_id: view.house_id || '' }); setView(null); }}><Camera size={13} />Edit / add media</button>}
                             {view.video_path && <FileLink path={view.video_path} label="Open video" />}
                             {approve('security') && <Confirm className="btn-ghost btn-sm text-red-600" message="Delete this visitor record?" onConfirm={() => act(() => del(`visitors/${view.id}`), 'Deleted', () => { setView(null); refresh(); })}>Delete</Confirm>}

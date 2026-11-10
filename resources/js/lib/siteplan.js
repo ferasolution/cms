@@ -177,6 +177,8 @@ export const SIGNAL_META = {
     noc: { label: 'NOC', color: '#8b5cf6', icon: '📄', rank: 7 },
     payment: { label: 'Payment', color: '#0ea5e9', icon: '💳', rank: 8 },
     book: { label: 'Book request', color: '#14b8a6', icon: '📚', rank: 9 },
+    emergency_entry: { label: 'Emergency vehicle', color: '#b91c1c', icon: '🚑', rank: 0.5 },
+    staff: { label: 'Staff to verify', color: '#64748b', icon: '🧹', rank: 10 },
 };
 
 /** Group signals by house: [{house_id, list, top}] — top = most urgent. */

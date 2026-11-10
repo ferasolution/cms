@@ -66,6 +66,40 @@ Route::prefix('api')->group(function () {
         Route::post('gate/incidents', [Api\GateController::class, 'storeIncident']);
         Route::put('gate/incidents/{incident}', [Api\GateController::class, 'updateIncident']);
         Route::post('visitors/{visitor}/checkout', [Api\VisitorController::class, 'checkout']);
+        Route::get('visitors/{visitor}', [Api\VisitorController::class, 'show'])->whereNumber('visitor');
+        Route::post('visitors/{visitor}/extend', [Api\VisitorController::class, 'extend']);
+        Route::post('visitors/{visitor}/revoke', [Api\VisitorController::class, 'revoke']);
+        // security suite
+        Route::get('security/overview', [Api\SecurityOpsController::class, 'overview']);
+        Route::get('gate/vehicle-logs', [Api\SecurityOpsController::class, 'vehicleLogs']);
+        Route::post('gate/vehicle-logs', [Api\SecurityOpsController::class, 'vehicleMove']);
+        Route::post('gate/emergency', [Api\SecurityOpsController::class, 'emergencyEntry']);
+        Route::get('staff', [Api\SecurityOpsController::class, 'staff']);
+        Route::get('staff/entries', [Api\SecurityOpsController::class, 'staffEntries']);
+        Route::post('staff', [Api\SecurityOpsController::class, 'storeStaff']);
+        Route::post('staff/{staff}', [Api\SecurityOpsController::class, 'updateStaff'])->whereNumber('staff');
+        Route::post('staff/{staff}/verify', [Api\SecurityOpsController::class, 'verifyStaff']);
+        Route::post('staff/{staff}/move', [Api\SecurityOpsController::class, 'staffMove']);
+        Route::delete('staff/{staff}', [Api\SecurityOpsController::class, 'destroyStaff']);
+        Route::get('cameras', [Api\SecurityOpsController::class, 'cameras']);
+        Route::get('cameras/footage', [Api\SecurityOpsController::class, 'footage']);
+        Route::post('cameras', [Api\SecurityOpsController::class, 'storeCamera']);
+        Route::put('cameras/{camera}', [Api\SecurityOpsController::class, 'updateCamera']);
+        Route::delete('cameras/{camera}', [Api\SecurityOpsController::class, 'destroyCamera']);
+        Route::get('patrol', [Api\SecurityOpsController::class, 'patrol']);
+        Route::post('patrol/checkpoints', [Api\SecurityOpsController::class, 'storeCheckpoint']);
+        Route::put('patrol/checkpoints/{checkpoint}', [Api\SecurityOpsController::class, 'updateCheckpoint']);
+        Route::delete('patrol/checkpoints/{checkpoint}', [Api\SecurityOpsController::class, 'destroyCheckpoint']);
+        Route::post('patrol/rounds', [Api\SecurityOpsController::class, 'startRound']);
+        Route::post('patrol/rounds/{round}/end', [Api\SecurityOpsController::class, 'endRound']);
+        Route::post('patrol/scan', [Api\SecurityOpsController::class, 'scanCheckpoint']);
+        Route::get('shifts', [Api\SecurityOpsController::class, 'shifts']);
+        Route::post('shifts', [Api\SecurityOpsController::class, 'storeShift']);
+        Route::post('shifts/generate', [Api\SecurityOpsController::class, 'generateShifts']);
+        Route::delete('shifts/{shift}', [Api\SecurityOpsController::class, 'destroyShift']);
+        Route::post('shifts/{shift}/checkin', [Api\SecurityOpsController::class, 'checkIn']);
+        Route::post('shifts/{shift}/checkout', [Api\SecurityOpsController::class, 'checkOut']);
+        Route::post('shifts/{shift}/ack', [Api\SecurityOpsController::class, 'ackHandover']);
         Route::post('visitors/{visitor}', [Api\VisitorController::class, 'update']); // multipart update
         Route::apiResource('visitors', Api\VisitorController::class)->except(['show', 'update']);
 

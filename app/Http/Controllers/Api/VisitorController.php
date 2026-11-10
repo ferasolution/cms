@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Vehicle;
+use App\Services\GateLog;
 use App\Models\Visitor;
 use App\Models\VisitorPass;
 use App\Models\Watchlist;
@@ -55,6 +56,7 @@ class VisitorController extends Controller
             'category' => 'required|in:visitor,guest,worker,relative,friend,delivery,staff,emergency,contractor,other',
             'purpose' => 'required|string|max:255',
             'vehicle_no' => 'nullable|string|max:30',
+            'vehicle_type' => 'nullable|in:car,bike,rickshaw,van,truck,suv,other',
             'persons' => 'nullable|integer|min:1|max:500',
             'gate' => 'nullable|string|max:50',
             'remarks' => 'nullable|string|max:1000',
@@ -102,6 +104,9 @@ class VisitorController extends Controller
         $data['photo_path'] = Uploads::store($request->file('photo'), 'visitors');
         $data['video_path'] = Uploads::store($request->file('video'), 'visitors');
         $vehicleId = ! empty($data['vehicle_no']) ? Vehicle::where('plate', strtoupper($data['vehicle_no']))->value('id') : null;
+        if (! empty($data['vehicle_no'])) {
+            $data['vehicle_no'] = strtoupper(trim($data['vehicle_no']));
+        }
         unset($data['photo'], $data['video'], $data['stay_minutes'], $data['request_approval'], $data['pass_code']);
 
         $visitor = Visitor::create($data + [
@@ -113,8 +118,13 @@ class VisitorController extends Controller
             'pass_id' => $pass?->id,
             'vehicle_id' => $vehicleId,
             'watchlist_hit' => (bool) $hit,
+            'token' => GateLog::token('GV', Visitor::class, 'token'),
+            'access_type' => $data['category'] === 'emergency' ? 'emergency' : 'temporary',
         ]);
         $visitor->setAttribute('stay_minutes', $stay);
+        if ($visitor->status === 'inside') {
+            GateLog::visitorVehicleIn($visitor);
+        }
         if ($pass) {
             $pass->update($pass->multi_use ? ['used_at' => now()] : ['status' => 'used', 'used_at' => now()]);
         }
@@ -154,6 +164,9 @@ class VisitorController extends Controller
             'responded_by' => $u->id, 'responded_at' => now(), 'response_note' => $data['note'] ?? null,
             'overstay_alerted_at' => null,
         ]);
+        if ($ok) {
+            GateLog::visitorVehicleIn($visitor);
+        }
         $who = $u->isResident() ? 'household' : $u->name;
         Activity::log('security', $ok ? 'approved' : 'rejected', "{$visitor->name} ".($ok ? 'approved' : 'rejected')." by {$who}".($ok ? ' for '.intdiv($stay, 60).'h '.($stay % 60).'m' : ''), $visitor);
         Activity::alertModule('security', 2, ($ok ? '✅ Allow entry: ' : '⛔ Do not allow: ').$visitor->name,
@@ -188,10 +201,54 @@ class VisitorController extends Controller
     {
         $this->authorizeManage($request, 'security');
         abort_if($visitor->status !== 'inside', 422, 'Visitor is not inside.');
-        $visitor->update(['exit_at' => now(), 'status' => 'exited']);
+        $visitor->update(['exit_at' => now(), 'status' => 'exited', 'exit_by' => $request->user()->id, 'exit_gate' => $request->input('gate') ?: $visitor->gate]);
+        GateLog::visitorVehicleOut($visitor);
         $mins = (int) $visitor->entry_at->diffInMinutes($visitor->exit_at);
         $over = $visitor->expected_exit_at && $visitor->exit_at->greaterThan($visitor->expected_exit_at) ? ' (overstayed '.(int) $visitor->expected_exit_at->diffInMinutes($visitor->exit_at).'m)' : '';
-        Activity::log('security', 'exit', "{$visitor->name} exited after ".intdiv($mins, 60).'h '.($mins % 60).'m'.$over, $visitor);
+        Activity::log('security', 'exit', "{$visitor->name} exited after ".intdiv($mins, 60).'h '.($mins % 60).'m'.$over.($request->boolean('scanned') ? ' (QR slip scanned)' : ''), $visitor);
+        Activity::alertHouse($visitor->house_id, 'security', 'Visitor left: '.$visitor->name, 'Stayed '.intdiv($mins, 60).'h '.($mins % 60).'m'.$over, 'info', '/security?tab=log');
+
+        return $visitor->load('house');
+    }
+
+    /** One visitor — used for the printable gate slip. */
+    public function show(Request $request, Visitor $visitor)
+    {
+        $this->authorizeView($request, 'security');
+        $u = $request->user();
+        abort_if($u->isResident() && $visitor->house_id !== $u->house_id, 403);
+        if (! $visitor->token) {
+            $visitor->update(['token' => GateLog::token('GV', Visitor::class, 'token')]);
+        }
+
+        return $visitor->load('house', 'logger:id,name', 'responder:id,name', 'exiter:id,name')->toArray() + ['receipt_footer' => Settings::get('gate_receipt_footer'), 'community' => Settings::get('community_name')];
+    }
+
+    /** Temporary access: give more time (household for own visitor, or security). */
+    public function extend(Request $request, Visitor $visitor)
+    {
+        $u = $request->user();
+        abort_unless(($u->isResident() && $u->house_id && $u->house_id === $visitor->house_id) || $u->canManage('security'), 403);
+        abort_if($visitor->status !== 'inside', 422, 'Visitor is not inside.');
+        $m = (int) $request->validate(['minutes' => 'required|integer|min:5|max:4320'])['minutes'];
+        $base = $visitor->expected_exit_at && $visitor->expected_exit_at->isFuture() ? $visitor->expected_exit_at : now();
+        $visitor->update(['expected_exit_at' => $base->copy()->addMinutes($m), 'overstay_alerted_at' => null]);
+        Activity::log('security', 'extend', "Access of {$visitor->name} extended by {$m} min (until ".$visitor->expected_exit_at->format('h:i A').')', $visitor);
+        Activity::alertModule('security', 2, 'Access extended: '.$visitor->name, 'Now allowed until '.$visitor->expected_exit_at->format('h:i A'), 'info', '/security?tab=temporary', $visitor->house_id);
+
+        return $visitor->load('house');
+    }
+
+    /** Temporary access: end it now — guards are told to escort the visitor out. */
+    public function revoke(Request $request, Visitor $visitor)
+    {
+        $u = $request->user();
+        abort_unless(($u->isResident() && $u->house_id && $u->house_id === $visitor->house_id) || $u->canManage('security'), 403);
+        abort_if($visitor->status !== 'inside', 422, 'Visitor is not inside.');
+        $visitor->update(['expected_exit_at' => now(), 'revoked_by' => $u->id, 'overstay_alerted_at' => now()]);
+        $why = trim((string) $request->input('reason'));
+        Activity::log('security', 'revoke', "Access of {$visitor->name} revoked".($why ? " — {$why}" : ''), $visitor);
+        Activity::alertModule('security', 2, '⛔ Access revoked: '.$visitor->name, ($visitor->house?->label ? 'Plot '.$visitor->house->label.' · ' : '').'Please make sure the visitor leaves.'.($why ? ' '.$why : ''), 'danger', '/security?tab=temporary', $visitor->house_id);
 
         return $visitor->load('house');
     }

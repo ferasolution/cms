@@ -44,6 +44,17 @@ class Settings
         'noc_sla_days' => 3,
         'daily_digest' => true,
         'leave_auto_status' => true,
+        // ---- security suite ----
+        'gate_names' => "Main Gate\nGate 2",
+        'gate_receipt_footer' => 'Keep this slip. Show the QR code at the gate when leaving.',
+        'shift_slots' => "morning = 07:00-15:00\nevening = 15:00-23:00\nnight = 23:00-07:00",
+        'shift_posts' => "Main Gate\nGate 2\nPatrol\nControl Room",
+        'shift_late_minutes' => 15,
+        'shift_alerts' => true,
+        'patrol_interval_minutes' => 120,
+        'patrol_alerts' => true,
+        'staff_schedule_alerts' => true,
+        'staff_notify_household' => true,
     ];
 
     private static ?array $cache = null;

@@ -8,7 +8,7 @@ const ZONE = { park: '#6fae63', mosque: '#c56bd1', commercial: '#d0574a', amenit
  * 2D live site plan (SVG). Shows every plot, request pins per house, emergency pulses and a route.
  * Pan by dragging, zoom with the wheel / buttons. Light-weight — works on any phone.
  */
-export default function PlanMap({ site, houses, signals = [], selectedId, onSelect, route, flash = [], focus, className = '', height = 420, showNumbers = 'auto', compact }) {
+export default function PlanMap({ site, houses, signals = [], selectedId, onSelect, route, flash = [], focus, className = '', height = 420, showNumbers = 'auto', compact, markers = [], onPick }) {
     const ref = useRef();
     const xs = site.boundary.map((p) => p[0]), ys = site.boundary.map((p) => p[1]);
     const full = useMemo(() => { const pad = 18; return [Math.min(...xs) - pad, Math.min(...ys) - pad, Math.max(...xs) - Math.min(...xs) + pad * 2, Math.max(...ys) - Math.min(...ys) + pad * 2]; }, [site]); // eslint-disable-line
@@ -77,7 +77,7 @@ export default function PlanMap({ site, houses, signals = [], selectedId, onSele
                     if (Math.abs(e.clientX - d.x) + Math.abs(e.clientY - d.y) > 3) d.moved = true;
                     setVb([d.vb[0] - ((e.clientX - d.x) / r.width) * d.vb[2], d.vb[1] - ((e.clientY - d.y) / r.height) * d.vb[3], d.vb[2], d.vb[3]]);
                 }}
-                onPointerUp={() => { setTimeout(() => { drag.current = null; }, 0); }}>
+                onPointerUp={(e) => { if (onPick && drag.current && !drag.current.moved) { const [px, py] = toPlan(e); onPick(Math.round(px), Math.round(py)); } setTimeout(() => { drag.current = null; }, 0); }}>
                 <defs>
                     <filter id="pm-glow"><feGaussianBlur stdDeviation="3" result="b" /><feMerge><feMergeNode in="b" /><feMergeNode in="SourceGraphic" /></feMerge></filter>
                 </defs>
@@ -115,6 +115,15 @@ export default function PlanMap({ site, houses, signals = [], selectedId, onSele
                     </g>
                 ))}
 
+                {markers.map((m) => (
+                    <g key={m.key} transform={`translate(${m.x} ${m.y})`} style={{ cursor: m.onClick ? 'pointer' : 'default' }} onClick={() => { if (!drag.current?.moved) m.onClick?.(); }}>
+                        {m.pulse && <circle r={11 * sw} fill="none" stroke={m.color} strokeWidth={2.4 * sw} className="pin-pulse" />}
+                        <rect x={-10 * sw} y={-10 * sw} width={20 * sw} height={20 * sw} rx={5 * sw} fill={m.color || '#334155'} stroke="#fff" strokeWidth={1.6 * sw} />
+                        <text fontSize={12 * sw} textAnchor="middle" dominantBaseline="central">{m.icon}</text>
+                        {m.label && (zoom > 1.6 || m.always) && <text y={18 * sw} fontSize={8 * sw} textAnchor="middle" fill="var(--plan-label)" fontWeight="700" style={{ paintOrder: 'stroke' }} stroke="var(--plan-bg)" strokeWidth={2 * sw}>{m.label}</text>}
+                        <title>{m.title || m.label}</title>
+                    </g>
+                ))}
                 {groups.map(({ house_id, list, top }) => {
                     const h = byId[house_id];
                     if (!h) return null;

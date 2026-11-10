@@ -26,6 +26,10 @@ class SettingsController extends Controller
         'visitor_auto_reject' => 'boolean', 'event_auto_close' => 'boolean', 'maintenance_reminders' => 'boolean', 'maintenance_due_day' => 'integer|min:1|max:28',
         'library_reminders' => 'boolean', 'inventory_reminders' => 'boolean', 'gym_auto_block_days' => 'integer|min:0|max:90', 'staff_absent_alert' => 'boolean',
         'staff_auto_checkout_hours' => 'integer|min:0|max:24', 'noc_sla_days' => 'integer|min:0|max:60', 'daily_digest' => 'boolean', 'leave_auto_status' => 'boolean',
+        // security suite
+        'gate_names' => 'nullable|string|max:500', 'gate_receipt_footer' => 'nullable|string|max:255', 'shift_slots' => 'nullable|string|max:500', 'shift_posts' => 'nullable|string|max:500',
+        'shift_late_minutes' => 'integer|min:0|max:240', 'shift_alerts' => 'boolean', 'patrol_interval_minutes' => 'integer|min:0|max:1440', 'patrol_alerts' => 'boolean',
+        'staff_schedule_alerts' => 'boolean', 'staff_notify_household' => 'boolean',
     ];
 
     public function show(Request $request)

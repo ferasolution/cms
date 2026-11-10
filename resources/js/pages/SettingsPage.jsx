@@ -73,6 +73,10 @@ export default function SettingsPage() {
                     { name: 'payment_account', label: 'Account no.', disabled: !edit, half: true }, { name: 'payment_iban', label: 'IBAN', disabled: !edit, half: true },
                     { name: 'payment_wallet', label: 'JazzCash / Easypaisa', disabled: !edit },
                     { name: 'emergency_contacts', label: 'Emergency contacts (one per line)', type: 'textarea', rows: 5, disabled: !edit },
+                    { name: 'gate_names', label: 'Gates (one per line)', type: 'textarea', rows: 3, disabled: !edit, half: true },
+                    { name: 'shift_posts', label: 'Guard posts (one per line)', type: 'textarea', rows: 3, disabled: !edit, half: true },
+                    { name: 'shift_slots', label: 'Guard shifts (name = from-to, one per line)', type: 'textarea', rows: 3, disabled: !edit, hint: 'e.g. morning = 07:00-15:00 · a shift that ends before it starts runs past midnight' },
+                    { name: 'gate_receipt_footer', label: 'Text printed at the bottom of the gate slip', disabled: !edit },
                 ]} />
             </div>
             <GeoCard edit={edit} toast={toast} />

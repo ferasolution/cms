@@ -329,4 +329,76 @@ class PortalTest extends TestCase
         // site plan can be re-applied without duplicating houses
         $this->actingAs($this->admin)->postJson('/api/settings/site-plan')->assertSuccessful()->assertJsonPath('created', 0);
     }
+
+    public function test_security_suite_entry_slip_vehicles_staff_emergency_patrol_shifts(): void
+    {
+        $guard = $this->as('guard');
+        $boss = $this->as('security');
+        $res = $this->as('resident');
+        $hid = $res->house_id;
+
+        // walk-in entry → household notified → slip QR → exit by scanning the slip
+        $v = $this->actingAs($guard)->postJson('/api/visitors', ['name' => 'Kamran', 'phone' => '0300-1234567', 'cnic' => '42101-9999999-1', 'category' => 'visitor', 'purpose' => 'Meeting',
+            'house_id' => $hid, 'vehicle_no' => 'bkx-221', 'vehicle_type' => 'car', 'request_approval' => false, 'stay_minutes' => 60])->assertSuccessful()->json();
+        $this->assertMatchesRegularExpression('/^GV-[A-Z0-9]{6}$/', $v['token']);
+        $this->assertDatabaseHas('vehicle_logs', ['visitor_id' => $v['id'], 'status' => 'inside', 'plate' => 'BKX-221']);
+        $this->actingAs($res)->getJson('/api/visitors/'.$v['id'])->assertSuccessful()->assertJsonPath('token', $v['token']);
+        $this->actingAs($res)->postJson("/api/visitors/{$v['id']}/extend", ['minutes' => 30])->assertSuccessful();
+        $this->actingAs($guard)->postJson('/api/gate/scan', ['code' => $v['token']])->assertSuccessful()->assertJsonPath('kind', 'exit')->assertJsonPath('valid', true);
+        $this->actingAs($guard)->postJson("/api/visitors/{$v['id']}/checkout", ['scanned' => true, 'gate' => 'Gate 2'])->assertSuccessful()->assertJsonPath('exit_gate', 'Gate 2');
+        $this->assertDatabaseHas('vehicle_logs', ['visitor_id' => $v['id'], 'status' => 'exited']);
+        $this->actingAs($guard)->postJson('/api/gate/scan', ['code' => $v['token']])->assertJsonPath('valid', false);
+
+        // vehicle register toggles in / out
+        $this->actingAs($guard)->postJson('/api/gate/vehicle-logs', ['plate' => 'LEA 4455', 'kind' => 'service'])->assertSuccessful()->assertJsonPath('action', 'entry');
+        $this->actingAs($guard)->postJson('/api/gate/vehicle-logs', ['plate' => 'lea-4455'])->assertSuccessful()->assertJsonPath('action', 'exit');
+
+        // domestic staff: resident registers → supervisor verifies → card scan → in / out
+        $s = $this->actingAs($res)->postJson('/api/staff', ['name' => 'Parveen', 'type' => 'maid', 'cnic' => '42101-7777777-1', 'house_id' => 1])->assertSuccessful()->json();
+        $this->assertSame($hid, $s['house_id']);
+        $this->actingAs($guard)->postJson("/api/staff/{$s['id']}/verify", ['verification' => 'verified'])->assertForbidden();
+        $this->actingAs($boss)->postJson("/api/staff/{$s['id']}/verify", ['verification' => 'verified'])->assertSuccessful();
+        $this->actingAs($guard)->postJson('/api/gate/scan', ['code' => $s['code']])->assertJsonPath('kind', 'staff')->assertJsonPath('valid', true);
+        $this->actingAs($guard)->postJson("/api/staff/{$s['id']}/move")->assertSuccessful()->assertJsonPath('action', 'entry');
+        $this->actingAs($guard)->postJson("/api/staff/{$s['id']}/move")->assertSuccessful()->assertJsonPath('action', 'exit');
+        $this->actingAs($res)->getJson('/api/staff')->assertSuccessful()->assertJsonPath('data.0.name', 'Parveen');
+
+        // emergency priority entry → signal on the house + SOS marked responding
+        $sos = $this->actingAs($res)->postJson('/api/sos', ['type' => 'medical'])->assertSuccessful()->json();
+        $this->actingAs($guard)->postJson('/api/gate/emergency', ['service' => 'ambulance', 'house_id' => $hid, 'vehicle_no' => 'AMB-115', 'crew' => 3])->assertSuccessful()->assertJsonPath('access_type', 'emergency');
+        $this->assertDatabaseHas('sos_alerts', ['id' => $sos['id'], 'status' => 'responding']);
+        $types = collect($this->actingAs($boss)->getJson('/api/map')->json('signals'))->pluck('type');
+        $this->assertTrue($types->contains('emergency_entry'));
+
+        // CCTV + footage links
+        $this->actingAs($guard)->postJson('/api/cameras', ['name' => 'X', 'stream_type' => 'demo'])->assertForbidden();
+        $this->actingAs($boss)->postJson('/api/cameras', ['name' => 'Gate cam', 'gate' => 'Main Gate', 'stream_type' => 'snapshot', 'stream_url' => 'http://cam/snap.jpg', 'playback_url' => 'http://nvr/play?s={start_unix}'])->assertSuccessful();
+        $f = $this->actingAs($guard)->getJson('/api/cameras/footage?gate=Main%20Gate&at='.urlencode(now()->toIso8601String()))->assertSuccessful()->json('cameras.0.playback');
+        $this->assertStringStartsWith('http://nvr/play?s=', $f);
+        $this->actingAs($res)->getJson('/api/cameras')->assertForbidden();
+
+        // patrol: checkpoint → round → scan → end
+        $cp = $this->actingAs($boss)->postJson('/api/patrol/checkpoints', ['name' => 'Park'])->assertSuccessful()->json();
+        $r = $this->actingAs($guard)->postJson('/api/patrol/rounds')->assertSuccessful()->json();
+        $this->actingAs($guard)->postJson('/api/patrol/scan', ['code' => $cp['code'], 'status' => 'issue', 'note' => 'Light off'])->assertSuccessful()->assertJsonPath('round.scanned', 1);
+        $this->actingAs($guard)->postJson("/api/patrol/rounds/{$r['id']}/end")->assertSuccessful()->assertJsonPath('status', 'completed');
+        $this->actingAs($guard)->getJson('/api/patrol')->assertSuccessful()->assertJsonPath('checkpoints.0.overdue', false);
+
+        // shifts: schedule → check in → handover → next guard acknowledges
+        $e1 = \App\Models\Employee::where('user_id', $guard->id)->first();
+        $e2 = \App\Models\Employee::where('user_id', $boss->id)->first();
+        $a = $this->actingAs($boss)->postJson('/api/shifts', ['employee_id' => $e1->id, 'post' => 'Main Gate', 'date' => today()->toDateString(), 'slot' => 'custom', 'from' => now()->subMinutes(30)->format('H:i'), 'to' => now()->addHours(2)->format('H:i')])->assertSuccessful()->json();
+        $b = $this->actingAs($boss)->postJson('/api/shifts', ['employee_id' => $e2->id, 'post' => 'Main Gate', 'date' => today()->toDateString(), 'slot' => 'custom', 'from' => now()->addHours(2)->format('H:i'), 'to' => now()->addHours(10)->format('H:i')])->assertSuccessful()->json();
+        $this->actingAs($boss)->postJson("/api/shifts/{$b['id']}/checkin")->assertUnprocessable(); // too early
+        $this->actingAs($guard)->postJson("/api/shifts/{$a['id']}/checkin")->assertSuccessful()->assertJsonPath('status', 'on_duty');
+        $this->actingAs($guard)->postJson("/api/shifts/{$a['id']}/checkout", ['handover_notes' => 'All quiet', 'handover_items' => ['Keys']])->assertSuccessful()->assertJsonPath('handover_to_shift_id', $b['id']);
+        $this->actingAs($boss)->getJson('/api/shifts')->assertSuccessful()->assertJsonCount(1, 'pending_handover');
+        $this->actingAs($boss)->postJson("/api/shifts/{$a['id']}/ack", ['note' => 'Received'])->assertSuccessful();
+        $this->actingAs($boss)->postJson('/api/shifts/generate', ['from' => today()->addDays(10)->toDateString(), 'days' => 7, 'rows' => [['employee_id' => $e1->id, 'slot' => 'night', 'post' => 'Gate 2']]])->assertJsonPath('created', 7);
+
+        // overview + automations know the new rules
+        $this->actingAs($guard)->getJson('/api/security/overview')->assertSuccessful()->assertJsonStructure(['vehicles_inside', 'staff_inside', 'patrol_coverage', 'on_duty']);
+        $keys = collect($this->actingAs($this->admin)->getJson('/api/automations')->json('rules'))->pluck('key');
+        $this->assertTrue($keys->contains('guard_shifts') && $keys->contains('patrol_coverage') && $keys->contains('domestic_staff'));
+    }
 }

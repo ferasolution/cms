@@ -330,7 +330,9 @@ export default function MapPage() {
             <div className="grid min-h-[560px] flex-1 gap-3 lg:grid-cols-[1fr_340px]">
                 <div ref={wrap} className="card relative min-h-[460px] overflow-hidden bg-[#0b1514]">
                     {!data ? <div className="grid h-full place-items-center"><Spinner /></div> : view === '2d' ? (
-                        <PlanMap site={data.site} houses={houses} signals={signals} selectedId={selected?.id} onSelect={select} route={route} flash={flash} focus={selected?.id} height="100%" className="absolute inset-0 !rounded-none" />
+                        <PlanMap site={data.site} houses={houses} signals={signals} selectedId={selected?.id} onSelect={select} route={route} flash={flash} focus={selected?.id} height="100%" className="absolute inset-0 !rounded-none"
+                            markers={[...(data.markers?.cameras || []).map((c) => ({ key: 'cam' + c.id, x: c.map_x, y: c.map_y, icon: '📹', color: '#0f766e', label: c.name, title: 'CCTV · ' + c.name })),
+                                ...(data.markers?.checkpoints || []).map((c) => { const old = !c.last_scan || Date.now() - new Date(c.last_scan.scanned_at) > 2 * 3600e3; return { key: 'cp' + c.id, x: c.map_x, y: c.map_y, icon: '📍', color: old ? '#dc2626' : '#2563eb', label: c.name, title: `Patrol checkpoint · ${c.name}${old ? ' — overdue' : ''}` }; })]} />
                     ) : (
                         <Canvas shadows dpr={[1, 2]} camera={{ position: [-8, 62, 70], fov: 42, far: 2000 }} gl={{ antialias: true, toneMapping: THREE.ACESFilmicToneMapping }}>
                             <Suspense fallback={null}>

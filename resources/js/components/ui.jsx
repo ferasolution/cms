@@ -87,7 +87,7 @@ export function PageHeader({ icon: Icon, title: t, subtitle, children }) {
 
 export function Tabs({ tabs, value, onChange }) {
     return (
-        <div className="mb-4 flex gap-1 overflow-x-auto rounded-2xl bg-ink/[.04] p-1">
+        <div className="mb-4 flex gap-1 overflow-x-auto rounded-2xl bg-ink/[.04] p-1 md:flex-wrap">
             {tabs.filter(Boolean).map((t) => (
                 <button key={t.key} onClick={() => onChange(t.key)}
                     className={`flex shrink-0 items-center gap-1.5 rounded-xl px-3.5 py-2 text-sm font-semibold transition ${value === t.key ? 'bg-surface text-brand-700 shadow-sm' : 'text-ink/55 hover:text-black'}`}>
@@ -297,7 +297,7 @@ export function FileLink({ path, label = 'View file' }) {
 }
 
 export function Confirm({ children, onConfirm, message = 'Are you sure?', className = 'btn-ghost btn-sm' }) {
-    return <button className={className} onClick={(e) => { e.stopPropagation(); if (window.confirm(message)) onConfirm(); }}>{children}</button>;
+    return <button type="button" className={className} onClick={(e) => { e.stopPropagation(); if (window.confirm(message)) onConfirm(); }}>{children}</button>;
 }
 
 /** Run an action, toast the result, then reload. */

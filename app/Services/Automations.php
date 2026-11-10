@@ -43,6 +43,9 @@ class Automations
         'leave_status' => ['Leave status sync', 'Employees on approved leave are marked "on leave" and back to active afterwards.', ['leave_auto_status'], 3600],
         'noc_sla' => ['NOC follow-up', 'Applications with no progress for the set days are flagged to the NOC officer.', ['noc_sla_days'], 3600],
         'sos_escalation' => ['SOS escalation', 'An SOS nobody responds to within 2 minutes is re-alerted to every admin with an alarm.', [], 20],
+        'guard_shifts' => ['Guard shift watch', 'If a guard has not checked in after the late minutes the supervisor is alerted and the shift is marked missed; shifts left open long after their end are flagged.', ['shift_alerts', 'shift_late_minutes'], 120],
+        'patrol_coverage' => ['Patrol coverage', 'Checkpoints that no guard has scanned within the patrol interval are reported to the supervisor (once per interval).', ['patrol_alerts', 'patrol_interval_minutes'], 300],
+        'domestic_staff' => ['Domestic staff watch', 'Staff still inside an hour after their working time, and staff cards about to expire, are reported to security and the household.', ['staff_schedule_alerts', 'staff_notify_household'], 900],
         'daily_digest' => ['Daily digest', 'Every morning admins get one summary: gate traffic, open complaints, dues, staff and pending approvals.', ['daily_digest'], 3600],
     ];
 
@@ -153,6 +156,83 @@ class Automations
         }
 
         return $n ? [$n, "$n overstay alert(s)"] : null;
+    }
+
+    // ---------------------------------------------------------------- guards, patrol, domestic staff
+
+    private static function rule_guard_shifts(): ?array
+    {
+        if (! self::on('shift_alerts')) {
+            return null;
+        }
+        $n = 0;
+        $late = (int) Settings::get('shift_late_minutes');
+        foreach (\App\Models\GuardShift::where('status', 'scheduled')->whereNull('missed_alerted_at')->where('starts_at', '<', now()->subMinutes($late))->where('ends_at', '>', now()->subHours(12))->get() as $sh) {
+            $sh->forceFill(['status' => 'missed', 'missed_alerted_at' => now()])->save();
+            Activity::alertModule('security', 3, '⚠ Guard not on duty: '.$sh->guard_name, $sh->post.' · shift started '.$sh->starts_at->format('h:i A').' — no check-in.', 'danger', '/security?tab=shifts');
+            Activity::alertUser($sh->user_id, 'security', 'You have not checked in', $sh->post.' duty started at '.$sh->starts_at->format('h:i A'), 'warning', '/security?tab=shifts');
+            $n++;
+        }
+        foreach (\App\Models\GuardShift::where('status', 'on_duty')->where('ends_at', '<', now()->subHours(2))->get() as $sh) {
+            if (! Cache::add('shift-open-'.$sh->id, 1, 6 * 3600)) {
+                continue;
+            }
+            Activity::alertModule('security', 3, 'Shift not handed over: '.$sh->guard_name, $sh->post.' ended '.$sh->ends_at->format('h:i A').' — still open.', 'warning', '/security?tab=shifts');
+            $n++;
+        }
+
+        return $n ? [$n, "$n guard shift alert(s)"] : null;
+    }
+
+    private static function rule_patrol_coverage(): ?array
+    {
+        $interval = (int) Settings::get('patrol_interval_minutes');
+        if (! self::on('patrol_alerts') || $interval <= 0 || ! \App\Models\GuardShift::where('status', 'on_duty')->exists()) {
+            return null;   // only while guards are on duty
+        }
+        $missed = \App\Models\PatrolCheckpoint::where('active', true)->with('lastScan')->get()
+            ->filter(fn ($c) => ! $c->lastScan || $c->lastScan->scanned_at->lt(now()->subMinutes($interval)));
+        if ($missed->isEmpty() || ! Cache::add('patrol-gap', 1, $interval * 60)) {
+            return null;
+        }
+        Activity::alertModule('security', 3, 'Patrol overdue at '.$missed->count().' checkpoint(s)', $missed->pluck('name')->take(6)->implode(', ').' — not checked in the last '.$interval.' min.', 'warning', '/security?tab=patrol');
+
+        return [1, 'Patrol overdue: '.$missed->count().' checkpoint(s)'];
+    }
+
+    private static function rule_domestic_staff(): ?array
+    {
+        if (! self::on('staff_schedule_alerts')) {
+            return null;
+        }
+        $n = 0;
+        foreach (\App\Models\StaffEntry::with('staff', 'house')->whereNull('exit_at')->where('entry_at', '<', now()->subHour())->get() as $e) {
+            $s = $e->staff;
+            if (! $s || ! $s->time_to) {
+                continue;
+            }
+            $end = Carbon::parse($e->entry_at->toDateString().' '.substr($s->time_to, 0, 5));
+            if ($s->time_from && $s->time_to < $s->time_from) {
+                $end->addDay();
+            }
+            if (now()->lt($end->copy()->addHour()) || ! Cache::add('ds-over-'.$e->id, 1, 12 * 3600)) {
+                continue;
+            }
+            Activity::alertModule('security', 2, ucfirst($s->type).' still inside: '.$s->name, 'Working time ended '.$end->format('h:i A').($e->house ? ' · Plot '.$e->house->label : ''), 'warning', '/security?tab=staff', $e->house_id);
+            if (Settings::get('staff_notify_household')) {
+                Activity::alertHouse($e->house_id, 'security', $s->name.' has not left yet', 'Working time ended at '.$end->format('h:i A').'.', 'info', '/security?tab=staff');
+            }
+            $n++;
+        }
+        foreach (\App\Models\DomesticStaff::where('active', true)->whereNotNull('valid_until')->whereBetween('valid_until', [today(), today()->addDays(7)])->get() as $s) {
+            if (! Cache::add('ds-exp-'.$s->id, 1, 3 * 86400)) {
+                continue;
+            }
+            Activity::alertHouse($s->house_id, 'security', 'Staff card expiring: '.$s->name, 'Valid until '.$s->valid_until->format('d M Y').'. Renew it under Security → Domestic staff.', 'warning', '/security?tab=staff');
+            $n++;
+        }
+
+        return $n ? [$n, "$n domestic staff alert(s)"] : null;
     }
 
     private static function rule_sos_escalation(): ?array

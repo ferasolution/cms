@@ -90,6 +90,29 @@ class GateController extends Controller
     {
         $this->authorizeManage($request, 'security');
         $raw = strtoupper(trim((string) $request->validate(['code' => 'required|string|max:120'])['code']));
+        if (preg_match('/(GV-[A-Z0-9]{6})/', $raw, $m)) {
+            $v = Visitor::with('house', 'logger:id,name')->where('token', $m[1])->first();
+            abort_unless($v, 404, 'Unknown gate slip.');
+            $over = $v->status === 'inside' && $v->expected_exit_at && $v->expected_exit_at->isPast();
+
+            return ['kind' => 'exit', 'valid' => $v->status === 'inside', 'overstay' => $over,
+                'reason' => match ($v->status) {
+                    'inside' => $over ? 'Overstayed by '.(int) $v->expected_exit_at->diffInMinutes(now()).' min' : 'Allowed until '.$v->expected_exit_at?->format('h:i A'),
+                    'exited' => 'Already exited at '.$v->exit_at?->format('d M h:i A'),
+                    'awaiting' => 'Still waiting for household approval',
+                    default => 'Entry was '.$v->status,
+                }, 'visitor' => $v];
+        }
+        if (preg_match('/(DS-[A-Z0-9]{6})/', $raw, $m)) {
+            $staff = \App\Models\DomesticStaff::with('house', 'inside')->where('code', $m[1])->first();
+            abort_unless($staff, 404, 'Unknown staff card.');
+            [$ok, $reason] = SecurityOpsController::staffCheck($staff);
+
+            return ['kind' => 'staff', 'valid' => $ok, 'reason' => $reason, 'staff' => $staff, 'inside' => (bool) $staff->inside];
+        }
+        if (preg_match('/(CP-[A-Z0-9]{6})/', $raw, $m)) {
+            abort(422, 'This is a patrol checkpoint — scan it from the Patrol tab.');
+        }
         if (preg_match('/(VP-[A-Z0-9]{6})/', $raw, $m)) {
             $pass = VisitorPass::with('house', 'creator:id,name')->where('code', $m[1])->first();
             abort_unless($pass, 404, 'Unknown visitor pass.');
@@ -120,9 +143,16 @@ class GateController extends Controller
         $vehicle = Vehicle::with('house')->get()->first(fn ($v) => preg_replace('/[^A-Z0-9]/', '', strtoupper($v->plate)) === $plate);
         $hit = VisitorController::watchlistMatch(null, null, $raw);
         if ($vehicle || $hit) {
-            return ['kind' => 'vehicle', 'valid' => $vehicle && $vehicle->active && ! ($hit && $hit->level === 'blocked'), 'reason' => $hit ? 'Watchlist: '.$hit->reason : ($vehicle && ! $vehicle->active ? 'Vehicle sticker inactive' : null), 'vehicle' => $vehicle, 'resident' => (bool) $vehicle];
+            $open = \App\Models\VehicleLog::where('status', 'inside')->get(['id', 'plate', 'entry_at'])->first(fn ($l) => preg_replace('/[^A-Z0-9]/', '', strtoupper($l->plate)) === $plate);
+
+            return ['kind' => 'vehicle', 'inside_log' => $open, 'plate' => $raw, 'valid' => $vehicle && $vehicle->active && ! ($hit && $hit->level === 'blocked'), 'reason' => $hit ? 'Watchlist: '.$hit->reason : ($vehicle && ! $vehicle->active ? 'Vehicle sticker inactive' : null), 'vehicle' => $vehicle, 'resident' => (bool) $vehicle];
         }
-        abort(404, 'Code not recognised. Try the pass code (VP-…), event code (EVT-…) or number plate.');
+        if (preg_match('/^[A-Z]{1,4}-?\d{1,5}$/', $raw)) {
+            $open = \App\Models\VehicleLog::where('status', 'inside')->get(['id', 'plate', 'entry_at'])->first(fn ($l) => preg_replace('/[^A-Z0-9]/', '', strtoupper($l->plate)) === $plate);
+
+            return ['kind' => 'vehicle', 'inside_log' => $open, 'plate' => $raw, 'valid' => true, 'reason' => 'Unregistered vehicle — record it as a visitor / service vehicle', 'vehicle' => null, 'resident' => false];
+        }
+        abort(404, 'Code not recognised. Scan a gate slip (GV-…), visitor pass (VP-…), staff card (DS-…), event code (EVT-…) or type a number plate.');
     }
 
     // ---------- Blacklist / watchlist ----------

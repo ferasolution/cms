@@ -19,6 +19,9 @@ const LABELS = {
     staff_absent_alert: ['Alert HR about absent staff', 'bool'],
     late_grace_minutes: ['Late grace (minutes)', 'number'],
     noc_sla_days: ['Flag after days without progress', 'number'],
+    shift_late_minutes: ['Guard counts as missing after (minutes)', 'number'],
+    patrol_interval_minutes: ['Every checkpoint checked within (minutes)', 'number'],
+    staff_notify_household: ['Tell the household when their staff arrives / stays late', 'bool'],
 };
 
 function Switch({ on, onChange, disabled }) {

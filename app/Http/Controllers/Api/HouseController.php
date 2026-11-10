@@ -121,6 +121,11 @@ class HouseController extends Controller
             'feed' => $official ? \App\Models\ActivityLog::with('user:id,name')->latest('id')->limit(8)->get(['id', 'user_id', 'module', 'description', 'created_at']) : [],
             'site' => \App\Services\SitePlan::site(),
             'signals' => $this->signals($u),
+            'markers' => $official && $u->canManage('security') ? [
+                'cameras' => \App\Models\Camera::where('active', true)->whereNotNull('map_x')->get(['id', 'name', 'gate', 'map_x', 'map_y']),
+                'checkpoints' => \App\Models\PatrolCheckpoint::where('active', true)->whereNotNull('map_x')->with('lastScan:id,patrol_checkpoint_id,scanned_at')->get(['id', 'name', 'map_x', 'map_y']),
+                'guards' => \App\Models\GuardShift::where('status', 'on_duty')->get(['id', 'guard_name', 'post']),
+            ] : null,
             'server_time' => now()->toIso8601String(),
         ];
     }
@@ -153,7 +158,13 @@ class HouseController extends Controller
             foreach ($scope(Visitor::where('status', 'awaiting'))->get() as $v) {
                 $add('gate', $v->house_id, $v->id, 'Visitor at gate: '.$v->name, ucfirst($v->category).' · '.$v->purpose, 'warning', '/security?tab=approvals', $v->created_at);
             }
-            foreach ($scope(Visitor::where('status', 'inside')->where('expected_exit_at', '<', now()))->get() as $v) {
+            foreach ($scope(Visitor::where('status', 'inside')->where('access_type', 'emergency'))->get() as $v) {
+                $add('emergency_entry', $v->house_id, 'e'.$v->id, $v->name, 'Priority entry via '.($v->gate ?: 'gate').' · '.($v->vehicle_no ?: '').' · '.$v->persons.' crew', 'danger', '/map?house='.$v->house_id.'&route=1', $v->entry_at);
+            }
+            foreach ($scope(\App\Models\DomesticStaff::where('verification', 'pending'))->get() as $d) {
+                $add('staff', $d->house_id, $d->id, 'Verify staff: '.$d->name, ucfirst($d->type).' · CNIC '.$d->cnic, 'info', '/security?tab=staff', $d->created_at);
+            }
+            foreach ($scope(Visitor::where('status', 'inside')->where('access_type', '!=', 'emergency')->where('expected_exit_at', '<', now()))->get() as $v) {
                 $add('overstay', $v->house_id, $v->id, 'Overstay: '.$v->name, 'Allowed until '.$v->expected_exit_at->format('h:i A'), 'warning', '/security', $v->expected_exit_at);
             }
             if (! $own && $u->canManage('security')) {
