@@ -28,9 +28,10 @@ class Activity
      * Alert everyone whose access to $module is at least $level (1 view, 2 edit, 3 manage).
      * Admins always qualify; level 3 on "users" means admins only.
      */
-    public static function alertModule(string $module, int $level, string $title, ?string $body = null, string $level_ = 'info', ?string $link = null): void
+    public static function alertModule(string $module, int $level, string $title, ?string $body = null, string $level_ = 'info', ?string $link = null, ?int $houseId = null): void
     {
         Alert::create([
+            'house_id' => $houseId,
             'audience_module' => $module,
             'audience_level' => $level,
             'module' => $module === 'users' ? 'system' : $module,
@@ -41,17 +42,17 @@ class Activity
         ]);
     }
 
-    public static function alertAdmins(string $module, string $title, ?string $body = null, string $level = 'info', ?string $link = null): void
+    public static function alertAdmins(string $module, string $title, ?string $body = null, string $level = 'info', ?string $link = null, ?int $houseId = null): void
     {
-        Alert::create(['audience_module' => 'users', 'audience_level' => 3, 'module' => $module, 'title' => $title, 'body' => $body, 'level' => $level, 'link' => $link]);
+        Alert::create(['house_id' => $houseId, 'audience_module' => 'users', 'audience_level' => 3, 'module' => $module, 'title' => $title, 'body' => $body, 'level' => $level, 'link' => $link]);
     }
 
-    public static function alertUser(?int $userId, string $module, string $title, ?string $body = null, string $level = 'info', ?string $link = null): void
+    public static function alertUser(?int $userId, string $module, string $title, ?string $body = null, string $level = 'info', ?string $link = null, ?int $houseId = null): void
     {
         if (! $userId) {
             return;
         }
-        Alert::create(['user_id' => $userId, 'module' => $module, 'title' => $title, 'body' => $body, 'level' => $level, 'link' => $link]);
+        Alert::create(['house_id' => $houseId, 'user_id' => $userId, 'module' => $module, 'title' => $title, 'body' => $body, 'level' => $level, 'link' => $link]);
     }
 
     /** Alert every resident account linked to a house. */
@@ -61,7 +62,7 @@ class Activity
             return;
         }
         foreach (\App\Models\User::where('house_id', $houseId)->where('active', true)->pluck('id') as $id) {
-            self::alertUser($id, $module, $title, $body, $level, $link);
+            self::alertUser($id, $module, $title, $body, $level, $link, $houseId);
         }
     }
 }

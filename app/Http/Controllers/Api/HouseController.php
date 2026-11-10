@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Complaint;
 use App\Models\Event;
 use App\Models\House;
+use App\Models\Incident;
 use App\Models\SosAlert;
 use App\Models\Transaction;
 use App\Models\Visitor;
@@ -117,9 +118,88 @@ class HouseController extends Controller
                 'events' => $events->count(), 'sos' => $showSos ? $sosRows->count() : 0,
             ],
             'feed' => $official ? \App\Models\ActivityLog::with('user:id,name')->latest('id')->limit(8)->get(['id', 'user_id', 'module', 'description', 'created_at']) : [],
-            'site' => \App\Models\Setting::get('site_plan'),
+            'site' => \App\Services\SitePlan::site(),
+            'signals' => $this->signals($u),
             'server_time' => now()->toIso8601String(),
         ];
+    }
+
+    /**
+     * Everything that needs attention, pinned to the house it came from — drives the map pins,
+     * the "requests" inbox and the flash when a new one arrives. Filtered by what the viewer may see.
+     */
+    private function signals($u): array
+    {
+        $own = $u->isResident();
+        $hid = $u->house_id ?? 0;
+        $out = [];
+        $add = function (string $type, $houseId, $id, string $title, ?string $sub, string $level, string $link, $at, array $extra = []) use (&$out) {
+            if (! $houseId) {
+                return;
+            }
+            $out[] = ['key' => $type.'-'.$id, 'type' => $type, 'id' => $id, 'house_id' => (int) $houseId, 'title' => $title, 'sub' => $sub, 'level' => $level, 'link' => $link,
+                'at' => $at instanceof \DateTimeInterface ? $at->format(DATE_ATOM) : $at] + $extra;
+        };
+        $scope = fn ($q, $col = 'house_id') => $own ? $q->where($col, $hid) : $q;
+
+        if ($u->canView('emergency') || $u->canView('security') || $own) {
+            foreach ($scope(SosAlert::with('user:id,name,phone')->whereIn('status', ['active', 'responding']))->get() as $s) {
+                $add('sos', $s->house_id, $s->id, 'SOS '.strtoupper($s->type), ($s->user?->name ?? '').($s->user?->phone ? ' · '.$s->user->phone : '').($s->message ? ' · '.$s->message : ''),
+                    'danger', '/emergency?sos='.$s->id, $s->created_at, ['status' => $s->status, 'lat' => $s->lat, 'lng' => $s->lng]);
+            }
+        }
+        if ($u->canView('security')) {
+            foreach ($scope(Visitor::where('status', 'awaiting'))->get() as $v) {
+                $add('gate', $v->house_id, $v->id, 'Visitor at gate: '.$v->name, ucfirst($v->category).' · '.$v->purpose, 'warning', '/security?tab=approvals', $v->created_at);
+            }
+            foreach ($scope(Visitor::where('status', 'inside')->where('expected_exit_at', '<', now()))->get() as $v) {
+                $add('overstay', $v->house_id, $v->id, 'Overstay: '.$v->name, 'Allowed until '.$v->expected_exit_at->format('h:i A'), 'warning', '/security', $v->expected_exit_at);
+            }
+            if (! $own && $u->canManage('security')) {
+                foreach (Incident::whereNotNull('house_id')->where('status', '!=', 'resolved')->get() as $i) {
+                    $add('incident', $i->house_id, $i->id, 'Incident: '.str_replace('_', ' ', $i->type), $i->reference.' · '.$i->severity, in_array($i->severity, ['high', 'critical']) ? 'danger' : 'warning', '/security?tab=incidents', $i->created_at);
+                }
+            }
+        }
+        if ($u->canView('complaints')) {
+            $q = Complaint::whereIn('status', ['open', 'assigned', 'in_progress']);
+            foreach (($own ? $q->where('user_id', $u->id) : $q)->get() as $c) {
+                $add('complaint', $c->house_id, $c->id, $c->title, $c->ticket_no.' · '.str_replace('_', ' ', $c->status).($c->assigned_worker ? ' · '.$c->assigned_worker : ''),
+                    $c->priority === 'urgent' ? 'danger' : ($c->status === 'open' ? 'warning' : 'info'), '/complaints?q='.$c->ticket_no, $c->created_at, ['priority' => $c->priority]);
+            }
+        }
+        if ($u->canView('events')) {
+            $q = Event::where(fn ($w) => $w->where('status', 'pending')->orWhere(fn ($x) => $x->where('status', 'approved')->whereDate('date', now()->toDateString())));
+            foreach (($own ? $q->where('requested_by', $u->id) : $q)->get() as $e) {
+                $add($e->status === 'pending' ? 'event_request' : 'event', $e->house_id, $e->id, ($e->status === 'pending' ? 'Event request: ' : 'Event today: ').$e->title,
+                    $e->venue.' · '.substr($e->start_time, 0, 5).'–'.substr($e->end_time, 0, 5), $e->status === 'pending' ? 'warning' : 'info', '/events', $e->created_at);
+            }
+        }
+        if ($u->canView('noc')) {
+            $q = \App\Models\Noc::whereIn('status', ['submitted', 'under_review', 'documents_required']);
+            foreach (($own ? $q->where('user_id', $u->id) : $q)->get() as $n) {
+                $add('noc', $n->house_id, $n->id, 'NOC '.$n->reference, str_replace('_', ' ', $n->type).' · '.str_replace('_', ' ', $n->status), $n->status === 'submitted' ? 'warning' : 'info', '/noc?q='.$n->reference, $n->created_at);
+            }
+        }
+        if ($u->canManage('gym') || $own) {
+            $q = \App\Models\GymPayment::with('member:id,name,house_id')->where('status', 'pending')->whereNotNull('proof_path');
+            foreach ($q->get() as $p) {
+                if (! $own || $p->member?->house_id === $hid) {
+                    $add('payment', $p->member?->house_id, $p->id, 'Gym payment to verify', ($p->member?->name ?? '').' · Rs '.number_format($p->amount), 'info', '/gym?tab=payments', $p->updated_at);
+                }
+            }
+        }
+        if ($u->canManage('library')) {
+            foreach (\App\Models\BookIssue::with('book:id,title', 'user:id,house_id')->where('status', 'requested')->get() as $b) {
+                $add('book', $b->user?->house_id, $b->id, 'Book request', $b->book?->title, 'info', '/library?tab=issues', $b->created_at);
+            }
+        }
+        if ($own) { // a household only ever sees pins on its own house
+            $out = array_values(array_filter($out, fn ($s) => $s['house_id'] === (int) $hid));
+        }
+        usort($out, fn ($a, $b) => strcmp((string) $b['at'], (string) $a['at']));
+
+        return $out;
     }
 
     /** One household's full picture (used from the 3D map). */

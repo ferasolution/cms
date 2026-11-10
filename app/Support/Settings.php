@@ -28,6 +28,22 @@ class Settings
         'work_day_minutes' => 480,
         'late_grace_minutes' => 10,
         'emergency_contacts' => "Rescue 1122\nFire Brigade 16\nPolice 15\nEdhi Ambulance 115",
+        // ---- automations ----
+        'auto_complaint_assign' => true,
+        'complaint_workers' => "plumbing = Akram (Plumber) | 0300-1112233\nelectrical = Javed (Electrician) | 0300-2223344\ncleaning = Sweeper Team | 0300-3334455\ngardening = Rafiq (Gardener) | 0300-4445566\nconstruction = Maintenance Team | 0300-5556677",
+        'complaint_escalate_hours' => 4,
+        'visitor_auto_reject' => false,
+        'event_auto_close' => true,
+        'maintenance_reminders' => true,
+        'maintenance_due_day' => 10,
+        'library_reminders' => true,
+        'inventory_reminders' => true,
+        'gym_auto_block_days' => 7,
+        'staff_absent_alert' => true,
+        'staff_auto_checkout_hours' => 4,
+        'noc_sla_days' => 3,
+        'daily_digest' => true,
+        'leave_auto_status' => true,
     ];
 
     private static ?array $cache = null;

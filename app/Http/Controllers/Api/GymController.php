@@ -154,7 +154,7 @@ class GymController extends Controller
         ]);
         Activity::log('gym', 'payment', "{$member->name} started payment {$p->reference} (Rs ".number_format($p->amount).')', $p);
         if ($p->proof_path) {
-            Activity::alertModule('gym', 2, 'Payment proof received', "{$member->name} · Rs ".number_format($p->amount)." · {$p->reference}", 'info', '/gym?tab=payments');
+            Activity::alertModule('gym', 2, 'Payment proof received', "{$member->name} · Rs ".number_format($p->amount)." · {$p->reference}", 'info', '/gym?tab=payments', $member->house_id);
         }
 
         return $p->toArray() + ['qr' => $this->qrPayload($p, $member)];
@@ -179,7 +179,7 @@ class GymController extends Controller
         abort_unless($u->canManage('gym') || $m->user_id === $u->id || ($m->house_id && $m->house_id === $u->house_id), 403);
         $request->validate(['proof' => 'required|file|mimes:jpg,jpeg,png,pdf|max:8192']);
         $payment->update(['proof_path' => Uploads::store($request->file('proof'), 'gym')]);
-        Activity::alertModule('gym', 2, 'Payment proof received', "{$m->name} · Rs ".number_format($payment->amount)." · {$payment->reference}", 'info', '/gym?tab=payments');
+        Activity::alertModule('gym', 2, 'Payment proof received', "{$m->name} · Rs ".number_format($payment->amount)." · {$payment->reference}", 'info', '/gym?tab=payments', $m->house_id);
         Activity::log('gym', 'payment', "Proof uploaded for {$payment->reference}", $payment);
 
         return $payment;

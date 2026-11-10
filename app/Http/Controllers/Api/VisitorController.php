@@ -122,11 +122,12 @@ class VisitorController extends Controller
         $where = $visitor->house ? ' for '.$visitor->house->label : '';
 
         if ($hit) {
-            Activity::alertModule('security', 2, '⚠ Watchlist match: '.$visitor->name, $hit->reason, 'danger', '/security');
-            Activity::alertAdmins('security', 'Watchlist match at gate', $visitor->name.$where.' — '.$hit->reason, 'warning', '/security');
+            Activity::alertModule('security', 2, '⚠ Watchlist match: '.$visitor->name, $hit->reason, 'danger', '/security', $visitor->house_id);
+            Activity::alertAdmins('security', 'Watchlist match at gate', $visitor->name.$where.' — '.$hit->reason, 'warning', '/security', $visitor->house_id);
         }
         if ($needsApproval) {
             Activity::log('security', 'arrival', ucfirst($visitor->category)." {$visitor->name} at gate{$where} — waiting for approval", $visitor);
+            Activity::alertModule('security', 2, 'Waiting for approval: '.$visitor->name, ($visitor->house?->label ? 'House '.$visitor->house->label.' · ' : '').$visitor->purpose, 'info', '/security?tab=approvals', $visitor->house_id);
             Activity::alertHouse($visitor->house_id, 'security', '🔔 Visitor at gate: '.$visitor->name,
                 ucfirst($visitor->category).' · '.$visitor->purpose.'. Open Security to approve or reject.', 'warning', '/security?tab=approvals');
         } else {
@@ -156,7 +157,7 @@ class VisitorController extends Controller
         $who = $u->isResident() ? 'household' : $u->name;
         Activity::log('security', $ok ? 'approved' : 'rejected', "{$visitor->name} ".($ok ? 'approved' : 'rejected')." by {$who}".($ok ? ' for '.intdiv($stay, 60).'h '.($stay % 60).'m' : ''), $visitor);
         Activity::alertModule('security', 2, ($ok ? '✅ Allow entry: ' : '⛔ Do not allow: ').$visitor->name,
-            ($visitor->house?->label ?? '').(! empty($data['note']) ? ' · '.$data['note'] : ''), $ok ? 'success' : 'danger', '/security');
+            ($visitor->house?->label ?? '').(! empty($data['note']) ? ' · '.$data['note'] : ''), $ok ? 'success' : 'danger', '/security', $visitor->house_id);
 
         return $visitor->load('house', 'responder');
     }

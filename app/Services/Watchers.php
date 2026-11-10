@@ -19,15 +19,11 @@ class Watchers
 {
     public static function run(): void
     {
-        if (! Cache::add('watchers-lock', 1, 20)) {
+        if (! Cache::add('watchers-lock', 1, 15)) {
             return;
         }
-        self::events();
-        self::visitors();
+        Automations::run();
         self::passes();
-        if (Cache::add('watchers-daily-'.now()->toDateString(), 1, 90000)) {
-            self::gymDues();
-        }
     }
 
     public static function endAt(Event $event): Carbon
@@ -40,7 +36,7 @@ class Watchers
     }
 
     /** Configurable event alerts: warning before end → organizer at end → security after grace. */
-    private static function events(): void
+    public static function events(): void
     {
         $now = now();
         $warn = (int) Settings::get('event_warning_minutes');
@@ -72,29 +68,13 @@ class Watchers
         }
     }
 
-    /** Visitors staying past their allowed time; gate requests nobody answered. */
-    private static function visitors(): void
-    {
-        foreach (Visitor::with('house')->where('status', 'inside')->whereNull('overstay_alerted_at')->whereNotNull('expected_exit_at')->where('expected_exit_at', '<', now())->limit(50)->get() as $v) {
-            $where = $v->house ? ' at '.$v->house->label : '';
-            Activity::alertModule('security', 2, 'Overstay: '.$v->name, "Allowed until ".$v->expected_exit_at->format('h:i A').$where.'. Please verify.', 'warning', '/security');
-            Activity::alertHouse($v->house_id, 'security', 'Your visitor is overstaying', $v->name.' was allowed until '.$v->expected_exit_at->format('h:i A'), 'warning', '/security');
-            $v->forceFill(['overstay_alerted_at' => now()])->save();
-        }
-        $timeout = (int) Settings::get('visitor_approval_timeout_minutes');
-        foreach (Visitor::where('status', 'awaiting')->whereNull('overstay_alerted_at')->where('created_at', '<', now()->subMinutes($timeout))->limit(50)->get() as $v) {
-            Activity::alertModule('security', 2, 'No response from household: '.$v->name, "Waiting for {$timeout}+ minutes. Call the resident or decide at the gate.", 'warning', '/security');
-            $v->forceFill(['overstay_alerted_at' => now()])->save();
-        }
-    }
-
     private static function passes(): void
     {
         VisitorPass::where('status', 'active')->where('valid_until', '<', now())->update(['status' => 'expired']);
     }
 
     /** Daily: remind gym members whose subscription ends soon or has ended. */
-    private static function gymDues(): void
+    public static function gymDues(): void
     {
         $days = (int) Settings::get('gym_due_reminder_days');
         $members = GymMember::where('status', 'active')->whereDate('end_date', '<=', now()->addDays($days)->toDateString())

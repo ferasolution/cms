@@ -282,7 +282,7 @@ class PortalTest extends TestCase
         $this->actingAs($this->as('guard'))->getJson('/api/alerts')->assertSuccessful()->assertJsonCount(1, 'sos');
         $this->actingAs($this->as('guard'))->postJson('/api/sos/'.$sos->json('id'), ['status' => 'responding'])->assertSuccessful();
         $this->actingAs($resident)->getJson('/api/sos')->assertSuccessful()->assertJsonStructure(['data', 'contacts']);
-        $this->actingAs($this->admin)->getJson('/api/map')->assertSuccessful()->assertJsonPath('stats.sos', 1)->assertJsonPath('site.name', 'Gulistan-e-Jauhar Block 19')->assertJsonCount(397, 'houses');
+        $this->actingAs($this->admin)->getJson('/api/map')->assertSuccessful()->assertJsonPath('stats.sos', 1)->assertJsonPath('site.name', 'Gulistan-e-Jauhar Block 19')->assertJsonCount(393, 'houses')->assertJsonStructure(['signals']);
 
         $a = $this->actingAs($this->as('manager'))->postJson('/api/announcements', ['title' => 'Water off', 'body' => 'Sat', 'category' => 'utility', 'priority' => 'important', 'audience' => 'residents'])->assertSuccessful();
         $this->actingAs($resident)->getJson('/api/announcements')->assertSuccessful()->assertJsonFragment(['title' => 'Water off']);
@@ -295,5 +295,38 @@ class PortalTest extends TestCase
         $s = $this->actingAs($this->admin)->getJson('/api/settings')->assertSuccessful()->json();
         $this->actingAs($this->admin)->putJson('/api/settings', array_merge($s, ['community_name' => 'Green Valley']))->assertSuccessful()->assertJsonPath('community_name', 'Green Valley');
         $this->actingAs(User::where('email', 'admin@demo.local')->first())->putJson('/api/settings', $s)->assertForbidden();
+    }
+
+    public function test_map_signals_locate_and_automations(): void
+    {
+        $resident = $this->as('resident');
+        // a new complaint shows up as a signal pinned to the resident's house, auto-assigned by category
+        $c = $this->actingAs($resident)->postJson('/api/complaints', ['category' => 'plumbing', 'title' => 'Pipe burst', 'priority' => 'urgent'])->assertSuccessful();
+        $this->assertSame('assigned', \App\Models\Complaint::find($c->json('id'))->status);
+        $map = $this->actingAs($this->admin)->getJson('/api/map')->assertSuccessful()->json();
+        $sig = collect($map['signals'])->firstWhere('key', 'complaint-'.$c->json('id'));
+        $this->assertNotNull($sig);
+        $this->assertSame($resident->house_id, $sig['house_id']);
+        $this->assertNotNull(collect($map['houses'])->firstWhere('id', $resident->house_id)['mx']);
+        $this->assertNotEmpty($map['site']['streets']);
+        // the manager's alert carries the house id so the UI can "locate" it
+        $this->assertSame($resident->house_id, \App\Models\Alert::where('title', 'like', '%Pipe burst%')->latest('id')->first()->house_id);
+        // resident only sees signals from their own house
+        $own = $this->actingAs($resident)->getJson('/api/map')->json('signals');
+        $this->assertTrue(collect($own)->every(fn ($s) => $s['house_id'] === $resident->house_id));
+        // SOS is a signal with the house → emergency locate
+        $this->actingAs($resident)->postJson('/api/sos', ['type' => 'fire'])->assertSuccessful();
+        $this->assertNotNull(collect($this->actingAs($this->as('guard'))->getJson('/api/map')->json('signals'))->firstWhere('type', 'sos'));
+        // automations overview + manual run + escalation
+        \App\Models\Complaint::where('id', $c->json('id'))->update(['status' => 'open', 'created_at' => now()->subHours(10)]);
+        $r = $this->actingAs($this->admin)->postJson('/api/automations/run')->assertSuccessful();
+        $this->assertNotNull(\App\Models\Complaint::find($c->json('id'))->escalated_at);
+        $this->assertGreaterThan(10, count($r->json('rules')));
+        $this->actingAs($resident)->getJson('/api/automations')->assertForbidden();
+        // GPS reference points
+        $this->actingAs($this->admin)->putJson('/api/settings/geo', ['p1' => ['x' => 100, 'y' => 100, 'lat' => 24.9, 'lng' => 67.12], 'p2' => ['x' => 900, 'y' => 500, 'lat' => 24.89, 'lng' => 67.13]])->assertSuccessful();
+        $this->assertEquals(24.9, $this->actingAs($this->admin)->getJson('/api/map')->json('site.geo.p1.lat'));
+        // site plan can be re-applied without duplicating houses
+        $this->actingAs($this->admin)->postJson('/api/settings/site-plan')->assertSuccessful()->assertJsonPath('created', 0);
     }
 }

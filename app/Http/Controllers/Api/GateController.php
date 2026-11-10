@@ -67,7 +67,7 @@ class GateController extends Controller
         $pass = VisitorPass::create($data + ['code' => $code, 'created_by' => $u->id, 'max_stay_minutes' => $data['max_stay_minutes'] ?? Settings::get('visitor_max_stay_minutes'), 'persons' => $data['persons'] ?? 1]);
         $pass->load('house');
         Activity::log('security', 'pass', "QR pass {$code} for {$pass->visitor_name}".($pass->house ? " → {$pass->house->label}" : '').' valid '.$pass->valid_from->format('d M H:i').'–'.$pass->valid_until->format('d M H:i'), $pass);
-        Activity::alertModule('security', 2, 'Expected visitor: '.$pass->visitor_name, ($pass->house?->label ?? '').' · '.$pass->valid_from->format('d M h:i A'), 'info', '/security?tab=passes');
+        Activity::alertModule('security', 2, 'Expected visitor: '.$pass->visitor_name, ($pass->house?->label ?? '').' · '.$pass->valid_from->format('d M h:i A'), 'info', '/security?tab=passes', $pass->house_id);
 
         return $pass;
     }
@@ -229,8 +229,8 @@ class GateController extends Controller
         $i->update(['reference' => 'INC-'.str_pad((string) $i->id, 5, '0', STR_PAD_LEFT)]);
         $label = str_replace('_', ' ', $i->type);
         Activity::log('security', 'incident', "Incident {$i->reference}: {$label} ({$i->severity})".($i->location ? " at {$i->location}" : ''), $i);
-        Activity::alertAdmins('security', 'Security incident: '.ucfirst($label), $i->reference.' · '.ucfirst($i->severity).($i->location ? ' · '.$i->location : ''), in_array($i->severity, ['high', 'critical']) ? 'danger' : 'warning', '/security?tab=incidents');
-        Activity::alertModule('security', 3, 'Incident reported: '.ucfirst($label), $i->reference, 'warning', '/security?tab=incidents');
+        Activity::alertAdmins('security', 'Security incident: '.ucfirst($label), $i->reference.' · '.ucfirst($i->severity).($i->location ? ' · '.$i->location : ''), in_array($i->severity, ['high', 'critical']) ? 'danger' : 'warning', '/security?tab=incidents', $i->house_id);
+        Activity::alertModule('security', 3, 'Incident reported: '.ucfirst($label), $i->reference, 'warning', '/security?tab=incidents', $i->house_id);
 
         return $i->load('house');
     }

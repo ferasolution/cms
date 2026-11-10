@@ -122,7 +122,7 @@ class EventController extends Controller
         $calc = self::calculate($data);
         $event = Event::create($data + ['requested_by' => $request->user()->id, 'charges' => $calc['total'], 'charge_breakdown' => $calc, 'status' => 'pending']);
         Activity::log('events', 'request', "Event request \"{$event->title}\" on ".$event->date->format('d M').' at '.$event->venue, $event);
-        Activity::alertModule('events', 3, 'New event request', "{$event->title} · ".$event->date->format('d M').' · '.$event->venue, 'info', '/events');
+        Activity::alertModule('events', 3, 'New event request', "{$event->title} · ".$event->date->format('d M').' · '.$event->venue, 'info', '/events', $event->house_id);
 
         return $event;
     }
