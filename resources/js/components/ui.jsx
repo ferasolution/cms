@@ -72,12 +72,12 @@ export function useGet(url, deps = []) {
 /* ---------- Layout bits ---------- */
 export function PageHeader({ icon: Icon, title: t, subtitle, children }) {
     return (
-        <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
-            <div className="flex items-center gap-3">
-                {Icon && <div className="grid size-11 place-items-center rounded-2xl bg-brand-600 text-white shadow-sm"><Icon size={22} /></div>}
-                <div>
-                    <h1 className="text-xl font-bold tracking-tight sm:text-2xl">{t}</h1>
-                    {subtitle && <p className="text-sm text-ink/55">{subtitle}</p>}
+        <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
+            <div className="flex min-w-0 items-start gap-3.5">
+                {Icon && <div className="relative grid size-12 shrink-0 place-items-center overflow-hidden rounded-[14px] bg-night text-sand-400 shadow-[0_8px_20px_-10px_rgba(16,24,51,.7)]"><div className="jaali absolute inset-0 opacity-[.08]" /><Icon size={22} className="relative" /></div>}
+                <div className="min-w-0">
+                    <h1 className="text-[22px] font-bold leading-tight tracking-tight sm:text-[27px]">{t}</h1>
+                    {subtitle && <p className="mt-1 max-w-[70ch] text-[13.5px] leading-snug text-ink/55">{subtitle}</p>}
                 </div>
             </div>
             <div className="flex flex-wrap items-center gap-2">{children}</div>
@@ -87,12 +87,12 @@ export function PageHeader({ icon: Icon, title: t, subtitle, children }) {
 
 export function Tabs({ tabs, value, onChange }) {
     return (
-        <div className="mb-4 flex gap-1 overflow-x-auto rounded-2xl bg-ink/[.04] p-1 md:flex-wrap">
+        <div className="mb-5 flex gap-1 overflow-x-auto rounded-[14px] border border-ink/[.06] bg-surface p-1 shadow-[0_1px_2px_rgba(19,26,44,.04)] md:flex-wrap">
             {tabs.filter(Boolean).map((t) => (
                 <button key={t.key} onClick={() => onChange(t.key)}
-                    className={`flex shrink-0 items-center gap-1.5 rounded-xl px-3.5 py-2 text-sm font-semibold transition ${value === t.key ? 'bg-surface text-brand-700 shadow-sm' : 'text-ink/55 hover:text-black'}`}>
-                    {t.icon && <t.icon size={15} />}{t.label}
-                    {t.count > 0 && <span className="rounded-full bg-sand-400 px-1.5 text-[11px] text-white">{t.count}</span>}
+                    className={`flex shrink-0 items-center gap-1.5 rounded-[10px] px-3.5 py-2 text-[13.5px] font-semibold transition ${value === t.key ? 'bg-night text-white shadow-[0_6px_14px_-8px_rgba(16,24,51,.8)]' : 'text-ink/55 hover:bg-ink/[.04] hover:text-ink'}`}>
+                    {t.icon && <t.icon size={15} className={value === t.key ? 'text-sand-400' : ''} />}{t.label}
+                    {t.count > 0 && <span className={`rounded-full px-1.5 text-[11px] font-bold tabular ${value === t.key ? 'bg-sand-400 text-night' : 'bg-sand-100 text-sand-500'}`}>{t.count}</span>}
                 </button>
             ))}
         </div>
@@ -100,15 +100,17 @@ export function Tabs({ tabs, value, onChange }) {
 }
 
 export function Stat({ label, value, sub, icon: Icon, tone = 'brand', onClick }) {
-    const tones = { brand: 'bg-brand-50 text-brand-600', sand: 'bg-sand-100 text-sand-500', red: 'bg-red-50 text-red-600', green: 'bg-emerald-50 text-emerald-600', blue: 'bg-sky-50 text-sky-600' };
+    const tones = { brand: ['bg-brand-50 text-brand-600', 'bg-brand-500'], sand: ['bg-sand-100 text-sand-500', 'bg-sand-400'], red: ['bg-red-50 text-red-600', 'bg-red-500'], green: ['bg-emerald-50 text-emerald-600', 'bg-emerald-500'], blue: ['bg-sky-50 text-sky-600', 'bg-sky-500'] };
+    const [chip, bar] = tones[tone] || tones.brand;
     return (
-        <div onClick={onClick} className={`card p-4 ${onClick ? 'cursor-pointer transition hover:-translate-y-0.5' : ''}`}>
+        <div onClick={onClick} className={`card relative overflow-hidden px-4 pb-4 pt-3.5 ${onClick ? 'cursor-pointer transition hover:border-ink/15' : ''}`}>
+            <span className={`absolute left-0 top-4 h-6 w-[3px] rounded-r-full ${bar}`} />
             <div className="flex items-start justify-between gap-2">
-                <div className="text-xs font-semibold text-ink/50">{label}</div>
-                {Icon && <div className={`grid size-8 place-items-center rounded-xl ${tones[tone]}`}><Icon size={16} /></div>}
+                <div className="text-[12.5px] font-semibold text-ink/55">{label}</div>
+                {Icon && <div className={`grid size-8 place-items-center rounded-[10px] ${chip}`}><Icon size={16} /></div>}
             </div>
-            <div className="mt-1 text-2xl font-bold tracking-tight">{value}</div>
-            {sub && <div className="mt-0.5 text-xs text-ink/50">{sub}</div>}
+            <div className="mt-1.5 text-[28px] font-bold leading-none tracking-tight">{value}</div>
+            {sub && <div className="mt-1.5 text-xs text-ink/50">{sub}</div>}
         </div>
     );
 }
@@ -131,7 +133,7 @@ export function Spinner({ className = '' }) {
 }
 
 export function Empty({ text = 'Nothing here yet.' }) {
-    return <div className="flex flex-col items-center gap-2 py-12 text-sm text-ink/40"><Inbox size={28} />{text}</div>;
+    return <div className="flex flex-col items-center gap-3 py-14 text-sm text-ink/45"><span className="grid size-12 place-items-center rounded-2xl bg-ink/[.04] text-ink/30"><Inbox size={22} /></span>{text}</div>;
 }
 
 export function SearchBox({ value, onChange, placeholder = 'Search…' }) {
@@ -162,12 +164,12 @@ export function Table({ list, columns, empty, onRow, footer = true }) {
         <div className="card overflow-hidden">
             <div className="overflow-x-auto">
                 <table className="w-full">
-                    <thead className="border-b border-ink/5 bg-ink/[.015]">
+                    <thead className="border-b border-ink/[.07] bg-canvas/60">
                         <tr>{columns.map((c, i) => <th key={i} className={`th ${c.className || ''}`}>{c.label}</th>)}</tr>
                     </thead>
                     <tbody className="divide-y divide-ink/5">
                         {rows.map((r) => (
-                            <tr key={r.id} onClick={onRow ? () => onRow(r) : undefined} className={onRow ? 'cursor-pointer hover:bg-brand-50/40' : ''}>
+                            <tr key={r.id} onClick={onRow ? () => onRow(r) : undefined} className={`transition-colors ${onRow ? 'cursor-pointer hover:bg-brand-50/50' : 'hover:bg-ink/[.015]'}`}>
                                 {columns.map((c, i) => <td key={i} className={`td ${c.className || ''}`}>{c.render ? c.render(r) : r[c.key] ?? '—'}</td>)}
                             </tr>
                         ))}
@@ -201,10 +203,10 @@ export function Modal({ open, onClose, title: t, children, wide }) {
     if (!open) return null;
     // Portal to <body> so modals are never clipped by a parent with transform / backdrop-filter.
     return createPortal(
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-ink/40 p-0 backdrop-blur-[2px] sm:items-center sm:p-4" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
-            <div className={`card max-h-[92vh] w-full overflow-y-auto rounded-b-none sm:rounded-2xl ${wide ? 'sm:max-w-3xl' : 'sm:max-w-lg'}`}>
-                <div className="sticky top-0 z-10 flex items-center justify-between border-b border-ink/5 bg-surface px-5 py-3.5">
-                    <h3 className="font-bold">{t}</h3>
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-night/55 p-0 backdrop-blur-sm sm:items-center sm:p-4" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
+            <div className={`card max-h-[92vh] w-full overflow-y-auto rounded-b-none shadow-2xl sm:rounded-[22px] ${wide ? 'sm:max-w-3xl' : 'sm:max-w-lg'}`}>
+                <div className="sticky top-0 z-10 flex items-center justify-between border-b border-ink/[.06] bg-surface/95 px-5 py-4 backdrop-blur">
+                    <h3 className="text-[17px] font-bold tracking-tight">{t}</h3>
                     <button className="btn-ghost btn-sm" onClick={onClose}><X size={16} /></button>
                 </div>
                 <div className="p-5">{children}</div>
@@ -346,7 +348,7 @@ export function QrImage({ text, size = 200, className = '' }) {
     const [src, setSrc] = useState(null);
     useEffect(() => {
         let alive = true;
-        import('qrcode').then((QR) => QR.toDataURL(text, { width: size * 2, margin: 1, color: { dark: '#0b2e2c', light: '#ffffff' } })).then((d) => alive && setSrc(d)).catch(() => {});
+        import('qrcode').then((QR) => QR.toDataURL(text, { width: size * 2, margin: 1, color: { dark: '#101833', light: '#ffffff' } })).then((d) => alive && setSrc(d)).catch(() => {});
         return () => { alive = false; };
     }, [text, size]);
     return src ? <img src={src} width={size} height={size} alt="QR code" className={`rounded-xl bg-white p-1 ${className}`} /> : <div style={{ width: size, height: size }} className="grid place-items-center rounded-xl bg-ink/5"><Spinner /></div>;

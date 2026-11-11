@@ -76,7 +76,7 @@ function LocateCard({ info, house, compact }) {
     const text = `Plot ${info.plot}${info.street ? ', ' + info.street : ''} — ${info.series}${info.landmark ? ', near ' + info.landmark : ''}${r ? `. From ${r.gate.label}: ${r.metres} m (~${r.walkMin} min walk)` : ''}${info.gps ? `. GPS ${info.gps.lat}, ${info.gps.lng}` : ''}`;
     return (
         <div className={`rounded-2xl bg-sky-50 p-3 text-sm ${compact ? '' : 'mt-1'}`}>
-            <div className="mb-1.5 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-sky-700"><Navigation size={13} />Locate</div>
+            <div className="mb-1.5 flex items-center gap-1.5 text-[12.5px] font-bold text-sky-700"><Navigation size={13} />Locate</div>
             <div className="grid grid-cols-2 gap-x-3 gap-y-1">
                 <div><span className="text-[11px] text-ink/45">Plot</span><div className="font-bold">{info.plot}</div></div>
                 <div><span className="text-[11px] text-ink/45">Street</span><div className="font-semibold">{info.street || '—'}</div></div>
@@ -335,7 +335,7 @@ export default function MapPage() {
             <Tabs value={layer} onChange={setLayer} tabs={Object.entries(LAYERS).filter(([, l]) => !(l.official && isResident) && !(l.finance && !can('finance', true))).map(([key, l]) => ({ key, label: l.label, icon: l.icon, count: { requests: signals.length, visitors: st.inside, complaints: st.complaints, events: st.events }[key] }))} />
 
             <div className="grid min-h-[560px] flex-1 gap-3 lg:grid-cols-[1fr_340px]">
-                <div ref={wrap} className="card relative min-h-[460px] overflow-hidden bg-[#0b1514]">
+                <div ref={wrap} className="card relative min-h-[460px] overflow-hidden bg-night">
                     {!data ? <div className="grid h-full place-items-center"><Spinner /></div> : view === '2d' ? (
                         <PlanMap site={data.site} houses={houses} signals={signals} selectedId={selected?.id} onSelect={select} route={route} flash={flash} focus={selected?.id} height="100%" className="absolute inset-0 !rounded-none"
                             markers={[...(data.markers?.cameras || []).map((c) => ({ key: 'cam' + c.id, x: c.map_x, y: c.map_y, icon: '📹', color: '#0f766e', label: c.name, title: 'CCTV · ' + c.name })),
@@ -350,8 +350,8 @@ export default function MapPage() {
 
                     {data && (
                         <div className="pointer-events-none absolute left-3 top-3 flex flex-wrap gap-2">
-                            {[['Requests', signals.length, '#e0a94f', Inbox], ['Inside', st.inside, '#22c55e', Users], ['At gate', st.awaiting, '#f59e0b', BellRing], ['Overstay', st.overstay, '#ef4444', Hourglass], ['Events', st.events, '#e0a94f', CalendarHeart], ...(st.sos ? [['SOS', st.sos, '#ff2a2a', Siren]] : [])].map(([l, v, c, I]) => (
-                                <div key={l} className={`flex items-center gap-2 rounded-xl bg-[#0b1514]/75 px-3 py-1.5 text-white backdrop-blur ${l === 'SOS' ? 'animate-pulse ring-2 ring-red-500' : ''}`}>
+                            {[['Requests', signals.length, '#f5a524', Inbox], ['Inside', st.inside, '#22c55e', Users], ['At gate', st.awaiting, '#f59e0b', BellRing], ['Overstay', st.overstay, '#ef4444', Hourglass], ['Events', st.events, '#f5a524', CalendarHeart], ...(st.sos ? [['SOS', st.sos, '#ff2a2a', Siren]] : [])].map(([l, v, c, I]) => (
+                                <div key={l} className={`flex items-center gap-2 rounded-xl bg-night/75 px-3 py-1.5 text-white backdrop-blur ${l === 'SOS' ? 'animate-pulse ring-2 ring-red-500' : ''}`}>
                                     <I size={14} style={{ color: c }} /><span className="text-lg font-bold leading-none">{v ?? 0}</span><span className="text-[11px] text-white/60">{l}</span>
                                 </div>
                             ))}
@@ -359,17 +359,17 @@ export default function MapPage() {
                     )}
                     {view === '3d' && (
                         <div className="absolute right-3 top-3 flex flex-col items-end gap-2">
-                            <div className="flex overflow-hidden rounded-xl bg-[#0b1514]/75 text-white backdrop-blur">
+                            <div className="flex overflow-hidden rounded-xl bg-night/75 text-white backdrop-blur">
                                 {[['auto', Clock3, 'Real time'], ['day', Sun, 'Day'], ['night', Moon, 'Night']].map(([m, I, t]) => (
                                     <button key={m} title={t} onClick={() => setMode(m)} className={`grid size-9 place-items-center ${mode === m ? 'bg-white/20' : 'hover:bg-white/10'}`}><I size={16} /></button>
                                 ))}
                             </div>
-                            <button title="Whole community" onClick={() => { setSelected(null); setFly(null); setHome((n) => n + 1); }} className="grid size-9 place-items-center rounded-xl bg-[#0b1514]/75 text-white backdrop-blur hover:bg-[#0b1514]"><MapIcon size={16} /></button>
-                            <button title="Slow orbit" onClick={() => setAutoRotate(!autoRotate)} className={`grid size-9 place-items-center rounded-xl text-white backdrop-blur ${autoRotate ? 'bg-brand-600' : 'bg-[#0b1514]/75 hover:bg-[#0b1514]'}`}><Radio size={16} /></button>
-                            <button title="Fullscreen" onClick={toggleFull} className="grid size-9 place-items-center rounded-xl bg-[#0b1514]/75 text-white backdrop-blur hover:bg-[#0b1514]">{full ? <Minimize2 size={16} /> : <Maximize2 size={16} />}</button>
+                            <button title="Whole community" onClick={() => { setSelected(null); setFly(null); setHome((n) => n + 1); }} className="grid size-9 place-items-center rounded-xl bg-night/75 text-white backdrop-blur hover:bg-night"><MapIcon size={16} /></button>
+                            <button title="Slow orbit" onClick={() => setAutoRotate(!autoRotate)} className={`grid size-9 place-items-center rounded-xl text-white backdrop-blur ${autoRotate ? 'bg-brand-600' : 'bg-night/75 hover:bg-night'}`}><Radio size={16} /></button>
+                            <button title="Fullscreen" onClick={toggleFull} className="grid size-9 place-items-center rounded-xl bg-night/75 text-white backdrop-blur hover:bg-night">{full ? <Minimize2 size={16} /> : <Maximize2 size={16} />}</button>
                         </div>
                     )}
-                    <div className="absolute bottom-3 left-3 flex max-w-[75%] flex-wrap gap-x-3 gap-y-1 rounded-xl bg-[#0b1514]/75 px-3 py-2 text-[11px] text-white backdrop-blur">
+                    <div className="absolute bottom-3 left-3 flex max-w-[75%] flex-wrap gap-x-3 gap-y-1 rounded-xl bg-night/75 px-3 py-2 text-[11px] text-white backdrop-blur">
                         {['sos', 'gate', 'complaint', 'event_request', 'noc', 'incident', 'payment'].map((t) => <span key={t} className="flex items-center gap-1">{SIGNAL_META[t].icon}<span>{SIGNAL_META[t].label}</span></span>)}
                         <span className="text-white/45">· zoom in to read plot numbers & streets</span>
                     </div>

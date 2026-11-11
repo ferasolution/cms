@@ -438,7 +438,7 @@ function Floor({ plan, f, pal, tex, doll, onRoom, onFloorClick, highlight }) {
                     onClick={(e) => { if (e.delta > 5) return; e.stopPropagation(); doll ? onRoom(rm.key) : onFloorClick(e.point); }}
                     onPointerOver={(e) => { e.stopPropagation(); document.body.style.cursor = 'pointer'; }} onPointerOut={() => { document.body.style.cursor = ''; }}>
                     <planeGeometry args={[rm.x1 - rm.x0, rm.z1 - rm.z0]} />
-                    <meshStandardMaterial map={floorTex[rm.key]} roughness={FLOOR_TEX[rm.type] === 'wood' ? 0.55 : 0.18} metalness={0.02} emissive={highlight === rm.key ? '#e0a94f' : '#000'} emissiveIntensity={highlight === rm.key ? 0.25 : 0} />
+                    <meshStandardMaterial map={floorTex[rm.key]} roughness={FLOOR_TEX[rm.type] === 'wood' ? 0.55 : 0.18} metalness={0.02} emissive={highlight === rm.key ? '#f5a524' : '#000'} emissiveIntensity={highlight === rm.key ? 0.25 : 0} />
                 </mesh>
             ))}
             <Walls pieces={pieces} pal={pal} doll={doll} center={center} />

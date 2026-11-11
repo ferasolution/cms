@@ -44,7 +44,7 @@ export function applyTheme(mode) {
     const m = mode || localStorageGet('theme') || 'system';
     const dark = m === 'dark' || (m === 'system' && window.matchMedia?.('(prefers-color-scheme: dark)').matches);
     document.documentElement.classList.toggle('dark', !!dark);
-    document.querySelector('meta[name=theme-color]')?.setAttribute('content', dark ? '#0b1514' : '#0f3d3e');
+    document.querySelector('meta[name=theme-color]')?.setAttribute('content', dark ? '#0b1022' : '#101833');
     try { localStorage.setItem('theme', m); } catch { /* private mode */ }
     return m;
 }

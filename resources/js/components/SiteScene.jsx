@@ -33,16 +33,16 @@ export function houseColor(h, layer) {
         case 'requests': return h.sig ? SIGNAL_META[h.sig]?.color || '#f59e0b' : '#d9dedd';
         case 'visitors': return h.awaiting ? '#f59e0b' : h.overstay ? '#ef4444' : h.visitors ? '#22c55e' : '#cfd6d5';
         case 'complaints': return h.complaints ? ['#fca5a5', '#f87171', '#ef4444', '#dc2626'][Math.min(3, h.complaints - 1)] : '#cfd6d5';
-        case 'maintenance': return h.paid ? '#1f7a74' : '#f59e0b';
-        case 'events': return h.event ? '#c98a2b' : '#cfd6d5';
-        default: return h.mine ? '#e0a94f' : PAINT[h.id % PAINT.length];
+        case 'maintenance': return h.paid ? '#3a55e0' : '#f59e0b';
+        case 'events': return h.event ? '#d98a0b' : '#cfd6d5';
+        default: return h.mine ? '#f5a524' : PAINT[h.id % PAINT.length];
     }
 }
 
 function Label({ text, pos, size = 'm', dim }) {
     return (
         <Html position={pos} center style={{ pointerEvents: 'none' }} zIndexRange={[10, 0]}>
-            <div className={`whitespace-nowrap rounded-md px-1.5 py-0.5 font-bold tracking-wider ${dim ? 'bg-black/35 text-white/80' : 'bg-[#0b2e2c]/85 text-white'} ${size === 'l' ? 'text-[11px]' : 'text-[9.5px]'}`}>{text}</div>
+            <div className={`whitespace-nowrap rounded-md px-1.5 py-0.5 font-bold tracking-wider ${dim ? 'bg-black/35 text-white/80' : 'bg-[#101833]/85 text-white'} ${size === 'l' ? 'text-[11px]' : 'text-[9.5px]'}`}>{text}</div>
         </Html>
     );
 }
@@ -128,7 +128,7 @@ function Zone({ z, to, night }) {
             return (
                 <group>
                     {flat(z.type === 'office' ? '#e7d58a' : '#efe0a0', 0.05)}
-                    <mesh position={[x, z.type === 'office' ? 0.45 : 0.7, zz]} castShadow><boxGeometry args={[bw * 0.6, z.type === 'office' ? 0.9 : 1.4, bh * 0.55]} /><meshStandardMaterial color={z.type === 'office' ? '#124f4b' : '#e9d9b0'} /></mesh>
+                    <mesh position={[x, z.type === 'office' ? 0.45 : 0.7, zz]} castShadow><boxGeometry args={[bw * 0.6, z.type === 'office' ? 0.9 : 1.4, bh * 0.55]} /><meshStandardMaterial color={z.type === 'office' ? '#2737a3' : '#e9d9b0'} /></mesh>
                     <Label text={z.label.toUpperCase()} pos={[x, z.type === 'office' ? 1.6 : 2.2, zz]} />
                 </group>
             );
@@ -202,8 +202,8 @@ function Gate({ g, to, night }) {
     const [x, z] = to(g.x, g.y);
     return (
         <group position={[x, 0, z]} rotation={[0, -THREE.MathUtils.degToRad(g.ang) + Math.PI / 2, 0]}>
-            {[-1.7, 1.7].map((o) => <mesh key={o} position={[o, 1.1, 0]} castShadow><boxGeometry args={[0.45, 2.2, 0.45]} /><meshStandardMaterial color="#124f4b" /></mesh>)}
-            <mesh position={[0, 2.3, 0]} castShadow><boxGeometry args={[3.8, 0.38, 0.5]} /><meshStandardMaterial color="#124f4b" emissive={night ? '#e0a94f' : '#000'} emissiveIntensity={night ? 0.3 : 0} /></mesh>
+            {[-1.7, 1.7].map((o) => <mesh key={o} position={[o, 1.1, 0]} castShadow><boxGeometry args={[0.45, 2.2, 0.45]} /><meshStandardMaterial color="#2737a3" /></mesh>)}
+            <mesh position={[0, 2.3, 0]} castShadow><boxGeometry args={[3.8, 0.38, 0.5]} /><meshStandardMaterial color="#2737a3" emissive={night ? '#f5a524' : '#000'} emissiveIntensity={night ? 0.3 : 0} /></mesh>
             <group ref={bar} position={[-1.4, 0.85, 0.4]}><mesh position={[1.4, 0, 0]}><boxGeometry args={[2.8, 0.08, 0.08]} /><meshStandardMaterial color="#ef4444" /></mesh></group>
             <mesh position={[2.7, 0.7, 0.6]} castShadow><boxGeometry args={[1, 1.4, 1]} /><meshStandardMaterial color="#e8e2d4" /></mesh>
             <Label text={(g.label || 'Main Gate').toUpperCase()} pos={[0, 3.2, 0]} />
@@ -311,7 +311,7 @@ function StreetNames({ site, to }) {
         const [x, z] = to(st.x, st.y);
         return (
             <Html key={st.text} position={[x, 0.15, z]} center style={{ pointerEvents: 'none' }} zIndexRange={[3, 0]}>
-                <div className="whitespace-nowrap rounded bg-[#0b1514]/55 px-1 text-[8.5px] font-bold uppercase tracking-wider text-white/90" style={{ transform: `rotate(${st.ang > 45 ? st.ang - 90 : st.ang}deg)` }}>{st.text}</div>
+                <div className="whitespace-nowrap rounded bg-night/55 px-1 text-[8.5px] font-bold uppercase tracking-wider text-white/90" style={{ transform: `rotate(${st.ang > 45 ? st.ang - 90 : st.ang}deg)` }}>{st.text}</div>
             </Html>
         );
     });
@@ -394,13 +394,13 @@ export default function SiteScene({ data, layer, selected, onSelect, night, walk
             {groups.map((g) => byId[g.house_id]?.mx != null && <SignalPin key={g.house_id} pos={top(byId[g.house_id])} group={g} flash={flashSet.has(g.house_id)} onClick={() => onSelect(byId[g.house_id])} />)}
             <RealHouses houses={data.houses} to={to} layer={layer} night={night} colorOf={houseColor} hover={hover} setHover={setHover} onSelect={onSelect} />
             <Surroundings site={site} to={to} night={night} />
-            <Highlight h={selected && byId[selected.id]} site={site} color="#e0a94f" />
+            <Highlight h={selected && byId[selected.id]} site={site} color="#f5a524" />
             {hover && hover.id !== selected?.id && <Highlight h={hover} site={site} color="#ffffff" />}
 
             {status.map((h) => {
                 const p = top(h), list = [];
                 if ((layer === 'overview' || layer === 'visitors') && h.visitors) list.push('#22c55e');
-                if ((layer === 'overview' || layer === 'events') && h.event) list.push('#e0a94f');
+                if ((layer === 'overview' || layer === 'events') && h.event) list.push('#f5a524');
                 return (
                     <group key={h.id}>
                         {list.map((c, i) => <Beacon key={c} pos={[p[0] + (i - (list.length - 1) / 2) * 0.9, p[1], p[2]]} color={c} />)}
@@ -415,7 +415,7 @@ export default function SiteScene({ data, layer, selected, onSelect, night, walk
 
             {tip && tip.mx != null && (
                 <Html position={top(tip).map((v, i) => (i === 1 ? v + 1.2 : v))} center style={{ pointerEvents: 'none' }} zIndexRange={[20, 10]}>
-                    <div className="whitespace-nowrap rounded-xl bg-[#0b1514]/90 px-2.5 py-1.5 text-xs font-semibold text-white shadow-xl backdrop-blur">
+                    <div className="whitespace-nowrap rounded-xl bg-night/90 px-2.5 py-1.5 text-xs font-semibold text-white shadow-xl backdrop-blur">
                         <div>Plot {tip.label}{tip.owner ? ' · ' + tip.owner : ''}</div>
                         <div className="mt-0.5 flex gap-2 text-[10px] font-normal text-white/70">
                             {tip.sos && <span className="font-bold text-red-300">SOS {tip.sos}</span>}

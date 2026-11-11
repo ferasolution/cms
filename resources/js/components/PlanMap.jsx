@@ -63,7 +63,7 @@ export default function PlanMap({ site, houses, signals = [], selectedId, onSele
     const fill = (h) => {
         const g = groups.find((x) => x.house_id === h.id);
         if (g) return SIGNAL_META[g.top.type]?.color || '#f59e0b';
-        if (h.mine) return '#e0a94f';
+        if (h.mine) return '#f5a524';
         return h.block === 'N' ? 'var(--plan-plot-n)' : 'var(--plan-plot)';
     };
 
@@ -87,7 +87,7 @@ export default function PlanMap({ site, houses, signals = [], selectedId, onSele
                 {(site.roads || []).filter((r) => !r.outside).map((r) => <polyline key={r.name} points={r.pts.join(' ')} fill="none" stroke="var(--plan-road)" strokeWidth={r.width * 0.7} strokeLinecap="round" strokeLinejoin="round" opacity="0.55" />)}
                 {(site.zones || []).filter((z) => z.type !== 'outside').map((z, i) => <polygon key={'z' + i} points={z.pts.join(' ')} fill={ZONE[z.type] || '#bbb'} stroke="rgba(0,0,0,.25)" strokeWidth={0.6 * sw} />)}
                 {placed.map((h) => (
-                    <polygon key={h.id} points={polys[h.id].join(' ')} fill={fill(h)} stroke={h.id === selectedId ? '#e0a94f' : 'rgba(40,30,50,.45)'} strokeWidth={(h.id === selectedId ? 2.4 : 0.6) * sw}
+                    <polygon key={h.id} points={polys[h.id].join(' ')} fill={fill(h)} stroke={h.id === selectedId ? '#f5a524' : 'rgba(40,30,50,.45)'} strokeWidth={(h.id === selectedId ? 2.4 : 0.6) * sw}
                         onPointerEnter={() => setHover(h)} onPointerLeave={() => setHover(null)}
                         onClick={() => { if (!drag.current?.moved) onSelect?.(h); }} style={{ cursor: 'pointer' }} />
                 ))}
@@ -109,7 +109,7 @@ export default function PlanMap({ site, houses, signals = [], selectedId, onSele
                 )}
                 {gatesOf(site).map((g) => (
                     <g key={g.label} transform={`translate(${g.x} ${g.y})`} pointerEvents="none">
-                        <circle r={7 * sw} fill="#124f4b" stroke="#fff" strokeWidth={1.5 * sw} />
+                        <circle r={7 * sw} fill="#2737a3" stroke="#fff" strokeWidth={1.5 * sw} />
                         <text y={0.5} fontSize={7 * sw} textAnchor="middle" dominantBaseline="central" fill="#fff" fontWeight="800">G</text>
                         {!compact && <text y={14 * sw} fontSize={7 * sw} textAnchor="middle" fill="var(--plan-label)" fontWeight="700">{g.label.toUpperCase()}</text>}
                     </g>
@@ -141,7 +141,7 @@ export default function PlanMap({ site, houses, signals = [], selectedId, onSele
             </svg>
 
             {hover && (
-                <div className="pointer-events-none absolute left-3 top-3 max-w-[70%] rounded-xl bg-[#0b1514]/90 px-3 py-2 text-xs text-white shadow-xl backdrop-blur">
+                <div className="pointer-events-none absolute left-3 top-3 max-w-[70%] rounded-xl bg-night/90 px-3 py-2 text-xs text-white shadow-xl backdrop-blur">
                     <div className="font-bold">Plot {hover.label}{hover.owner ? ' · ' + hover.owner : ''}</div>
                     <div className="text-white/60">{hover.street}</div>
                     {groups.find((g) => g.house_id === hover.id)?.list.map((s) => <div key={s.key} className="mt-0.5">{SIGNAL_META[s.type]?.icon} {s.title}</div>)}

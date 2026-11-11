@@ -13,7 +13,7 @@ async function printCheckpoints(cps) {
     const w = window.open('', '_blank', 'width=800,height=900');
     if (!w) return;
     w.document.write(`<!doctype html><html><head><title>Patrol checkpoints</title><style>body{font-family:Arial;margin:10mm}.g{display:grid;grid-template-columns:repeat(3,1fr);gap:6mm}
-        .c{border:2px solid #124f4b;border-radius:4mm;padding:4mm;text-align:center;break-inside:avoid}img{width:42mm;height:42mm}h3{margin:2mm 0 0;font-size:14px}.k{font:700 12px monospace;letter-spacing:1px}.s{font-size:10px;color:#555}</style></head>
+        .c{border:2px solid #2737a3;border-radius:4mm;padding:4mm;text-align:center;break-inside:avoid}img{width:42mm;height:42mm}h3{margin:2mm 0 0;font-size:14px}.k{font:700 12px monospace;letter-spacing:1px}.s{font-size:10px;color:#555}</style></head>
         <body><div class="g">${cps.map((c, i) => `<div class="c"><div class="s">PATROL CHECKPOINT</div><img src="${qrs[i]}"><h3>${esc(c.name)}</h3><div class="k">${esc(c.code)}</div><div class="s">Guards: scan on every round</div></div>`).join('')}</div>
         <script>window.onload=()=>setTimeout(()=>window.print(),300)<\/script></body></html>`);
     w.document.close();
@@ -138,7 +138,7 @@ export default function PatrolTab() {
                     {() => (
                         <div>
                             <div className="label flex items-center gap-1"><MapPin size={13} />Position {pick ? <span className="text-ink/45">({pick[0]}, {pick[1]})</span> : <span className="text-ink/45">— click the map</span>}</div>
-                            {map.data?.site?.boundary && <PlanMap site={map.data.site} houses={map.data.houses} height={240} compact onPick={(x, y) => setPick([x, y])} markers={pick ? [{ key: 'p', x: pick[0], y: pick[1], icon: '📍', color: '#e0a94f', pulse: true }] : []} />}
+                            {map.data?.site?.boundary && <PlanMap site={map.data.site} houses={map.data.houses} height={240} compact onPick={(x, y) => setPick([x, y])} markers={pick ? [{ key: 'p', x: pick[0], y: pick[1], icon: '📍', color: '#f5a524', pulse: true }] : []} />}
                             {edit.id && <div className="mt-3"><Confirm className="btn-ghost btn-sm text-red-600" message="Remove this checkpoint?" onConfirm={() => act(() => del(`patrol/checkpoints/${edit.id}`), 'Removed', () => { setEdit(null); p.reload(); })}><Trash2 size={13} />Remove</Confirm></div>}
                         </div>
                     )}

@@ -107,7 +107,7 @@ function SearchPalette({ open, onClose }) {
                     {rows.map((r, i) => (
                         <button key={r.type + r.id} onMouseEnter={() => setSel(i)} onClick={() => go(r)}
                             className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left ${i === sel ? 'bg-brand-50' : ''}`}>
-                            <span className="w-24 shrink-0 text-[10px] font-bold uppercase tracking-wider text-brand-600">{r.type}</span>
+                            <span className="w-24 shrink-0 text-[11.5px] font-semibold capitalize text-brand-600">{r.type}</span>
                             <span className="min-w-0 flex-1"><span className="block truncate text-sm font-semibold">{r.title}</span>{r.sub && <span className="block truncate text-xs text-ink/50">{r.sub}</span>}</span>
                             {i === sel && <CornerDownLeft size={14} className="text-ink/35" />}
                         </button>
@@ -169,7 +169,7 @@ function LiveDot() {
     const { online, lastSync } = useAlerts();
     return (
         <span className={`hidden items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold md:flex ${online ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-700'}`} title={lastSync ? 'Last sync ' + lastSync.toLocaleTimeString() : ''}>
-            {online ? <><span className="relative flex size-2"><span className="absolute inline-flex size-full animate-ping rounded-full bg-emerald-400 opacity-75" /><span className="relative inline-flex size-2 rounded-full bg-emerald-500" /></span>LIVE</> : <><WifiOff size={12} />Offline</>}
+            {online ? <><span className="relative flex size-2"><span className="absolute inline-flex size-full animate-ping rounded-full bg-emerald-400 opacity-75" /><span className="relative inline-flex size-2 rounded-full bg-emerald-500" /></span>Live</> : <><WifiOff size={12} />Offline</>}
         </span>
     );
 }
@@ -227,8 +227,8 @@ export default function Layout() {
 
     const link = (to, Icon, label, end) => (
         <NavLink key={to} to={to} end={end} onClick={() => setOpen(false)}
-            className={({ isActive }) => `group flex items-center gap-3 rounded-xl px-3 py-2 text-[13.5px] font-medium transition ${isActive ? 'bg-white/12 text-white shadow-[inset_2px_0_0_#e0a94f]' : 'text-white/60 hover:bg-white/6 hover:text-white'}`}>
-            <Icon size={17} className="shrink-0" />{label}
+            className={({ isActive }) => `group flex items-center gap-3 rounded-[10px] px-3 py-[7px] text-[13.5px] transition ${isActive ? 'lamp font-semibold text-white' : 'font-medium text-white/58 hover:bg-white/[.06] hover:text-white'}`}>
+            {({ isActive }) => <><Icon size={17} className={`shrink-0 transition ${isActive ? 'text-sand-400 drop-shadow-[0_0_6px_rgba(245,165,36,.6)]' : 'text-white/45 group-hover:text-white/80'}`} />{label}</>}
         </NavLink>
     );
     const groups = {};
@@ -236,53 +236,52 @@ export default function Layout() {
 
     return (
         <div className="flex h-full">
-            <aside className={`fixed inset-y-0 left-0 z-40 flex w-64 flex-col bg-brand-900 p-3 text-white transition-transform dark:bg-[#071110] lg:static lg:translate-x-0 ${open ? 'translate-x-0' : '-translate-x-full'}`}>
-                <div className="mb-3 flex items-center justify-between px-2 pt-2">
-                    <div className="flex items-center gap-2.5">
-                        <img src="/icon.svg" alt="" className="size-9 rounded-xl" />
+            <aside className={`fixed inset-y-0 left-0 z-40 flex w-[264px] flex-col overflow-hidden bg-night p-3 text-white transition-transform lg:static lg:translate-x-0 ${open ? 'translate-x-0' : '-translate-x-full'}`}>
+                <div className="jaali pointer-events-none absolute inset-0 opacity-[.045]" />
+                <div className="pointer-events-none absolute -left-24 -top-24 size-72 rounded-full bg-brand-500/25 blur-3xl" />
+                <div className="relative mb-4 flex items-center justify-between px-2 pt-2">
+                    <div className="flex items-center gap-3">
+                        <span className="relative grid size-10 place-items-center rounded-xl bg-white/[.07] ring-1 ring-white/10"><img src="/icon.svg" alt="" className="size-7 rounded-lg" /><span className="absolute -right-0.5 -top-0.5 size-2.5 rounded-full bg-sand-400 shadow-[0_0_8px_2px_rgba(245,165,36,.6)]" /></span>
                         <div className="leading-tight">
-                            <div className="text-sm font-bold">{community || 'Community'}</div>
-                            <div className="text-[11px] text-white/45">Smart Community Platform</div>
+                            <div className="text-[15px] font-bold tracking-tight">{community || 'Community'}</div>
+                            <div className="text-[11.5px] text-white/45">Community control room</div>
                         </div>
                     </div>
                     <button className="lg:hidden" onClick={() => setOpen(false)}><X size={20} /></button>
                 </div>
-                <button onClick={() => { setSearch(true); setOpen(false); }} className="mb-3 flex items-center gap-2 rounded-xl bg-white/8 px-3 py-2 text-left text-xs text-white/50 hover:bg-white/12">
-                    <Search size={14} />Search…<kbd className="ml-auto rounded border border-white/15 px-1 text-[10px]">Ctrl K</kbd>
-                </button>
-                <nav className="-mr-1 flex-1 space-y-0.5 overflow-y-auto pr-1">
+                <nav className="relative -mr-1 flex-1 space-y-0.5 overflow-y-auto pr-1 [scrollbar-width:thin] [scrollbar-color:rgba(255,255,255,.15)_transparent]">
                     {link('/', LayoutDashboard, isAdmin ? 'Command Center' : 'Dashboard', true)}
                     {link('/map', Map, '3D Community Map')}
                     {employee && link('/workspace', Briefcase, 'My Workspace')}
                     {Object.entries(groups).map(([g, items]) => (
                         <div key={g}>
-                            <div className="px-3 pb-1 pt-4 text-[10px] font-semibold uppercase tracking-widest text-white/30">{g}</div>
+                            <div className="flex items-center gap-2 px-3 pb-1.5 pt-5 text-[11.5px] font-semibold text-white/35">{g}<span className="h-px flex-1 bg-white/[.07]" /></div>
                             {items.map((m) => link(m.to, m.icon, m.label))}
                         </div>
                     ))}
                     {isAdmin && link('/automations', Workflow, 'Automations')}
                     {isAdmin && link('/activity', Activity, 'Audit & Activity Log')}
                 </nav>
-                <div className="mt-3 rounded-xl bg-white/6 p-3">
-                    <NavLink to="/profile" onClick={() => setOpen(false)} className="flex items-center gap-2.5">
-                        <span className="grid size-9 shrink-0 place-items-center rounded-full bg-sand-400 text-sm font-bold text-brand-900">{user.name.split(' ').map((w) => w[0]).slice(0, 2).join('')}</span>
+                <div className="relative mt-3 rounded-2xl border border-white/[.07] bg-white/[.04] p-2.5">
+                    <NavLink to="/profile" onClick={() => setOpen(false)} className="flex items-center gap-2.5 rounded-xl p-1 hover:bg-white/[.05]">
+                        <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-sand-400 text-sm font-bold text-night">{user.name.split(' ').map((w) => w[0]).slice(0, 2).join('')}</span>
                         <div className="min-w-0 leading-tight">
                             <div className="truncate text-sm font-semibold">{user.name}</div>
                             <div className="truncate text-[11px] text-white/50">{roleLabel}{user.house ? ' · ' + (user.house.block ? user.house.block + '-' : '') + user.house.house_no : ''}</div>
                         </div>
                     </NavLink>
-                    <button onClick={logout} className="mt-2.5 flex w-full items-center justify-center gap-2 rounded-lg py-1.5 text-xs font-semibold text-white/60 hover:bg-white/10 hover:text-white"><LogOut size={14} />Sign out</button>
+                    <button onClick={logout} className="mt-1.5 flex w-full items-center justify-center gap-2 rounded-lg py-1.5 text-xs font-semibold text-white/50 hover:bg-white/[.07] hover:text-white"><LogOut size={14} />Sign out</button>
                 </div>
             </aside>
             {open && <div className="fixed inset-0 z-30 bg-black/40 lg:hidden" onClick={() => setOpen(false)} />}
 
             <div className="flex min-w-0 flex-1 flex-col">
                 <SosBanner />
-                <header className="sticky top-0 z-20 flex items-center justify-between gap-2 border-b border-ink/5 bg-canvas/85 px-3 py-2 backdrop-blur sm:px-6">
+                <header className="sticky top-0 z-20 flex h-[60px] items-center justify-between gap-2 border-b border-ink/[.06] bg-canvas/80 px-3 backdrop-blur-xl sm:px-6 lg:px-8">
                     <div className="flex items-center gap-2">
                         <button className="btn-ghost -ml-1 lg:hidden" onClick={() => setOpen(true)}><Menu size={20} /></button>
-                        <button onClick={() => setSearch(true)} className="hidden w-72 items-center gap-2 rounded-xl border border-ink/10 bg-surface px-3 py-2 text-sm text-ink/40 hover:border-brand-500 sm:flex">
-                            <Search size={15} />Search everything…<kbd className="ml-auto rounded border border-ink/10 px-1 text-[10px]">Ctrl K</kbd>
+                        <button onClick={() => setSearch(true)} className="hidden w-80 items-center gap-2.5 rounded-xl border border-ink/[.08] bg-surface px-3 py-2 text-sm text-ink/45 shadow-[0_1px_2px_rgba(19,26,44,.04)] transition hover:border-brand-500/50 hover:text-ink/60 sm:flex">
+                            <Search size={15} />Search houses, people, plates…<kbd className="ml-auto rounded-md bg-ink/[.05] px-1.5 py-0.5 text-[10.5px] font-semibold text-ink/45">Ctrl K</kbd>
                         </button>
                         <button onClick={() => setSearch(true)} className="grid size-10 place-items-center rounded-xl hover:bg-ink/5 sm:hidden"><Search size={19} /></button>
                     </div>
@@ -293,7 +292,7 @@ export default function Layout() {
                         <SosButton />
                     </div>
                 </header>
-                <main className="flex-1 overflow-y-auto px-3 pb-24 pt-5 sm:px-6 lg:px-8 lg:pb-6"><div key={location.pathname} className="rise h-full"><Outlet /></div></main>
+                <main className="flex-1 overflow-y-auto px-3 pb-24 pt-6 sm:px-6 lg:px-8 lg:pb-8"><div key={location.pathname} className="rise h-full"><Outlet /></div></main>
                 <BottomNav onMenu={() => setOpen(true)} />
             </div>
             <SearchPalette open={search} onClose={() => setSearch(false)} />

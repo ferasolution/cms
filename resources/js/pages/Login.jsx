@@ -20,29 +20,29 @@ export default function Login() {
 
     return (
         <div className="grid min-h-full lg:grid-cols-[1.1fr_1fr]">
-            <div className="relative hidden overflow-hidden bg-brand-900 p-12 text-white lg:flex lg:flex-col lg:justify-between">
-                <svg className="absolute inset-0 h-full w-full opacity-[.07]" aria-hidden="true">
-                    <defs><pattern id="g" width="48" height="48" patternUnits="userSpaceOnUse"><path d="M48 0H0V48" fill="none" stroke="white" /></pattern></defs>
-                    <rect width="100%" height="100%" fill="url(#g)" />
-                </svg>
+            <div className="relative hidden overflow-hidden bg-night p-12 text-white lg:flex lg:flex-col lg:justify-between">
+                <div className="jaali absolute inset-0 opacity-[.06] [mask-image:radial-gradient(ellipse_at_70%_40%,black,transparent_75%)]" aria-hidden="true" />
+                <div className="absolute right-[18%] top-[22%] size-3 rounded-full bg-sand-400 shadow-[0_0_40px_18px_rgba(245,165,36,.45)]" aria-hidden="true" />
+                <div className="absolute -bottom-40 -left-20 size-[28rem] rounded-full bg-brand-500/30 blur-3xl" aria-hidden="true" />
                 <div className="relative flex items-center gap-3">
-                    <img src="/icon.svg" className="size-11 rounded-2xl" alt="" />
-                    <span className="text-lg font-bold">{window.APP?.name}</span>
+                    <span className="grid size-12 place-items-center rounded-2xl bg-white/[.07] ring-1 ring-white/10"><img src="/icon.svg" className="size-8 rounded-lg" alt="" /></span>
+                    <span className="text-lg font-bold tracking-tight">{window.APP?.name}</span>
                 </div>
                 <div className="relative">
-                    <h1 className="max-w-md text-4xl font-bold leading-tight tracking-tight">Your whole community, managed from one place.</h1>
-                    <div className="mt-8 grid max-w-lg grid-cols-2 gap-3">
+                    <h1 className="max-w-lg text-[44px] font-bold leading-[1.05] tracking-tight">Every gate, every house, every request. One control room.</h1>
+                    <p className="mt-4 max-w-md text-[15px] leading-relaxed text-white/60">Security, residents, staff and the office work from the same live picture of the community.</p>
+                    <div className="mt-10 grid max-w-lg grid-cols-2 gap-x-6 gap-y-3.5">
                         {FEATURES.map(([Icon, t]) => (
-                            <div key={t} className="flex items-center gap-2.5 text-sm text-white/75"><span className="grid size-8 place-items-center rounded-lg bg-surface/10"><Icon size={16} /></span>{t}</div>
+                            <div key={t} className="flex items-center gap-3 text-sm text-white/70"><Icon size={16} className="shrink-0 text-sand-400" />{t}</div>
                         ))}
                     </div>
                 </div>
-                <div className="relative text-xs text-white/40">Developed by Fera Solution</div>
+                <div className="relative text-xs text-white/35">Built by Fera Solution</div>
             </div>
             <div className="flex items-center justify-center p-6">
                 <form onSubmit={submit} className="w-full max-w-sm">
                     <img src="/icon.svg" className="mb-6 size-12 rounded-2xl lg:hidden" alt="" />
-                    <h2 className="text-2xl font-bold tracking-tight">Sign in</h2>
+                    <h2 className="text-[30px] font-bold leading-tight tracking-tight">Sign in</h2>
                     <p className="mt-1 text-sm text-ink/55">Officials and residents use the same login.</p>
                     <div className="mt-7 space-y-4">
                         <div>
@@ -55,7 +55,7 @@ export default function Login() {
                         </div>
                         <label className="flex items-center gap-2 text-sm text-ink/65"><input type="checkbox" className="size-4 accent-brand-600" checked={form.remember} onChange={(e) => setForm({ ...form, remember: e.target.checked })} />Keep me signed in</label>
                         {error && <div className="rounded-xl bg-red-50 px-3 py-2 text-sm text-red-700">{error}</div>}
-                        <button className="btn-primary w-full py-2.5" disabled={busy}>{busy && <Loader2 size={16} className="animate-spin" />}Sign in</button>
+                        <button className="btn-primary w-full py-3 text-[15px]" disabled={busy}>{busy && <Loader2 size={16} className="animate-spin" />}Sign in</button>
                     </div>
                 </form>
             </div>

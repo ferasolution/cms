@@ -17,9 +17,9 @@ async function printCard(s) {
     if (!w) return;
     const photo = s.photo_path ? `<img class="ph" src="${location.origin}${fileUrl(s.photo_path)}">` : '<div class="ph"></div>';
     w.document.write(`<!doctype html><html><head><title>${esc(s.code)}</title><style>@page{size:86mm 54mm;margin:0}body{margin:0;font-family:Arial,sans-serif}
-        .c{width:86mm;height:54mm;box-sizing:border-box;padding:3mm;display:flex;gap:3mm;border:1px solid #124f4b;border-radius:3mm}
+        .c{width:86mm;height:54mm;box-sizing:border-box;padding:3mm;display:flex;gap:3mm;border:1px solid #2737a3;border-radius:3mm}
         .ph{width:20mm;height:24mm;object-fit:cover;background:#eee;border-radius:2mm}.q{width:22mm;height:22mm;margin-top:auto}
-        h2{margin:0;font-size:12px;color:#124f4b}.n{font-size:13px;font-weight:700;margin-top:1mm}.s{font-size:9px;color:#333;line-height:1.4}.k{font:700 11px monospace;letter-spacing:1px}</style></head>
+        h2{margin:0;font-size:12px;color:#2737a3}.n{font-size:13px;font-weight:700;margin-top:1mm}.s{font-size:9px;color:#333;line-height:1.4}.k{font:700 11px monospace;letter-spacing:1px}</style></head>
         <body><div class="c"><div>${photo}<img class="q" src="${qr}"></div><div><h2>STAFF ENTRY CARD</h2><div class="n">${esc(s.name)}</div>
         <div class="s">${esc(title(s.type))}<br>${s.house ? 'Plot ' + esc(s.house.label) : ''}<br>CNIC ${esc(s.cnic)}<br>${esc(s.work_days || 'All days')} ${s.time_from ? esc(s.time_from.slice(0, 5)) + '–' + esc((s.time_to || '').slice(0, 5)) : ''}<br>
         Valid till ${s.valid_until ? esc(new Date(s.valid_until).toLocaleDateString()) : '—'}</div><div class="k">${esc(s.code)}</div></div></div>

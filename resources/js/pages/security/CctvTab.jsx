@@ -174,7 +174,7 @@ export default function CctvTab({ approve, gates }) {
                     {() => (
                         <div>
                             <div className="label flex items-center gap-1"><MapPin size={13} />Position on the map {pick ? <span className="text-ink/45">({pick[0]}, {pick[1]})</span> : <span className="text-ink/45">— click the map</span>}</div>
-                            {map.data?.site?.boundary && <PlanMap site={map.data.site} houses={map.data.houses} height={220} compact onPick={(x, y) => setPick([x, y])} markers={pick ? [{ key: 'p', x: pick[0], y: pick[1], icon: '📹', color: '#e0a94f', pulse: true }] : []} />}
+                            {map.data?.site?.boundary && <PlanMap site={map.data.site} houses={map.data.houses} height={220} compact onPick={(x, y) => setPick([x, y])} markers={pick ? [{ key: 'p', x: pick[0], y: pick[1], icon: '📹', color: '#f5a524', pulse: true }] : []} />}
                             {edit.id && <div className="mt-3"><Confirm className="btn-ghost btn-sm text-red-600" message="Remove this camera?" onConfirm={() => act(() => del(`cameras/${edit.id}`), 'Removed', () => { setEdit(null); cams.reload(); })}><Trash2 size={13} />Remove camera</Confirm></div>}
                         </div>
                     )}

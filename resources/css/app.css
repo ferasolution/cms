@@ -1,40 +1,53 @@
-@import '@fontsource-variable/instrument-sans';
+@import '@fontsource-variable/schibsted-grotesk';
 @import 'tailwindcss';
 
 @source '../js/**/*.jsx';
 
+/*
+ * "Night watch" theme — lapis blue for action, sodium-lamp amber for attention,
+ * porcelain canvas, and a deep night sidebar with a Karachi jaali lattice.
+ */
 @theme {
-    --font-sans: 'Instrument Sans Variable', 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji';
-    --color-ink: #10201f;
+    --font-sans: 'Schibsted Grotesk Variable', 'Schibsted Grotesk', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji';
+    --color-ink: #131a2c;
     --color-surface: #ffffff;
-    --color-canvas: #fbf7f0;
-    --color-brand-50: #eef7f6;
-    --color-brand-100: #d5ecea;
-    --color-brand-200: #a9d6d2;
-    --color-brand-500: #1f7a74;
-    --color-brand-600: #17635e;
-    --color-brand-700: #124f4b;
-    --color-brand-900: #0b2e2c;
-    --color-sand-50: #fbf7f0;
-    --color-sand-100: #f4ead9;
-    --color-sand-400: #e0a94f;
-    --color-sand-500: #c98a2b;
+    --color-canvas: #f2f4f8;
+    --color-night: #101833;
+    --color-brand-50: #eef1fe;
+    --color-brand-100: #dce2fd;
+    --color-brand-200: #b6c2fa;
+    --color-brand-500: #3a55e0;
+    --color-brand-600: #2f45c9;
+    --color-brand-700: #2737a3;
+    --color-brand-900: #121a4a;
+    --color-sand-50: #fef8ec;
+    --color-sand-100: #fdf0d8;
+    --color-sand-400: #f5a524;
+    --color-sand-500: #d98a0b;
+    --radius-panel: 20px;
 }
 
 html, body, #root { height: 100%; }
-body { @apply bg-canvas text-ink antialiased; }
+body { @apply bg-canvas text-ink antialiased; font-feature-settings: 'ss01', 'cv01'; }
+h1, h2, h3 { letter-spacing: -0.015em; }
+.tabular { font-variant-numeric: tabular-nums; }
+:focus-visible { outline: 2px solid var(--color-brand-500); outline-offset: 2px; border-radius: 8px; }
+::selection { background: rgba(245, 165, 36, .35); }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .001ms !important; transition-duration: .001ms !important; } }
 
 @custom-variant dark (&:where(.dark, .dark *));
 
 /* Dark mode: flip the neutral tokens and soften the tinted backgrounds. */
 .dark {
     color-scheme: dark;
-    --color-ink: #e4eeec;
-    --color-surface: #13201f;
-    --color-canvas: #0b1514;
-    --color-brand-50: #12302d;
-    --color-brand-100: #17403c;
-    --color-sand-100: #3a2e19;
+    --color-ink: #e6e9f4;
+    --color-surface: #141b31;
+    --color-canvas: #0b1022;
+    --color-night: #070b18;
+    --color-brand-50: #1a2350;
+    --color-brand-100: #222d63;
+    --color-sand-100: #3a2c12;
+    --color-sand-50: #2a2010;
     --color-red-50: #3a1717;
     --color-amber-50: #3a2c12;
     --color-orange-50: #3b2412;
@@ -53,29 +66,37 @@ body { @apply bg-canvas text-ink antialiased; }
     --color-orange-900: #fed7aa;
     --color-red-900: #fecaca;
 }
-.dark .card { box-shadow: 0 1px 0 rgba(255,255,255,.03), 0 8px 24px -12px rgba(0,0,0,.6); }
+.dark .card { box-shadow: 0 1px 0 rgba(255,255,255,.04) inset, 0 10px 30px -18px rgba(0,0,0,.8); }
 .dark .input { color-scheme: dark; }
+.dark .text-brand-700 { color: #a9b8ff; }
+.dark .text-brand-600 { color: #8ea0ff; }
+.dark .text-sand-500 { color: #f7bd59; }
 
-
-@utility card { @apply bg-surface rounded-2xl border border-ink/8 shadow-[0_1px_2px_rgba(16,32,31,.04),0_8px_24px_-12px_rgba(16,32,31,.08)]; }
-@utility input { @apply w-full rounded-xl border border-ink/12 bg-surface text-ink px-3 py-2 text-sm outline-none transition focus:border-brand-500 focus:ring-4 focus:ring-brand-500/10 disabled:bg-ink/[.03]; }
-@utility label { @apply mb-1 block text-xs font-semibold text-ink/60; }
-@utility btn { @apply inline-flex items-center justify-center gap-1.5 rounded-xl px-3.5 py-2 text-sm font-semibold transition disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap; }
-@utility btn-primary { @apply btn bg-brand-600 text-white hover:bg-brand-700 shadow-sm; }
-@utility btn-ghost { @apply btn text-ink/70 hover:bg-ink/5; }
-@utility btn-outline { @apply btn border border-ink/12 bg-surface hover:bg-ink/[.04]; }
-@utility btn-danger { @apply btn bg-red-600 text-white hover:bg-red-700; }
+/* Surfaces — radius follows hierarchy: panels 20, inner items 14, controls 12. */
+@utility card { @apply bg-surface border border-ink/[.07]; border-radius: var(--radius-panel); box-shadow: 0 1px 0 rgba(19,26,44,.03), 0 12px 32px -22px rgba(19,26,44,.28); }
+@utility input { @apply w-full rounded-xl border border-ink/12 bg-surface text-ink px-3 py-2 text-sm outline-none transition placeholder:text-ink/35 hover:border-ink/25 focus:border-brand-500 focus:ring-4 focus:ring-brand-500/12 disabled:bg-ink/[.03]; }
+@utility label { @apply mb-1 block text-[12.5px] font-semibold text-ink/65; }
+@utility btn { @apply inline-flex items-center justify-center gap-1.5 rounded-xl px-3.5 py-2 text-sm font-semibold transition active:translate-y-px disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap; }
+@utility btn-primary { @apply btn bg-brand-600 text-white hover:bg-brand-700; box-shadow: inset 0 1px 0 rgba(255,255,255,.18), 0 1px 2px rgba(18,26,74,.25), 0 6px 14px -8px rgba(47,69,201,.65); }
+@utility btn-ghost { @apply btn text-ink/70 hover:bg-ink/[.06] hover:text-ink; }
+@utility btn-outline { @apply btn border border-ink/12 bg-surface hover:border-ink/25 hover:bg-ink/[.03]; }
+@utility btn-danger { @apply btn bg-red-600 text-white hover:bg-red-700; box-shadow: inset 0 1px 0 rgba(255,255,255,.18), 0 6px 14px -8px rgba(220,38,38,.7); }
 @utility btn-sm { @apply px-2.5 py-1.5 text-xs rounded-lg; }
-@utility th { @apply px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wide text-ink/45 whitespace-nowrap; }
+@utility th { @apply px-4 py-3 text-left text-[12px] font-semibold text-ink/50 whitespace-nowrap; }
 @utility td { @apply px-4 py-3 text-sm align-top; }
+
+/* Karachi jaali — eight-point star lattice, used only on the night surfaces. */
+@utility jaali {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='44' height='44' viewBox='0 0 44 44'%3E%3Cg fill='none' stroke='%23ffffff' stroke-width='1'%3E%3Crect x='12' y='12' width='20' height='20'/%3E%3Crect x='12' y='12' width='20' height='20' transform='rotate(45 22 22)'/%3E%3Cpath d='M0 22h7.9M36.1 22H44M22 0v7.9M22 36.1V44'/%3E%3C/g%3E%3C/svg%3E");
+    background-size: 44px 44px;
+}
+/* sodium-lamp glow for the active place */
+@utility lamp { box-shadow: inset 3px 0 0 var(--color-sand-400), 0 0 0 1px rgba(245,165,36,.18); background: linear-gradient(90deg, rgba(245,165,36,.20), rgba(245,165,36,.04) 70%); }
 
 @keyframes ring { 0%,100% { transform: rotate(0) } 15% { transform: rotate(14deg) } 30% { transform: rotate(-12deg) } 45% { transform: rotate(8deg) } 60% { transform: rotate(-6deg) } }
 @utility ringing { animation: ring 1s ease-in-out infinite; transform-origin: top center; }
 @keyframes slidein { from { opacity: 0; transform: translateY(-8px) } to { opacity: 1; transform: none } }
 @utility toast-in { animation: slidein .25s ease-out; }
-.dark .text-brand-700 { color: #7fd1c9; }
-.dark .text-brand-600 { color: #5ec2b8; }
-.dark .text-sand-500 { color: #e9bd6f; }
 
 /* ---- site plan (2D map) ---- */
 :root { --plan-bg: #e9ece6; --plan-ground: #d4d8d6; --plan-road: #9aa3a1; --plan-plot: #f3cdee; --plan-plot-n: #f6d9f1; --plan-out: #e4dcb4; --plan-grave: #a9acb3; --plan-label: rgba(20,40,40,.55); }
@@ -84,7 +105,7 @@ body { @apply bg-canvas text-ink antialiased; }
 .route-dash { animation: route-dash 1s linear infinite; }
 @keyframes pin-pulse { 0% { transform: scale(1); opacity: .9 } 100% { transform: scale(3.2); opacity: 0 } }
 .pin-pulse { transform-box: fill-box; transform-origin: center; animation: pin-pulse 1.6s ease-out infinite; }
-@keyframes flash-in { 0% { background: rgba(224,169,79,.35) } 100% { background: transparent } }
+@keyframes flash-in { 0% { background: rgba(245,165,36,.32) } 100% { background: transparent } }
 .flash-in { animation: flash-in 2.5s ease-out; }
 @keyframes rise { from { opacity: 0; transform: translateY(6px) } to { opacity: 1; transform: none } }
 .rise { animation: rise .35s ease-out both; }

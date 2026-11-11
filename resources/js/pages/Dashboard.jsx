@@ -35,14 +35,14 @@ export function ActivityFeed({ rows, compact }) {
 function KpiCard({ c, onClick }) {
     const Icon = MODULE_META[c.module]?.icon || LayoutDashboard;
     return (
-        <button onClick={onClick} className="card group relative overflow-hidden p-4 text-left transition hover:-translate-y-0.5 hover:shadow-lg">
-            <div className={`absolute -right-8 -top-8 size-20 rounded-full opacity-[.05] transition group-hover:scale-125 ${c.warn ? 'bg-red-500' : 'bg-brand-500'}`} />
+        <button onClick={onClick} className="card group relative overflow-hidden px-4 pb-4 pt-3.5 text-left transition hover:border-ink/15">
+            <span className={`absolute left-0 top-4 h-6 w-[3px] rounded-r-full ${c.warn ? 'bg-red-500' : 'bg-brand-500'}`} />
             <div className="flex items-start justify-between gap-2">
-                <div className="text-xs font-semibold text-ink/50">{c.label}</div>
-                <div className={`grid size-8 place-items-center rounded-xl ${c.warn ? 'bg-red-50 text-red-600' : 'bg-brand-50 text-brand-600'}`}><Icon size={16} /></div>
+                <div className="text-[12.5px] font-semibold text-ink/55">{c.label}</div>
+                <div className={`grid size-8 place-items-center rounded-[10px] transition group-hover:scale-105 ${c.warn ? 'bg-red-50 text-red-600' : 'bg-brand-50 text-brand-600'}`}><Icon size={16} /></div>
             </div>
-            <div className="mt-1 text-2xl font-bold tracking-tight">{c.money ? money(c.value) : c.value}</div>
-            {c.sub && <div className="mt-0.5 text-xs text-ink/50">{c.sub}</div>}
+            <div className="mt-1.5 text-[28px] font-bold leading-none tracking-tight">{c.money ? money(c.value) : c.value}</div>
+            {c.sub && <div className="mt-1.5 text-xs leading-snug text-ink/50">{c.sub}</div>}
         </button>
     );
 }
@@ -90,7 +90,7 @@ function LiveMapCard() {
                         </div>
                     ) : (
                         <>
-                            <div className="sticky top-0 bg-surface px-4 py-2.5 text-xs font-bold uppercase tracking-wider text-ink/45">{signals.length} live request{signals.length === 1 ? '' : 's'}</div>
+                            <div className="sticky top-0 bg-surface px-4 py-2.5 text-[12.5px] font-semibold text-ink/50">{signals.length} live request{signals.length === 1 ? '' : 's'}</div>
                             {!signals.length && <div className="px-4 pb-6 text-sm text-ink/45">All quiet. New requests appear here and pulse on the map.</div>}
                             {[...signals].sort((a, b) => (a.type === 'sos' ? 0 : 1) - (b.type === 'sos' ? 0 : 1) || new Date(b.at) - new Date(a.at)).slice(0, 30).map((s) => (
                                 <button key={s.key} onClick={() => setSel(s.house_id)} className={`flex w-full gap-2.5 border-t border-ink/5 px-4 py-2 text-left hover:bg-ink/[.03] ${s.type === 'sos' ? 'bg-red-50 dark:bg-red-500/10' : ''} ${flash.includes(s.house_id) ? 'flash-in' : ''}`}>
@@ -121,24 +121,25 @@ export default function Dashboard() {
     return (
         <div className="mx-auto max-w-7xl space-y-5">
             {/* Hero */}
-            <div className="relative overflow-hidden rounded-3xl bg-brand-900 p-6 text-white sm:p-8">
-                <svg className="absolute inset-0 h-full w-full opacity-[.08]" aria-hidden="true"><defs><pattern id="hg" width="40" height="40" patternUnits="userSpaceOnUse"><path d="M40 0H0V40" fill="none" stroke="white" /></pattern></defs><rect width="100%" height="100%" fill="url(#hg)" /></svg>
-                <div className="absolute -right-10 -top-16 size-64 rounded-full bg-sand-400/20 blur-3xl" />
+            <div className="relative overflow-hidden rounded-[24px] bg-night p-6 text-white shadow-[0_20px_50px_-30px_rgba(16,24,51,.9)] sm:p-8">
+                <div className="jaali absolute inset-0 opacity-[.06] [mask-image:linear-gradient(90deg,transparent,black_45%)]" aria-hidden="true" />
+                <div className="absolute -right-16 -top-24 size-80 rounded-full bg-sand-400/25 blur-3xl" aria-hidden="true" />
+                <div className="absolute -bottom-28 left-10 size-72 rounded-full bg-brand-500/30 blur-3xl" aria-hidden="true" />
                 <div className="relative flex flex-wrap items-end justify-between gap-4">
                     <div>
-                        <div className="text-xs font-semibold uppercase tracking-widest text-sand-400">{isAdmin ? 'Command Center' : community}</div>
-                        <h1 className="mt-1 text-2xl font-bold tracking-tight sm:text-3xl">{greet}, {user.name.split(' ')[0]}</h1>
+                        <div className="flex items-center gap-2 text-[13px] font-medium text-sand-400"><span className="size-1.5 rounded-full bg-sand-400 shadow-[0_0_8px_2px_rgba(245,165,36,.7)]" />{new Date().toLocaleDateString([], { weekday: 'long', day: 'numeric', month: 'long' })}</div>
+                        <h1 className="mt-2 text-[28px] font-bold leading-tight tracking-tight sm:text-[38px]">{greet}, {user.name.split(' ')[0]}</h1>
                         <p className="mt-1 text-sm text-white/60">{isAdmin ? 'Every module, every gate, every rupee — live.' : isResident ? 'Your household at a glance.' : 'Your modules, live.'}</p>
                     </div>
                     <div className="flex flex-wrap gap-2">
                         {isAdmin && data?.people && [['Households', data.people.houses, Home, '/map'], ['Residents', data.people.residents, Users, '/users?role=user'], ['Staff', data.people.staff, Users, '/users?role=editor'], ['Active today', data.people.online, Wifi, '/activity']].map(([l, v, I, to]) => (
-                            <button key={l} onClick={() => nav(to)} className="rounded-2xl bg-white/8 px-4 py-2.5 text-left hover:bg-white/14">
-                                <div className="flex items-center gap-1.5 text-[11px] text-white/55"><I size={12} />{l}</div>
-                                <div className="text-xl font-bold">{v}</div>
+                            <button key={l} onClick={() => nav(to)} className="min-w-[112px] rounded-2xl border border-white/[.08] bg-white/[.05] px-4 py-3 text-left backdrop-blur transition hover:border-sand-400/40 hover:bg-white/[.09]">
+                                <div className="flex items-center gap-1.5 text-[12px] text-white/55"><I size={12} />{l}</div>
+                                <div className="tabular mt-1 text-[26px] font-bold leading-none">{v}</div>
                             </button>
                         ))}
                         {isResident && [['Pre-register visitor', QrCode, '/security?tab=passes'], ['Raise complaint', MessageSquareWarning, '/complaints'], ['Book event', CalendarHeart, '/events'], ['Apply NOC', FileCheck2, '/noc']].map(([l, I, to]) => (
-                            <button key={l} onClick={() => nav(to)} className="flex items-center gap-2 rounded-2xl bg-white/10 px-4 py-3 text-sm font-semibold hover:bg-white/16"><I size={16} />{l}</button>
+                            <button key={l} onClick={() => nav(to)} className="flex items-center gap-2 rounded-2xl border border-white/[.08] bg-white/[.06] px-4 py-3 text-sm font-semibold transition hover:border-sand-400/40 hover:bg-white/[.1]"><I size={16} className="text-sand-400" />{l}</button>
                         ))}
                     </div>
                 </div>
@@ -182,8 +183,8 @@ export default function Dashboard() {
                                         <YAxis tickLine={false} axisLine={false} fontSize={11} tickFormatter={(v) => (v >= 1000 ? Math.round(v / 1000) + 'k' : v)} width={40} stroke="currentColor" strokeOpacity={0.5} />
                                         <Tooltip formatter={(v) => money(v)} cursor={{ fill: '#8882' }} contentStyle={{ borderRadius: 12, border: 'none' }} />
                                         <Legend iconType="circle" wrapperStyle={{ fontSize: 12 }} />
-                                        <Bar dataKey="revenue" name="Revenue" fill="#1f7a74" radius={[6, 6, 0, 0]} />
-                                        <Bar dataKey="expense" name="Expenses + salaries" fill="#e0a94f" radius={[6, 6, 0, 0]} />
+                                        <Bar dataKey="revenue" name="Revenue" fill="#3a55e0" radius={[6, 6, 0, 0]} />
+                                        <Bar dataKey="expense" name="Expenses + salaries" fill="#f5a524" radius={[6, 6, 0, 0]} />
                                     </BarChart>
                                 </ResponsiveContainer>
                             </div>
@@ -195,11 +196,11 @@ export default function Dashboard() {
                             <div className="h-44">
                                 <ResponsiveContainer>
                                     <AreaChart data={data.gate_chart}>
-                                        <defs><linearGradient id="gg" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#1f7a74" stopOpacity={0.45} /><stop offset="100%" stopColor="#1f7a74" stopOpacity={0} /></linearGradient></defs>
+                                        <defs><linearGradient id="gg" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#3a55e0" stopOpacity={0.45} /><stop offset="100%" stopColor="#3a55e0" stopOpacity={0} /></linearGradient></defs>
                                         <XAxis dataKey="hour" tickLine={false} axisLine={false} fontSize={10} interval={2} stroke="currentColor" strokeOpacity={0.5} />
                                         <YAxis allowDecimals={false} tickLine={false} axisLine={false} fontSize={10} width={24} stroke="currentColor" strokeOpacity={0.5} />
                                         <Tooltip contentStyle={{ borderRadius: 12, border: 'none' }} />
-                                        <Area type="monotone" dataKey="entries" stroke="#1f7a74" strokeWidth={2} fill="url(#gg)" />
+                                        <Area type="monotone" dataKey="entries" stroke="#3a55e0" strokeWidth={2} fill="url(#gg)" />
                                     </AreaChart>
                                 </ResponsiveContainer>
                             </div>
