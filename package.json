@@ -25,6 +25,7 @@
         "hls.js": "^1.5.20",
         "html5-qrcode": "^2.3.8",
         "lucide-react": "^1.70.0",
+        "motion": "^12.23.12",
         "qrcode": "^1.5.4",
         "react": "^19.3.1",
         "react-dom": "^19.3.1",

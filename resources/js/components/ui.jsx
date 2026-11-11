@@ -1,4 +1,6 @@
-import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useId, useRef, useState } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
+import { CountUp, spotlight } from './motion';
 import { createPortal } from 'react-dom';
 import { X, Search, ChevronLeft, ChevronRight, Loader2, Inbox, Paperclip } from 'lucide-react';
 import { get, fileUrl, title } from '../lib/api';
@@ -19,10 +21,12 @@ export function ToastProvider({ children }) {
         <ToastCtx.Provider value={push}>
             {children}
             <div className="fixed right-3 top-3 z-[100] flex w-[min(390px,calc(100vw-1.5rem))] flex-col gap-2">
+                <AnimatePresence initial={false}>
                 {items.map((t) => {
                     const [bg, ic] = tone[t.level] || tone.info;
                     return (
-                        <div key={t.id} className="toast-in card flex items-start gap-3 overflow-hidden px-3.5 py-3 shadow-xl">
+                        <motion.div key={t.id} layout initial={{ opacity: 0, x: 40, scale: 0.96 }} animate={{ opacity: 1, x: 0, scale: 1 }} exit={{ opacity: 0, x: 60, transition: { duration: 0.2 } }} transition={{ type: 'spring', stiffness: 420, damping: 32 }}
+                            className="card flex items-start gap-3 overflow-hidden px-3.5 py-3 shadow-xl">
                             <span className={`mt-0.5 grid size-6 shrink-0 place-items-center rounded-full text-xs font-black text-white ${bg}`}>{ic}</span>
                             <div className="min-w-0 flex-1">
                                 <div className="text-sm font-semibold leading-snug">{t.message}</div>
@@ -30,9 +34,10 @@ export function ToastProvider({ children }) {
                                 {t.action && <button className="mt-1.5 inline-flex items-center gap-1 rounded-lg bg-brand-600 px-2.5 py-1 text-xs font-bold text-white hover:bg-brand-700" onClick={() => { t.action.onClick(); setItems((s) => s.filter((x) => x.id !== t.id)); }}>{t.action.label}</button>}
                             </div>
                             <button className="text-ink/30 hover:text-ink" onClick={() => setItems((s) => s.filter((x) => x.id !== t.id))}><X size={14} /></button>
-                        </div>
+                        </motion.div>
                     );
                 })}
+                </AnimatePresence>
             </div>
         </ToastCtx.Provider>
     );
@@ -74,7 +79,7 @@ export function PageHeader({ icon: Icon, title: t, subtitle, children }) {
     return (
         <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
             <div className="flex min-w-0 items-start gap-3.5">
-                {Icon && <div className="relative grid size-12 shrink-0 place-items-center overflow-hidden rounded-[14px] bg-night text-sand-400 shadow-[0_8px_20px_-10px_rgba(16,24,51,.7)]"><div className="jaali absolute inset-0 opacity-[.08]" /><Icon size={22} className="relative" /></div>}
+                {Icon && <div className="sheen relative grid size-12 shrink-0 place-items-center overflow-hidden rounded-[14px] bg-night text-sand-400 shadow-[0_8px_20px_-10px_rgba(16,24,51,.7)]"><div className="jaali absolute inset-0 opacity-[.08]" /><Icon size={22} className="relative" /></div>}
                 <div className="min-w-0">
                     <h1 className="text-[22px] font-bold leading-tight tracking-tight sm:text-[27px]">{t}</h1>
                     {subtitle && <p className="mt-1 max-w-[70ch] text-[13.5px] leading-snug text-ink/55">{subtitle}</p>}
@@ -86,13 +91,15 @@ export function PageHeader({ icon: Icon, title: t, subtitle, children }) {
 }
 
 export function Tabs({ tabs, value, onChange }) {
+    const id = useId();
     return (
         <div className="mb-5 flex gap-1 overflow-x-auto rounded-[14px] border border-ink/[.06] bg-surface p-1 shadow-[0_1px_2px_rgba(19,26,44,.04)] md:flex-wrap">
             {tabs.filter(Boolean).map((t) => (
                 <button key={t.key} onClick={() => onChange(t.key)}
-                    className={`flex shrink-0 items-center gap-1.5 rounded-[10px] px-3.5 py-2 text-[13.5px] font-semibold transition ${value === t.key ? 'bg-night text-white shadow-[0_6px_14px_-8px_rgba(16,24,51,.8)]' : 'text-ink/55 hover:bg-ink/[.04] hover:text-ink'}`}>
-                    {t.icon && <t.icon size={15} className={value === t.key ? 'text-sand-400' : ''} />}{t.label}
-                    {t.count > 0 && <span className={`rounded-full px-1.5 text-[11px] font-bold tabular ${value === t.key ? 'bg-sand-400 text-night' : 'bg-sand-100 text-sand-500'}`}>{t.count}</span>}
+                    className={`relative flex shrink-0 items-center gap-1.5 rounded-[10px] px-3.5 py-2 text-[13.5px] font-semibold transition-colors ${value === t.key ? 'text-white' : 'text-ink/55 hover:bg-ink/[.04] hover:text-ink'}`}>
+                    {value === t.key && <motion.span layoutId={'tab' + id} className="absolute inset-0 -z-0 rounded-[10px] bg-night shadow-[0_6px_14px_-8px_rgba(16,24,51,.8)]" transition={{ type: 'spring', stiffness: 500, damping: 38 }} />}
+                    <span className="relative flex items-center gap-1.5">{t.icon && <t.icon size={15} className={value === t.key ? 'text-sand-400' : ''} />}{t.label}</span>
+                    {t.count > 0 && <span className={`relative rounded-full px-1.5 text-[11px] font-bold tabular ${value === t.key ? 'bg-sand-400 text-night' : 'bg-sand-100 text-sand-500'}`}>{t.count}</span>}
                 </button>
             ))}
         </div>
@@ -103,13 +110,13 @@ export function Stat({ label, value, sub, icon: Icon, tone = 'brand', onClick })
     const tones = { brand: ['bg-brand-50 text-brand-600', 'bg-brand-500'], sand: ['bg-sand-100 text-sand-500', 'bg-sand-400'], red: ['bg-red-50 text-red-600', 'bg-red-500'], green: ['bg-emerald-50 text-emerald-600', 'bg-emerald-500'], blue: ['bg-sky-50 text-sky-600', 'bg-sky-500'] };
     const [chip, bar] = tones[tone] || tones.brand;
     return (
-        <div onClick={onClick} className={`card relative overflow-hidden px-4 pb-4 pt-3.5 ${onClick ? 'cursor-pointer transition hover:border-ink/15' : ''}`}>
+        <div onClick={onClick} {...spotlight} className={`card spot lift relative overflow-hidden px-4 pb-4 pt-3.5 ${onClick ? 'cursor-pointer' : ''}`}>
             <span className={`absolute left-0 top-4 h-6 w-[3px] rounded-r-full ${bar}`} />
             <div className="flex items-start justify-between gap-2">
                 <div className="text-[12.5px] font-semibold text-ink/55">{label}</div>
                 {Icon && <div className={`grid size-8 place-items-center rounded-[10px] ${chip}`}><Icon size={16} /></div>}
             </div>
-            <div className="mt-1.5 text-[28px] font-bold leading-none tracking-tight">{value}</div>
+            <div className="mt-1.5 text-[28px] font-bold leading-none tracking-tight"><CountUp value={value} /></div>
             {sub && <div className="mt-1.5 text-xs text-ink/50">{sub}</div>}
         </div>
     );
@@ -168,8 +175,8 @@ export function Table({ list, columns, empty, onRow, footer = true }) {
                         <tr>{columns.map((c, i) => <th key={i} className={`th ${c.className || ''}`}>{c.label}</th>)}</tr>
                     </thead>
                     <tbody className="divide-y divide-ink/5">
-                        {rows.map((r) => (
-                            <tr key={r.id} onClick={onRow ? () => onRow(r) : undefined} className={`transition-colors ${onRow ? 'cursor-pointer hover:bg-brand-50/50' : 'hover:bg-ink/[.015]'}`}>
+                        {rows.map((r, ri) => (
+                            <tr key={r.id} style={{ animation: `stagger-in .45s cubic-bezier(.2,.7,.2,1) ${Math.min(ri, 12) * 0.03}s both` }} onClick={onRow ? () => onRow(r) : undefined} className={`transition-colors ${onRow ? 'cursor-pointer hover:bg-brand-50/50' : 'hover:bg-ink/[.015]'}`}>
                                 {columns.map((c, i) => <td key={i} className={`td ${c.className || ''}`}>{c.render ? c.render(r) : r[c.key] ?? '—'}</td>)}
                             </tr>
                         ))}
@@ -200,18 +207,23 @@ export function Modal({ open, onClose, title: t, children, wide }) {
         window.addEventListener('keydown', k);
         return () => window.removeEventListener('keydown', k);
     }, [open, onClose]);
-    if (!open) return null;
     // Portal to <body> so modals are never clipped by a parent with transform / backdrop-filter.
     return createPortal(
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-night/55 p-0 backdrop-blur-sm sm:items-center sm:p-4" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
-            <div className={`card max-h-[92vh] w-full overflow-y-auto rounded-b-none shadow-2xl sm:rounded-[22px] ${wide ? 'sm:max-w-3xl' : 'sm:max-w-lg'}`}>
+        <AnimatePresence>
+        {open && (
+        <motion.div key="m" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.18 }}
+            className="fixed inset-0 z-50 flex items-end justify-center bg-night/55 p-0 backdrop-blur-sm sm:items-center sm:p-4" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
+            <motion.div initial={{ opacity: 0, y: 28, scale: 0.97 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 18, scale: 0.98, transition: { duration: 0.15 } }} transition={{ type: 'spring', stiffness: 380, damping: 32 }}
+                className={`card max-h-[92vh] w-full overflow-y-auto rounded-b-none shadow-2xl sm:rounded-[22px] ${wide ? 'sm:max-w-3xl' : 'sm:max-w-lg'}`}>
                 <div className="sticky top-0 z-10 flex items-center justify-between border-b border-ink/[.06] bg-surface/95 px-5 py-4 backdrop-blur">
                     <h3 className="text-[17px] font-bold tracking-tight">{t}</h3>
                     <button className="btn-ghost btn-sm" onClick={onClose}><X size={16} /></button>
                 </div>
                 <div className="p-5">{children}</div>
-            </div>
-        </div>,
+            </motion.div>
+        </motion.div>
+        )}
+        </AnimatePresence>,
         document.body,
     );
 }

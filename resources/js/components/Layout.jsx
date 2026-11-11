@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
+import { NavLink, useLocation, useNavigate, useOutlet } from 'react-router-dom';
 import {
     LayoutDashboard, ShieldCheck, Boxes, BookOpen, Wallet, CalendarHeart, MessageSquareWarning, FileCheck2, Archive,
     Users, Map, Bell, LogOut, Menu, X, Activity, BellRing, Search, Siren, Moon, Sun, Megaphone, Dumbbell, BriefcaseBusiness,
@@ -9,6 +9,7 @@ import { useAuth, applyTheme } from '../lib/auth';
 import { useAlerts } from '../lib/alerts';
 import { ago, get, post, put } from '../lib/api';
 import { Modal, useToast } from './ui';
+import { motion, AnimatePresence } from 'motion/react';
 
 export const MODULE_META = {
     security: { icon: ShieldCheck, to: '/security', group: 'Operations' },
@@ -37,12 +38,12 @@ function Bell2() {
             <button onClick={() => { setOpen(!open); if (!open && 'Notification' in window && Notification.permission === 'default') Notification.requestPermission(); }}
                 className={`relative grid size-10 place-items-center rounded-xl hover:bg-ink/5 ${ringing ? 'text-red-600' : ''}`} title="Alerts">
                 {ringing ? <BellRing size={20} className="ringing" /> : <Bell size={20} />}
-                {unread > 0 && <span className="absolute right-1 top-1 grid min-w-[18px] place-items-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white">{unread > 99 ? '99+' : unread}</span>}
+                {unread > 0 && <motion.span key={unread} initial={{ scale: 0.4 }} animate={{ scale: 1 }} transition={{ type: 'spring', stiffness: 600, damping: 18 }} className="absolute right-1 top-1 grid min-w-[18px] place-items-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white">{unread > 99 ? '99+' : unread}</motion.span>}
             </button>
             {open && (
                 <>
                     <div className="fixed inset-0 z-30" onClick={() => setOpen(false)} />
-                    <div className="card absolute right-0 z-40 mt-2 w-[min(380px,calc(100vw-1.5rem))] overflow-hidden">
+                    <motion.div initial={{ opacity: 0, y: -8, scale: 0.97 }} animate={{ opacity: 1, y: 0, scale: 1 }} transition={{ type: 'spring', stiffness: 500, damping: 34 }} style={{ transformOrigin: 'top right' }} className="card absolute right-0 z-40 mt-2 w-[min(380px,calc(100vw-1.5rem))] overflow-hidden">
                         <div className="flex items-center justify-between border-b border-ink/5 px-4 py-3">
                             <span className="font-bold">Notification center</span>
                             {unread > 0 && <button className="text-xs font-semibold text-brand-600" onClick={markAll}>Mark all read</button>}
@@ -62,7 +63,7 @@ function Bell2() {
                                 </button>
                             ))}
                         </div>
-                    </div>
+                    </motion.div>
                 </>
             )}
         </div>
@@ -214,6 +215,7 @@ function BottomNav({ onMenu }) {
 
 export default function Layout() {
     const location = useLocation();
+    const outlet = useOutlet();
     const { user, modules, roleLabel, logout, isAdmin, employee, community } = useAuth();
     const [open, setOpen] = useState(false);
     const [search, setSearch] = useState(false);
@@ -227,8 +229,10 @@ export default function Layout() {
 
     const link = (to, Icon, label, end) => (
         <NavLink key={to} to={to} end={end} onClick={() => setOpen(false)}
-            className={({ isActive }) => `group flex items-center gap-3 rounded-[10px] px-3 py-[7px] text-[13.5px] transition ${isActive ? 'lamp font-semibold text-white' : 'font-medium text-white/58 hover:bg-white/[.06] hover:text-white'}`}>
-            {({ isActive }) => <><Icon size={17} className={`shrink-0 transition ${isActive ? 'text-sand-400 drop-shadow-[0_0_6px_rgba(245,165,36,.6)]' : 'text-white/45 group-hover:text-white/80'}`} />{label}</>}
+            className={({ isActive }) => `group relative flex items-center gap-3 rounded-[10px] px-3 py-[7px] text-[13.5px] transition-colors ${isActive ? 'font-semibold text-white' : 'font-medium text-white/58 hover:bg-white/[.06] hover:text-white'}`}>
+            {({ isActive }) => <>
+                {isActive && <motion.span layoutId="lamp" className="lamp absolute inset-0 rounded-[10px]" transition={{ type: 'spring', stiffness: 420, damping: 36 }} />}
+                <Icon size={17} className={`relative shrink-0 transition ${isActive ? 'text-sand-400 drop-shadow-[0_0_6px_rgba(245,165,36,.6)]' : 'text-white/45 group-hover:translate-x-0.5 group-hover:text-white/80'}`} /><span className="relative transition-transform group-hover:translate-x-0.5">{label}</span></>}
         </NavLink>
     );
     const groups = {};
@@ -237,11 +241,11 @@ export default function Layout() {
     return (
         <div className="flex h-full">
             <aside className={`fixed inset-y-0 left-0 z-40 flex w-[264px] flex-col overflow-hidden bg-night p-3 text-white transition-transform lg:static lg:translate-x-0 ${open ? 'translate-x-0' : '-translate-x-full'}`}>
-                <div className="jaali pointer-events-none absolute inset-0 opacity-[.045]" />
+                <div className="jaali jaali-pan pointer-events-none absolute inset-0 opacity-[.045]" />
                 <div className="pointer-events-none absolute -left-24 -top-24 size-72 rounded-full bg-brand-500/25 blur-3xl" />
                 <div className="relative mb-4 flex items-center justify-between px-2 pt-2">
                     <div className="flex items-center gap-3">
-                        <span className="relative grid size-10 place-items-center rounded-xl bg-white/[.07] ring-1 ring-white/10"><img src="/icon.svg" alt="" className="size-7 rounded-lg" /><span className="absolute -right-0.5 -top-0.5 size-2.5 rounded-full bg-sand-400 shadow-[0_0_8px_2px_rgba(245,165,36,.6)]" /></span>
+                        <span className="relative grid size-10 place-items-center rounded-xl bg-white/[.07] ring-1 ring-white/10"><img src="/icon.svg" alt="" className="size-7 rounded-lg" /><span className="lamp-breathe absolute -right-0.5 -top-0.5 size-2.5 rounded-full bg-sand-400" /></span>
                         <div className="leading-tight">
                             <div className="text-[15px] font-bold tracking-tight">{community || 'Community'}</div>
                             <div className="text-[11.5px] text-white/45">Community control room</div>
@@ -292,7 +296,9 @@ export default function Layout() {
                         <SosButton />
                     </div>
                 </header>
-                <main className="flex-1 overflow-y-auto px-3 pb-24 pt-6 sm:px-6 lg:px-8 lg:pb-8"><div key={location.pathname} className="rise h-full"><Outlet /></div></main>
+                <main className="flex-1 overflow-y-auto px-3 pb-24 pt-6 sm:px-6 lg:px-8 lg:pb-8"><AnimatePresence mode="wait" initial={false}>
+                    <motion.div key={location.pathname} className="h-full [&>div]:stagger" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={{ duration: 0.22, ease: [0.2, 0.7, 0.2, 1] }}>{outlet}</motion.div>
+                </AnimatePresence></main>
                 <BottomNav onMenu={() => setOpen(true)} />
             </div>
             <SearchPalette open={search} onClose={() => setSearch(false)} />

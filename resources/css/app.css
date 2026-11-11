@@ -93,6 +93,26 @@ h1, h2, h3 { letter-spacing: -0.015em; }
 /* sodium-lamp glow for the active place */
 @utility lamp { box-shadow: inset 3px 0 0 var(--color-sand-400), 0 0 0 1px rgba(245,165,36,.18); background: linear-gradient(90deg, rgba(245,165,36,.20), rgba(245,165,36,.04) 70%); }
 
+/* ---- motion ---- */
+/* one orchestrated page load: direct children rise in sequence */
+@keyframes stagger-in { from { opacity: 0; transform: translateY(14px) scale(.985); filter: blur(4px) } to { opacity: 1; transform: none; filter: none } }
+@utility stagger { & > * { animation: stagger-in .6s cubic-bezier(.2,.7,.2,1) both; } & > *:nth-child(1) { animation-delay: .02s } & > *:nth-child(2) { animation-delay: .09s } & > *:nth-child(3) { animation-delay: .16s } & > *:nth-child(4) { animation-delay: .23s } & > *:nth-child(5) { animation-delay: .3s } & > *:nth-child(6) { animation-delay: .37s } & > *:nth-child(n+7) { animation-delay: .44s } }
+/* pointer spotlight on interactive cards */
+@utility spot { position: relative; isolation: isolate; &::after { content: ''; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; opacity: 0; transition: opacity .3s; background: radial-gradient(260px circle at var(--mx, 50%) var(--my, 50%), rgba(58,85,224,.10), transparent 65%); z-index: -1; } &:hover::after { opacity: 1; } }
+.dark .spot::after { background: radial-gradient(260px circle at var(--mx, 50%) var(--my, 50%), rgba(245,165,36,.10), transparent 65%); }
+@utility lift { transition: transform .25s cubic-bezier(.2,.7,.2,1), box-shadow .25s, border-color .25s; &:hover { transform: translateY(-3px); box-shadow: 0 1px 0 rgba(19,26,44,.03), 0 22px 40px -24px rgba(19,26,44,.45); } }
+/* hero sky: two slow drifting lights and a breathing street lamp */
+@keyframes drift-a { 0%,100% { transform: translate(0,0) scale(1) } 50% { transform: translate(-60px,30px) scale(1.15) } }
+@keyframes drift-b { 0%,100% { transform: translate(0,0) scale(1) } 50% { transform: translate(80px,-24px) scale(.9) } }
+@keyframes lamp-breathe { 0%,100% { opacity: 1; box-shadow: 0 0 10px 3px rgba(245,165,36,.65) } 46% { opacity: 1 } 48% { opacity: .55 } 50% { opacity: 1; box-shadow: 0 0 18px 6px rgba(245,165,36,.8) } }
+@utility drift-a { animation: drift-a 16s ease-in-out infinite; }
+@utility drift-b { animation: drift-b 20s ease-in-out infinite; }
+@utility lamp-breathe { animation: lamp-breathe 5s ease-in-out infinite; }
+@keyframes jaali-pan { from { background-position: 0 0 } to { background-position: 44px 44px } }
+@utility jaali-pan { animation: jaali-pan 18s linear infinite; }
+@keyframes sheen { from { transform: translateX(-120%) skewX(-18deg) } to { transform: translateX(260%) skewX(-18deg) } }
+@utility sheen { position: relative; overflow: hidden; &::before { content: ''; position: absolute; inset: 0; width: 40%; background: linear-gradient(90deg, transparent, rgba(255,255,255,.22), transparent); animation: sheen 1.2s .4s cubic-bezier(.4,0,.2,1) both; pointer-events: none; } }
+
 @keyframes ring { 0%,100% { transform: rotate(0) } 15% { transform: rotate(14deg) } 30% { transform: rotate(-12deg) } 45% { transform: rotate(8deg) } 60% { transform: rotate(-6deg) } }
 @utility ringing { animation: ring 1s ease-in-out infinite; transform-origin: top center; }
 @keyframes slidein { from { opacity: 0; transform: translateY(-8px) } to { opacity: 1; transform: none } }

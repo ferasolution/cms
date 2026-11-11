@@ -3,6 +3,7 @@ import { Area, AreaChart, Bar, BarChart, CartesianGrid, Legend, ResponsiveContai
 import { LayoutDashboard, Home, Users, AlertTriangle, Megaphone, Siren, Wifi, ArrowRight, Plus, QrCode, MessageSquareWarning, CalendarHeart, FileCheck2 } from 'lucide-react';
 import { useGet, Spinner, Empty } from '../components/ui';
 import PlanMap from '../components/PlanMap';
+import { CountUp, spotlight } from '../components/motion';
 import { signalsByHouse, SIGNAL_META, locateInfo } from '../lib/siteplan';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { MODULE_META } from '../components/Layout';
@@ -35,13 +36,14 @@ export function ActivityFeed({ rows, compact }) {
 function KpiCard({ c, onClick }) {
     const Icon = MODULE_META[c.module]?.icon || LayoutDashboard;
     return (
-        <button onClick={onClick} className="card group relative overflow-hidden px-4 pb-4 pt-3.5 text-left transition hover:border-ink/15">
+        <button onClick={onClick} {...spotlight} className="card spot lift group relative overflow-hidden px-4 pb-4 pt-3.5 text-left">
             <span className={`absolute left-0 top-4 h-6 w-[3px] rounded-r-full ${c.warn ? 'bg-red-500' : 'bg-brand-500'}`} />
             <div className="flex items-start justify-between gap-2">
                 <div className="text-[12.5px] font-semibold text-ink/55">{c.label}</div>
                 <div className={`grid size-8 place-items-center rounded-[10px] transition group-hover:scale-105 ${c.warn ? 'bg-red-50 text-red-600' : 'bg-brand-50 text-brand-600'}`}><Icon size={16} /></div>
             </div>
-            <div className="mt-1.5 text-[28px] font-bold leading-none tracking-tight">{c.money ? money(c.value) : c.value}</div>
+            <div className="mt-1.5 text-[28px] font-bold leading-none tracking-tight"><CountUp value={c.money ? money(c.value) : c.value} /></div>
+            {(() => { const m = String(c.value).match(/^(\d+)\s*\/\s*(\d+)$/); return m && +m[2] > 0 ? <div className="mt-2.5 h-1.5 overflow-hidden rounded-full bg-ink/[.06]"><div className="h-full rounded-full bg-brand-500 transition-[width] duration-1000 ease-out" style={{ width: `${Math.min(100, (m[1] / m[2]) * 100)}%` }} /></div> : null; })()}
             {c.sub && <div className="mt-1.5 text-xs leading-snug text-ink/50">{c.sub}</div>}
         </button>
     );
@@ -119,15 +121,15 @@ export default function Dashboard() {
     const pendingTotal = (data?.pending || []).reduce((a, p) => a + p.value, 0);
 
     return (
-        <div className="mx-auto max-w-7xl space-y-5">
+        <div className="stagger mx-auto max-w-7xl space-y-5">
             {/* Hero */}
-            <div className="relative overflow-hidden rounded-[24px] bg-night p-6 text-white shadow-[0_20px_50px_-30px_rgba(16,24,51,.9)] sm:p-8">
-                <div className="jaali absolute inset-0 opacity-[.06] [mask-image:linear-gradient(90deg,transparent,black_45%)]" aria-hidden="true" />
-                <div className="absolute -right-16 -top-24 size-80 rounded-full bg-sand-400/25 blur-3xl" aria-hidden="true" />
-                <div className="absolute -bottom-28 left-10 size-72 rounded-full bg-brand-500/30 blur-3xl" aria-hidden="true" />
+            <div className="sheen relative overflow-hidden rounded-[24px] bg-night p-6 text-white shadow-[0_20px_50px_-30px_rgba(16,24,51,.9)] sm:p-8">
+                <div className="jaali jaali-pan absolute inset-0 opacity-[.07] [mask-image:linear-gradient(90deg,transparent,black_45%)]" aria-hidden="true" />
+                <div className="drift-a absolute -right-16 -top-24 size-80 rounded-full bg-sand-400/25 blur-3xl" aria-hidden="true" />
+                <div className="drift-b absolute -bottom-28 left-10 size-72 rounded-full bg-brand-500/35 blur-3xl" aria-hidden="true" />
                 <div className="relative flex flex-wrap items-end justify-between gap-4">
                     <div>
-                        <div className="flex items-center gap-2 text-[13px] font-medium text-sand-400"><span className="size-1.5 rounded-full bg-sand-400 shadow-[0_0_8px_2px_rgba(245,165,36,.7)]" />{new Date().toLocaleDateString([], { weekday: 'long', day: 'numeric', month: 'long' })}</div>
+                        <div className="flex items-center gap-2 text-[13px] font-medium text-sand-400"><span className="lamp-breathe size-1.5 rounded-full bg-sand-400" />{new Date().toLocaleDateString([], { weekday: 'long', day: 'numeric', month: 'long' })}</div>
                         <h1 className="mt-2 text-[28px] font-bold leading-tight tracking-tight sm:text-[38px]">{greet}, {user.name.split(' ')[0]}</h1>
                         <p className="mt-1 text-sm text-white/60">{isAdmin ? 'Every module, every gate, every rupee — live.' : isResident ? 'Your household at a glance.' : 'Your modules, live.'}</p>
                     </div>
@@ -135,7 +137,7 @@ export default function Dashboard() {
                         {isAdmin && data?.people && [['Households', data.people.houses, Home, '/map'], ['Residents', data.people.residents, Users, '/users?role=user'], ['Staff', data.people.staff, Users, '/users?role=editor'], ['Active today', data.people.online, Wifi, '/activity']].map(([l, v, I, to]) => (
                             <button key={l} onClick={() => nav(to)} className="min-w-[112px] rounded-2xl border border-white/[.08] bg-white/[.05] px-4 py-3 text-left backdrop-blur transition hover:border-sand-400/40 hover:bg-white/[.09]">
                                 <div className="flex items-center gap-1.5 text-[12px] text-white/55"><I size={12} />{l}</div>
-                                <div className="tabular mt-1 text-[26px] font-bold leading-none">{v}</div>
+                                <div className="mt-1 text-[26px] font-bold leading-none"><CountUp value={v} duration={1200} /></div>
                             </button>
                         ))}
                         {isResident && [['Pre-register visitor', QrCode, '/security?tab=passes'], ['Raise complaint', MessageSquareWarning, '/complaints'], ['Book event', CalendarHeart, '/events'], ['Apply NOC', FileCheck2, '/noc']].map(([l, I, to]) => (
@@ -156,8 +158,8 @@ export default function Dashboard() {
                     <div className="mb-3 flex items-center justify-between"><span className="flex items-center gap-2 font-bold"><AlertTriangle size={16} className="text-sand-500" />Needs your attention</span><span className="text-xs text-ink/45">{pendingTotal} items</span></div>
                     <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7">
                         {data.pending.map((p) => (
-                            <button key={p.label} onClick={() => nav(p.to)} className={`flex items-center justify-between rounded-xl px-3 py-2.5 text-left text-xs font-semibold transition hover:-translate-y-0.5 ${p.value ? 'bg-sand-100 text-sand-500' : 'bg-ink/[.03] text-ink/40'}`}>
-                                <span>{p.label}</span><span className="text-lg">{p.value}</span>
+                            <button key={p.label} onClick={() => nav(p.to)} className={`group flex items-center justify-between rounded-xl px-3 py-2.5 text-left text-xs font-semibold transition hover:-translate-y-0.5 hover:shadow-[0_10px_20px_-14px_rgba(217,138,11,.8)] ${p.value ? 'bg-sand-100 text-sand-500' : 'bg-ink/[.03] text-ink/40'}`}>
+                                <span>{p.label}</span><span className="text-lg transition group-hover:scale-110"><CountUp value={p.value} /></span>
                             </button>
                         ))}
                     </div>
