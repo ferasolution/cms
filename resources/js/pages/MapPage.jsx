@@ -1,4 +1,5 @@
-import { Suspense, useEffect, useMemo, useRef, useState } from 'react';
+import { Suspense, lazy, useEffect, useMemo, useRef, useState } from 'react';
+const HouseInterior = lazy(() => import('../components/HouseInterior'));
 import { Canvas, useFrame } from '@react-three/fiber';
 import { Sky, Stars, CameraControls } from '@react-three/drei';
 import * as THREE from 'three';
@@ -110,7 +111,7 @@ function SignalActions({ s, onDone }) {
     return <div className="mt-1.5 flex flex-wrap gap-1">{b}</div>;
 }
 
-function HousePanel({ house, data, signals, onClose, showRoute, setShowRoute, refresh }) {
+function HousePanel({ house, data, signals, onClose, showRoute, setShowRoute, refresh, onInside }) {
     const [d, setD] = useState(null);
     useEffect(() => { setD(null); get(`houses/${house.id}`).then(setD).catch(() => setD({ error: true })); }, [house.id]);
     const info = useMemo(() => locateInfo(data.site, data.houses, house), [data.site, data.houses, house]);
@@ -134,6 +135,11 @@ function HousePanel({ house, data, signals, onClose, showRoute, setShowRoute, re
                         ))}
                     </div>
                 )}
+                <button onClick={onInside} className="group relative flex w-full items-center gap-3 overflow-hidden rounded-2xl bg-gradient-to-br from-stone-800 to-stone-950 p-3 text-left text-white shadow-md transition hover:shadow-lg">
+                    <span className="grid size-11 shrink-0 place-items-center rounded-xl bg-white/10 text-2xl transition group-hover:scale-110">🏠</span>
+                    <span className="min-w-0 flex-1"><span className="block font-bold">Inner view</span><span className="block text-xs text-white/60">3D dollhouse · walk room by room</span></span>
+                    <span className="text-white/50 transition group-hover:translate-x-1">→</span>
+                </button>
                 <LocateCard info={info} house={d?.house} />
                 <button className={`btn-sm w-full ${showRoute ? 'btn-primary' : 'btn-outline'}`} onClick={() => setShowRoute(!showRoute)}><RouteIcon size={13} />{showRoute ? 'Hide route from gate' : 'Show route from gate'}</button>
                 {!d ? <div className="grid h-20 place-items-center"><Spinner /></div> : d.error ? null : (
@@ -207,6 +213,7 @@ export default function MapPage() {
     const [flash, setFlash] = useState([]);
     const [filter, setFilter] = useState('');
     const [panel, setPanel] = useState(true);
+    const [inside, setInside] = useState(null);
     const seen = useRef(null), seenSig = useRef(null), sosFocused = useRef(new Set());
     const sun = useSun(mode);
     const wrap = useRef();
@@ -257,7 +264,7 @@ export default function MapPage() {
         const hid = Number(q.get('house')), sid = Number(q.get('sos'));
         const s = sid && signals.find((x) => x.type === 'sos' && x.id === sid);
         const h = byId[s ? s.house_id : hid];
-        if (h && !sosFocused.current.has('init')) { sosFocused.current.add('init'); select(h); if (s || q.get('route')) setShowRoute(true); }
+        if (h && !sosFocused.current.has('init')) { sosFocused.current.add('init'); select(h); if (s || q.get('route')) setShowRoute(true); if (q.get('inside')) setInside(h); }
     }, [data?.houses?.length]); // eslint-disable-line
 
     const route = useMemo(() => (showRoute && selected && data?.site ? routeTo(data.site, houses, byId[selected.id] || selected) : null), [showRoute, selected, data?.site, houses]); // eslint-disable-line
@@ -334,7 +341,7 @@ export default function MapPage() {
                             markers={[...(data.markers?.cameras || []).map((c) => ({ key: 'cam' + c.id, x: c.map_x, y: c.map_y, icon: '📹', color: '#0f766e', label: c.name, title: 'CCTV · ' + c.name })),
                                 ...(data.markers?.checkpoints || []).map((c) => { const old = !c.last_scan || Date.now() - new Date(c.last_scan.scanned_at) > 2 * 3600e3; return { key: 'cp' + c.id, x: c.map_x, y: c.map_y, icon: '📍', color: old ? '#dc2626' : '#2563eb', label: c.name, title: `Patrol checkpoint · ${c.name}${old ? ' — overdue' : ''}` }; })]} />
                     ) : (
-                        <Canvas shadows dpr={[1, 2]} camera={{ position: [-8, 62, 70], fov: 42, far: 2000 }} gl={{ antialias: true, toneMapping: THREE.ACESFilmicToneMapping }}>
+                        <Canvas frameloop={inside ? 'never' : 'always'} shadows dpr={[1, 2]} camera={{ position: [-8, 62, 70], fov: 42, far: 2000 }} gl={{ antialias: true, toneMapping: THREE.ACESFilmicToneMapping }}>
                             <Suspense fallback={null}>
                                 <World data={mapData} layer={layer} selected={selected} onSelect={select} sun={sun} walkers={walkers} setWalkers={setWalkers} fly={fly} autoRotate={autoRotate} signals={layer === 'overview' || layer === 'requests' ? signals : []} flash={flash} route={route} home={home} />
                             </Suspense>
@@ -370,12 +377,17 @@ export default function MapPage() {
 
                 <div className={`card overflow-hidden ${panel ? '' : 'hidden lg:block'} max-h-[78vh] lg:max-h-none`}>
                     {selected ? (
-                        <HousePanel house={byId[selected.id] || selected} data={mapData} signals={signals} onClose={() => { setSelected(null); setShowRoute(false); }} showRoute={showRoute} setShowRoute={setShowRoute} refresh={reload} />
+                        <HousePanel onInside={() => setInside(byId[selected.id] || selected)} house={byId[selected.id] || selected} data={mapData} signals={signals} onClose={() => { setSelected(null); setShowRoute(false); }} showRoute={showRoute} setShowRoute={setShowRoute} refresh={reload} />
                     ) : (
                         <InboxPanel signals={signals} byId={byId} onPick={select} flash={flash} filter={filter} setFilter={setFilter} />
                     )}
                 </div>
             </div>
+            {inside && (
+                <Suspense fallback={<div className="fixed inset-0 z-[60] grid place-items-center bg-stone-200/90"><Spinner /></div>}>
+                    <HouseInterior house={inside} signals={signals} onClose={() => setInside(null)} onRoute={() => { setInside(null); select(inside); setShowRoute(true); }} />
+                </Suspense>
+            )}
         </div>
     );
 }

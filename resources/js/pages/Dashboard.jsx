@@ -86,6 +86,7 @@ function LiveMapCard() {
                             {info?.route && <div className="text-xs text-ink/55">{info.route.metres} m from {info.route.gate.label} · ~{info.route.walkMin} min walk</div>}
                             {groups.find((g) => g.house_id === h.id)?.list.map((s) => <button key={s.key} onClick={() => nav(s.link)} className="block w-full rounded-xl bg-ink/[.03] p-2 text-left hover:bg-ink/[.06]"><b>{SIGNAL_META[s.type]?.icon} {s.title}</b><div className="text-xs text-ink/55">{s.sub}</div></button>)}
                             <button className="btn-primary btn-sm w-full" onClick={() => nav(`/map?house=${h.id}&route=1`)}>📍 Locate in 3D with route</button>
+                            <button className="btn-outline btn-sm w-full" onClick={() => nav(`/map?house=${h.id}&inside=1`)}>🏠 Inner view</button>
                         </div>
                     ) : (
                         <>
