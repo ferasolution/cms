@@ -3,13 +3,14 @@ import { useFrame } from '@react-three/fiber';
 import { Html, Line } from '@react-three/drei';
 import { gatesOf, routeTo, signalsByHouse, SIGNAL_META } from '../lib/siteplan';
 import * as THREE from 'three';
+import RealHouses, { FLOOR } from './site/RealHouses';
+import Surroundings from './site/Surroundings';
 
 /**
  * Real site-plan renderer. Plots come from the digitised society map (source pixels); everything is
  * converted to scene units here. All houses are instanced, so ~400 plots stay smooth on phones.
  */
 export const S = 0.1; // scene units per plan pixel
-const FLOOR = 0.42;
 
 export function siteTransform(site) {
     const xs = site.boundary.map((p) => p[0]), ys = site.boundary.map((p) => p[1]);
@@ -43,66 +44,6 @@ function Label({ text, pos, size = 'm', dim }) {
         <Html position={pos} center style={{ pointerEvents: 'none' }} zIndexRange={[10, 0]}>
             <div className={`whitespace-nowrap rounded-md px-1.5 py-0.5 font-bold tracking-wider ${dim ? 'bg-black/35 text-white/80' : 'bg-[#0b2e2c]/85 text-white'} ${size === 'l' ? 'text-[11px]' : 'text-[9.5px]'}`}>{text}</div>
         </Html>
-    );
-}
-
-/* ---------------- instanced houses ---------------- */
-function Houses({ houses, site, layer, night, hover, setHover, selected, onSelect }) {
-    const { to } = useMemo(() => siteTransform(site), [site]);
-    const body = useRef(), lawn = useRef(), roof = useRef(), tank = useRef(), win = useRef();
-    const placed = useMemo(() => houses.filter((h) => h.mx != null), [houses]);
-    const floorsTotal = placed.reduce((a, h) => a + Math.max(1, h.floors), 0);
-
-    useLayoutEffect(() => {
-        const o = new THREE.Object3D();
-        let wi = 0;
-        placed.forEach((h, i) => {
-            const [x, z] = to(h.mx, h.my);
-            const w = h.mw * S, d = h.mh * S, rot = -THREE.MathUtils.degToRad(h.ma);
-            const fl = Math.max(1, h.floors), ht = fl * FLOOR + 0.08;
-            const bw = w * 0.8, bd = d * 0.74;
-            o.rotation.set(0, rot, 0);
-            o.position.set(x, 0.03, z); o.scale.set(w * 0.98, 0.06, d * 0.96); o.updateMatrix(); lawn.current.setMatrixAt(i, o.matrix);
-            o.position.set(x, ht / 2 + 0.06, z); o.scale.set(bw, ht, bd); o.updateMatrix(); body.current.setMatrixAt(i, o.matrix);
-            o.position.set(x, ht + 0.1, z); o.scale.set(bw * 1.04, 0.07, bd * 1.04); o.updateMatrix(); roof.current.setMatrixAt(i, o.matrix);
-            // water tank on the roof, offset along the long side
-            const off = new THREE.Vector3(bw * 0.28, 0, 0).applyAxisAngle(new THREE.Vector3(0, 1, 0), rot);
-            o.position.set(x + off.x, ht + 0.24, z + off.z); o.scale.set(0.22, 0.22, 0.22); o.updateMatrix(); tank.current.setMatrixAt(i, o.matrix);
-            for (let f = 0; f < fl; f++) {
-                o.position.set(x, 0.06 + f * FLOOR + FLOOR * 0.55, z); o.scale.set(bw * 1.01, 0.1, bd * 1.01); o.updateMatrix(); win.current.setMatrixAt(wi++, o.matrix);
-            }
-        });
-        [body, lawn, roof, tank, win].forEach((r) => { r.current.instanceMatrix.needsUpdate = true; r.current.computeBoundingSphere(); });
-    }, [placed, to]);
-
-    useLayoutEffect(() => {
-        const c = new THREE.Color();
-        let wi = 0;
-        placed.forEach((h, i) => {
-            body.current.setColorAt(i, c.set(houseColor(h, layer)));
-            lawn.current.setColorAt(i, c.set(h.series === 'N' ? '#9cc58a' : '#b7cfa8'));
-            roof.current.setColorAt(i, c.set(layer === 'overview' ? (h.mine ? '#b5762a' : ['#b9b1a4', '#a89f92', '#c4bcae'][h.id % 3]) : houseColor(h, layer)).multiplyScalar(layer === 'overview' ? 1 : 0.8));
-            const lit = night && (h.id * 7) % 10 > 2;
-            for (let f = 0; f < Math.max(1, h.floors); f++) win.current.setColorAt(wi++, c.set(lit ? '#ffcf73' : night ? '#22303a' : '#5d7480'));
-        });
-        [body, lawn, roof, win].forEach((r) => { if (r.current.instanceColor) r.current.instanceColor.needsUpdate = true; });
-    }, [placed, layer, night]);
-
-    const pick = (e) => { e.stopPropagation(); return placed[e.instanceId]; };
-    const ev = {
-        onPointerMove: (e) => { const h = pick(e); if (h && hover?.id !== h.id) { setHover(h); document.body.style.cursor = 'pointer'; } },
-        onPointerOut: () => { setHover(null); document.body.style.cursor = ''; },
-        onClick: (e) => { const h = pick(e); if (h) onSelect(h); },
-    };
-    const unit = useMemo(() => new THREE.BoxGeometry(1, 1, 1), []);
-    return (
-        <group>
-            <instancedMesh ref={lawn} args={[unit, null, placed.length]} receiveShadow><meshStandardMaterial roughness={1} /></instancedMesh>
-            <instancedMesh ref={body} args={[unit, null, placed.length]} castShadow receiveShadow {...ev}><meshStandardMaterial roughness={0.7} /></instancedMesh>
-            <instancedMesh ref={roof} args={[unit, null, placed.length]} castShadow {...ev}><meshStandardMaterial roughness={0.8} /></instancedMesh>
-            <instancedMesh ref={tank} args={[unit, null, placed.length]} castShadow><meshStandardMaterial color="#3a4a55" roughness={0.5} /></instancedMesh>
-            <instancedMesh ref={win} args={[unit, null, floorsTotal]}><meshBasicMaterial toneMapped={false} /></instancedMesh>
-        </group>
     );
 }
 
@@ -192,11 +133,18 @@ function Zone({ z, to, night }) {
                 </group>
             );
         case 'outside_commercial':
-            return <group>{flat('#b98a80', 0.02, 0.3)}<Label text={z.label} pos={[x, 1, zz]} dim /></group>;
+            return (
+                <group>{flat(night ? '#3a3330' : '#a59a8c', 0.02, 0.02)}
+                    {[...Array(Math.max(1, Math.round(Math.max(bw, bh) / 2.2)))].map((_, i, a) => {
+                        const t = (i + 0.5) / a.length - 0.5, long = bw > bh;
+                        return <mesh key={i} position={[x + (long ? t * bw * 0.85 : 0), 0.55, zz + (long ? 0 : t * bh * 0.85)]} castShadow receiveShadow><boxGeometry args={[long ? bw * 0.85 / a.length * 0.9 : Math.min(bw, 1.6), 1.1, long ? Math.min(bh, 1.6) : bh * 0.85 / a.length * 0.9]} /><meshStandardMaterial color={['#c96f55', '#d8c8a8', '#9fb7c4', '#e0b46a'][i % 4]} roughness={0.6} /></mesh>;
+                    })}
+                    <Label text={z.label} pos={[x, 1.6, zz]} dim /></group>
+            );
         default: // neighbouring areas
             return (
                 <group>
-                    {flat(z.tone === 'graveyard' ? (night ? '#3a3d44' : '#8d9098') : (night ? '#55513c' : '#d8d0a6'), 0.01, z.tone === 'graveyard' ? 0.05 : 0.6)}
+                    {flat(z.tone === 'graveyard' ? (night ? '#3b3a33' : '#b3a98f') : (night ? '#2c2d2a' : '#8f8f88'), 0.01, 0.02)}
                     <Label text={z.label} pos={[x, 1.3, zz]} dim size={z.tone === 'graveyard' ? 'l' : 'm'} />
                 </group>
             );
@@ -219,9 +167,10 @@ function Road({ r, to, night }) {
         <group>
             {segs.map((s, i) => (
                 <group key={i} position={[s.x, 0, s.z]} rotation={[0, s.rot, 0]}>
-                    <mesh position={[0, 0.035, 0]} receiveShadow><boxGeometry args={[s.len + r.width * S * 0.5, 0.03, r.width * S]} /><meshStandardMaterial color={night ? '#2c3332' : '#3e4645'} roughness={0.9} /></mesh>
-                    <mesh position={[0, 0.055, 0]}><boxGeometry args={[s.len, 0.005, 0.08]} /><meshBasicMaterial color="#e8d38a" /></mesh>
-                    {r.main && <mesh position={[0, 0.08, 0]}><boxGeometry args={[s.len, 0.06, 0.35]} /><meshStandardMaterial color="#6f9b5f" /></mesh>}
+                    <mesh position={[0, 0.035, 0]} receiveShadow><boxGeometry args={[s.len + r.width * S * 0.5, 0.03, r.width * S]} /><meshStandardMaterial color={night ? '#1f2322' : '#4a4e4d'} roughness={0.95} /></mesh>
+                    {!r.main && [...Array(Math.max(1, Math.floor(s.len / 0.9)))].map((_, k, a) => <mesh key={k} position={[(k - (a.length - 1) / 2) * 0.9, 0.052, 0]}><boxGeometry args={[0.45, 0.004, 0.05]} /><meshBasicMaterial color="#f1efe6" /></mesh>)}
+                    {r.main && <mesh position={[0, 0.08, 0]} receiveShadow><boxGeometry args={[s.len, 0.08, 0.5]} /><meshStandardMaterial color={night ? '#28401f' : '#6f9b5f'} /></mesh>}
+                    {r.main && [1, -1].map((sd) => <mesh key={sd} position={[0, 0.06, sd * (r.width * S / 2 - 0.08)]}><boxGeometry args={[s.len, 0.004, 0.04]} /><meshBasicMaterial color="#f1efe6" /></mesh>)}
                 </group>
             ))}
             {lamps.map(([lx, lz], i) => (
@@ -243,7 +192,7 @@ function Wall({ site, to }) {
         return { x: (x1 + x2) / 2, z: (z1 + z2) / 2, len: Math.hypot(x2 - x1, z2 - z1), rot: -Math.atan2(z2 - z1, x2 - x1) };
     }), [site, to]);
     return segs.map((s, i) => (
-        <mesh key={i} position={[s.x, 0.3, s.z]} rotation={[0, s.rot, 0]} castShadow><boxGeometry args={[s.len + 0.1, 0.6, 0.14]} /><meshStandardMaterial color="#cbbfa8" /></mesh>
+        <mesh key={i} position={[s.x, 0.3, s.z]} rotation={[0, s.rot, 0]} castShadow><boxGeometry args={[s.len + 0.1, 0.6, 0.14]} /><meshStandardMaterial color="#d6cbb5" roughness={0.9} /></mesh>
     ));
 }
 
@@ -429,10 +378,10 @@ export default function SiteScene({ data, layer, selected, onSelect, night, walk
     return (
         <>
             <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.02, 0]} receiveShadow onClick={() => onSelect(null)}>
-                <planeGeometry args={[w * 3, d * 3]} /><meshStandardMaterial color={night ? '#2f4038' : '#a9b7a3'} />
+                <planeGeometry args={[w * 4, d * 4]} /><meshStandardMaterial color={night ? '#23271f' : '#b3ab95'} roughness={1} />
             </mesh>
             <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]} receiveShadow onClick={() => onSelect(null)}>
-                <shapeGeometry args={[ground]} /><meshStandardMaterial color={night ? '#66706d' : '#c9cdcb'} roughness={1} />
+                <shapeGeometry args={[ground]} /><meshStandardMaterial color={night ? '#2b2f2e' : '#6f7371'} roughness={0.95} />
             </mesh>
             <Wall site={site} to={to} />
             {(site.roads || []).map((r) => <Road key={r.name} r={r} to={to} night={night} />)}
@@ -443,7 +392,8 @@ export default function SiteScene({ data, layer, selected, onSelect, night, walk
             <PlotNumbers houses={placedHouses} to={to} all={allNumbers} />
             {route && <RouteLine path={route.path} to={to} />}
             {groups.map((g) => byId[g.house_id]?.mx != null && <SignalPin key={g.house_id} pos={top(byId[g.house_id])} group={g} flash={flashSet.has(g.house_id)} onClick={() => onSelect(byId[g.house_id])} />)}
-            <Houses houses={data.houses} site={site} layer={layer} night={night} hover={hover} setHover={setHover} selected={selected} onSelect={onSelect} />
+            <RealHouses houses={data.houses} to={to} layer={layer} night={night} colorOf={houseColor} hover={hover} setHover={setHover} onSelect={onSelect} />
+            <Surroundings site={site} to={to} night={night} />
             <Highlight h={selected && byId[selected.id]} site={site} color="#e0a94f" />
             {hover && hover.id !== selected?.id && <Highlight h={hover} site={site} color="#ffffff" />}
 
