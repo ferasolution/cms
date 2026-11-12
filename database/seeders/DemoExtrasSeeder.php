@@ -28,6 +28,9 @@ class DemoExtrasSeeder extends Seeder
 {
     public function run(): void
     {
+        if (! \App\Support\Tenant::id()) {
+            \App\Support\Tenant::set(\App\Models\Society::orderBy('id')->first());
+        }
         if (GymPlan::exists()) {
             return; // already seeded
         }

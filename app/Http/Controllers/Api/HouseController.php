@@ -43,6 +43,8 @@ class HouseController extends Controller
     public function store(Request $request)
     {
         $this->authorizeManage($request, 'users');
+        $max = \App\Support\Tenant::get()?->maxHouses();
+        abort_if($max && House::count() >= $max, 422, "Your plan allows {$max} houses. Ask the platform team to upgrade the plan.");
         $house = House::create($request->validate($this->rules));
         Activity::log('users', 'create', "Added house {$house->label}", $house);
 

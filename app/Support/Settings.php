@@ -57,11 +57,19 @@ class Settings
         'staff_notify_household' => true,
     ];
 
-    private static ?array $cache = null;
+    /** per-society cache for this request */
+    private static array $cache = [];
+
+    public static function flush(): void
+    {
+        self::$cache = [];
+    }
 
     public static function all(): array
     {
-        return self::$cache ??= array_replace(self::DEFAULTS, Setting::get('community', []) ?: []);
+        $k = Tenant::id() ?? 0;
+
+        return self::$cache[$k] ??= array_replace(self::DEFAULTS, Setting::get('community', []) ?: []);
     }
 
     public static function get(string $key)
@@ -73,7 +81,7 @@ class Settings
     {
         $clean = array_intersect_key($values, self::DEFAULTS);
         Setting::put('community', array_replace(Setting::get('community', []) ?: [], $clean));
-        self::$cache = null;
+        self::flush();
 
         return self::all();
     }

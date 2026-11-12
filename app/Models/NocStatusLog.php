@@ -2,10 +2,13 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\BelongsToSociety;
 use Illuminate\Database\Eloquent\Model;
 
 class NocStatusLog extends Model
 {
+    use BelongsToSociety;
+
     protected $table = 'noc_status_logs';
 
     protected $guarded = ['id'];

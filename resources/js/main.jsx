@@ -62,14 +62,26 @@ function App() {
     );
 }
 
+const PlatformApp = lazy(() => import('./platform/PlatformApp'));
+const SocietyClosed = lazy(() => import('./platform/SocietyClosed'));
+const mode = window.APP?.mode || 'tenant';
+
 createRoot(document.getElementById('root')).render(
-    <BrowserRouter>
-        <ToastProvider>
-            <AuthProvider>
-                <App />
-            </AuthProvider>
-        </ToastProvider>
-    </BrowserRouter>,
+    mode === 'platform' ? (
+        <BrowserRouter>
+            <ToastProvider><Suspense fallback={<Loading />}><PlatformApp /></Suspense></ToastProvider>
+        </BrowserRouter>
+    ) : window.APP?.society?.open === false ? (
+        <Suspense fallback={<Loading />}><SocietyClosed /></Suspense>
+    ) : (
+        <BrowserRouter basename={window.APP?.base || '/'}>
+            <ToastProvider>
+                <AuthProvider>
+                    <App />
+                </AuthProvider>
+            </ToastProvider>
+        </BrowserRouter>
+    ),
 );
 
 if ('serviceWorker' in navigator && location.protocol === 'https:') {

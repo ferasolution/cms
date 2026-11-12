@@ -35,7 +35,10 @@ class PortalTest extends TestCase
     public function test_spa_and_login(): void
     {
         $this->get('/')->assertSuccessful()->assertSee('id="root"', false);
-        $this->get('/complaints')->assertSuccessful();
+        $this->get('/complaints')->assertRedirect('/block19/complaints');
+        $this->get('/block19/complaints')->assertSuccessful()->assertSee('"base":"\/block19"', false);
+        $this->get('/block19/manifest.webmanifest')->assertSuccessful()->assertJsonPath('start_url', '/block19/');
+        $this->get('/no-such-society')->assertNotFound();
         $this->getJson('/api/me')->assertUnauthorized();
         $this->postJson('/api/login', ['email' => 'adh@test.local', 'password' => 'wrong'])->assertUnprocessable();
         $this->postJson('/api/login', ['email' => 'adh@test.local', 'password' => 'password'])
@@ -59,7 +62,7 @@ class PortalTest extends TestCase
         foreach (['visitors', 'visitors/stats', 'inventory', 'inventory/issues', 'library/books', 'library/categories', 'library/issues',
             'finance/transactions', 'finance/summary', 'finance/maintenance', 'finance/salaries', 'finance/expense-requests',
             'events', 'events/rates', 'complaints', 'complaints/report', 'noc', 'noc/checklists', 'records', 'houses', 'houses?all=1', 'users',
-            'users?staff=1', 'houses/1'] as $url) {
+            'users?staff=1', 'houses/'.House::query()->value('id')] as $url) {
             $this->actingAs($this->admin)->getJson('/api/'.$url)->assertSuccessful();
         }
     }
@@ -123,7 +126,7 @@ class PortalTest extends TestCase
     public function test_finance_flow(): void
     {
         $fin = $this->as('finance');
-        $this->actingAs($fin)->postJson('/api/finance/transactions', ['type' => 'revenue', 'category' => 'maintenance', 'amount' => 3000, 'house_id' => 1, 'period' => now()->format('Y-m'), 'date' => now()->toDateString()])->assertSuccessful();
+        $this->actingAs($fin)->postJson('/api/finance/transactions', ['type' => 'revenue', 'category' => 'maintenance', 'amount' => 3000, 'house_id' => House::query()->value('id'), 'period' => now()->format('Y-m'), 'date' => now()->toDateString()])->assertSuccessful();
         $req = $this->actingAs($this->as('security'))->postJson('/api/finance/expense-requests', ['title' => 'Torch', 'amount' => 1500, 'category' => 'security'])->assertSuccessful();
         $this->actingAs($fin)->postJson('/api/finance/expense-requests/'.$req->json('id').'/review', ['status' => 'approved'])->assertForbidden();
         $this->actingAs($this->admin)->postJson('/api/finance/expense-requests/'.$req->json('id').'/review', ['status' => 'approved'])->assertSuccessful();
@@ -354,7 +357,7 @@ class PortalTest extends TestCase
         $this->actingAs($guard)->postJson('/api/gate/vehicle-logs', ['plate' => 'lea-4455'])->assertSuccessful()->assertJsonPath('action', 'exit');
 
         // domestic staff: resident registers → supervisor verifies → card scan → in / out
-        $s = $this->actingAs($res)->postJson('/api/staff', ['name' => 'Parveen', 'type' => 'maid', 'cnic' => '42101-7777777-1', 'house_id' => 1])->assertSuccessful()->json();
+        $s = $this->actingAs($res)->postJson('/api/staff', ['name' => 'Parveen', 'type' => 'maid', 'cnic' => '42101-7777777-1', 'house_id' => House::query()->value('id')])->assertSuccessful()->json();
         $this->assertSame($hid, $s['house_id']);
         $this->actingAs($guard)->postJson("/api/staff/{$s['id']}/verify", ['verification' => 'verified'])->assertForbidden();
         $this->actingAs($boss)->postJson("/api/staff/{$s['id']}/verify", ['verification' => 'verified'])->assertSuccessful();

@@ -6,11 +6,20 @@ use Illuminate\Foundation\Http\Middleware\ValidateCsrfToken;
 use Illuminate\Support\Facades\Route;
 
 /*
-| JSON API for the React portal. Uses the normal web session (cookie) auth, so it works on
-| shared hosting with no extra services. All routes live under /api.
+| SaaS layout
+|   /                      platform site (landing, find your society, sign-up)
+|   /platform/…            platform owner console           (API: /_p/api/…)
+|   /{society}/…           a society's portal               (API: /{society}/api/…, files: /{society}/files/…)
+|   /api/…                 older links: society of the signed-in user (or the default one)
+| JSON API uses the normal web session (cookie) auth, so it works on shared hosting with no extra services.
 */
-Route::prefix('api')->group(function () {
-    Route::post('login', [Api\AuthController::class, 'login'])->name('login.attempt');
+use App\Http\Controllers\PlatformController;
+use App\Http\Controllers\SpaController;
+use App\Http\Middleware\PlatformOwner;
+use App\Http\Middleware\ResolveSociety;
+
+$api = function () {
+    Route::post('login', [Api\AuthController::class, 'login']);
     Route::post('logout', [Api\AuthController::class, 'logout']);
 
     Route::middleware('auth')->group(function () {
@@ -201,11 +210,43 @@ Route::prefix('api')->group(function () {
     });
 
     Route::any('{any}', fn () => response()->json(['message' => 'Not found.'], 404))->where('any', '.*');
+};
+
+// ---------------------------------------------------------------- platform (no society)
+Route::prefix('_p/api')->middleware(PlatformOwner::class.':public')->group(function () {
+    Route::get('plans', [PlatformController::class, 'plans']);
+    Route::get('lookup', [PlatformController::class, 'lookup'])->middleware('throttle:60,1');
+    Route::get('slug-check', [PlatformController::class, 'slugCheck'])->middleware('throttle:60,1');
+    Route::post('register', [PlatformController::class, 'register'])->middleware('throttle:10,1');
+    Route::get('status', [PlatformController::class, 'status']);
+    Route::post('setup', [PlatformController::class, 'setup'])->middleware('throttle:5,1');
+    Route::post('login', [PlatformController::class, 'login']);
+    Route::post('logout', [PlatformController::class, 'logout']);
 });
+Route::prefix('_p/api')->middleware(PlatformOwner::class.':owner')->group(function () {
+    Route::get('overview', [PlatformController::class, 'overview']);
+    Route::post('societies', [PlatformController::class, 'store']);
+    Route::put('societies/{society}', [PlatformController::class, 'update']);
+    Route::post('societies/{society}/site-plan', [PlatformController::class, 'sitePlan']);
+    Route::post('societies/{society}/impersonate', [PlatformController::class, 'impersonate']);
+});
+Route::any('_p/api/{any}', fn () => response()->json(['message' => 'Not found.'], 404))->where('any', '.*');
 
 Route::match(['get', 'post'], 'system/deploy', [SystemController::class, 'deploy'])->withoutMiddleware(ValidateCsrfToken::class)->middleware('throttle:10,1');
 
-Route::get('files/{path}', [Api\FileController::class, 'show'])->where('path', '.*')->middleware('auth');
+// ---------------------------------------------------------------- older links without a society prefix
+Route::prefix('api')->middleware(ResolveSociety::class)->group($api);
+Route::get('files/{path}', [Api\FileController::class, 'show'])->where('path', '.*')->middleware([ResolveSociety::class, 'auth']);
 
-// Everything else is the React single-page app.
-Route::view('/{any?}', 'app')->where('any', '^(?!api|files|build|up|system).*$')->name('login');
+// ---------------------------------------------------------------- platform pages
+Route::get('/', [SpaController::class, 'platform'])->name('login');
+Route::get('register', [SpaController::class, 'platform']);
+Route::get('platform/{any?}', [SpaController::class, 'platform'])->where('any', '.*');
+
+// ---------------------------------------------------------------- a society's portal
+Route::prefix('{society}')->where(['society' => '[A-Za-z0-9][A-Za-z0-9-]{1,39}'])->middleware(ResolveSociety::class)->group(function () use ($api) {
+    Route::prefix('api')->group($api);
+    Route::get('files/{path}', [Api\FileController::class, 'show'])->where('path', '.*')->middleware('auth');
+    Route::get('manifest.webmanifest', [SpaController::class, 'manifest']);
+    Route::get('{any?}', [SpaController::class, 'tenant'])->where('any', '.*');
+});

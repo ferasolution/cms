@@ -296,7 +296,14 @@ export default function Layout() {
                         <SosButton />
                     </div>
                 </header>
-                <main className="flex-1 overflow-y-auto px-3 pb-24 pt-6 sm:px-6 lg:px-8 lg:pb-8"><AnimatePresence mode="wait" initial={false}>
+                <main className="flex-1 overflow-y-auto px-3 pb-24 pt-6 sm:px-6 lg:px-8 lg:pb-8">
+                    {window.APP?.society?.status === 'trial' && window.APP.society.trial_ends_at && (
+                        <div className="mb-4 flex flex-wrap items-center gap-2 rounded-2xl border border-sand-400/30 bg-sand-50 px-4 py-2.5 text-sm text-sand-500">
+                            <span className="lamp-breathe size-2 rounded-full bg-sand-400" />
+                            <b>Free trial</b> — {Math.max(0, Math.ceil((new Date(window.APP.society.trial_ends_at) - Date.now()) / 86400000))} days left. Every feature of your plan is on.
+                            <a href="https://www.ferasolution.com" target="_blank" rel="noreferrer" className="ml-auto font-semibold underline-offset-2 hover:underline">Choose a plan</a>
+                        </div>
+                    )}<AnimatePresence mode="wait" initial={false}>
                     <motion.div key={location.pathname} className="h-full [&>div]:stagger" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={{ duration: 0.22, ease: [0.2, 0.7, 0.2, 1] }}>{outlet}</motion.div>
                 </AnimatePresence></main>
                 <BottomNav onMenu={() => setOpen(true)} />

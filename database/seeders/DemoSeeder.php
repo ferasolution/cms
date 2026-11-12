@@ -27,6 +27,9 @@ class DemoSeeder extends Seeder
 {
     public function run(): void
     {
+        if (! \App\Support\Tenant::id()) {
+            \App\Support\Tenant::set(\App\Models\Society::orderBy('id')->first());
+        }
         $names = ['Ahmed Khan', 'Fatima Ali', 'Usman Tariq', 'Ayesha Siddiqui', 'Bilal Hussain', 'Sana Malik', 'Hamza Qureshi', 'Zainab Raza',
             'Imran Sheikh', 'Hira Javed', 'Faisal Mirza', 'Mariam Aslam', 'Kashif Abbasi', 'Nadia Iqbal', 'Omar Farooq', 'Rabia Anwar'];
 

@@ -18,15 +18,28 @@ class SitePlan
     private const FIRST = ['Ahmed', 'Fatima', 'Usman', 'Ayesha', 'Bilal', 'Sana', 'Hamza', 'Zainab', 'Imran', 'Hira', 'Faisal', 'Mariam', 'Kashif', 'Nadia', 'Omar', 'Rabia', 'Tariq', 'Saima', 'Adeel', 'Nida', 'Junaid', 'Amna', 'Shoaib', 'Mehwish'];
     private const LAST = ['Khan', 'Ali', 'Siddiqui', 'Hussain', 'Malik', 'Qureshi', 'Raza', 'Sheikh', 'Javed', 'Mirza', 'Aslam', 'Abbasi', 'Iqbal', 'Farooq', 'Anwar', 'Baig', 'Rizvi', 'Zaidi', 'Memon', 'Butt'];
 
-    public static function data(): array
+    /** The current society's digitised plan (plots + site). Outside a society (old migrations) the bundled Block 19 plan. */
+    public static function data(): ?array
+    {
+        if ($soc = \App\Support\Tenant::get()) {
+            return $soc->site_plan ?: null;
+        }
+
+        return self::bundled();
+    }
+
+    public static function bundled(): array
     {
         return json_decode(file_get_contents(database_path(self::FILE)), true);
     }
 
-    /** The site metadata (boundary, roads, landmarks, gates, street labels, geo-reference). */
-    public static function site(): array
+    /** The site metadata (boundary, roads, landmarks, gates, street labels, geo-reference) — null when the society has no map yet. */
+    public static function site(): ?array
     {
-        $site = self::data()['site'];
+        $site = self::data()['site'] ?? null;
+        if (! $site) {
+            return null;
+        }
         if ($geo = Setting::get('map_geo')) {
             $site['geo'] = $geo + ['note' => 'Set in Settings'];
         }
@@ -42,6 +55,7 @@ class SitePlan
      */
     public static function apply(bool $adoptExisting = false, bool $demo = false): array
     {
+        abort_unless(self::data(), 422, 'This society has no site plan yet.');
         $plots = collect(self::data()['plots'])->values()->all();
         $taken = [];
         $created = $moved = $renamed = $unplaced = 0;

@@ -2,10 +2,13 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\BelongsToSociety;
 use Illuminate\Database\Eloquent\Model;
 
 class SosAlert extends Model
 {
+    use BelongsToSociety;
+
     protected $table = 'sos_alerts';
 
     protected $guarded = ['id'];

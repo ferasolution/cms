@@ -43,6 +43,7 @@ export default function Login() {
                 <form onSubmit={submit} className="w-full max-w-sm">
                     <img src="/icon.svg" className="mb-6 size-12 rounded-2xl lg:hidden" alt="" />
                     <h2 className="text-[30px] font-bold leading-tight tracking-tight">Sign in</h2>
+                    {window.APP?.society && <div className="mt-1 text-[15px] font-semibold text-brand-700">{window.APP.society.display_name || window.APP.society.name}</div>}
                     <p className="mt-1 text-sm text-ink/55">Officials and residents use the same login.</p>
                     <div className="mt-7 space-y-4">
                         <div>
@@ -57,6 +58,7 @@ export default function Login() {
                         {error && <div className="rounded-xl bg-red-50 px-3 py-2 text-sm text-red-700">{error}</div>}
                         <button className="btn-primary w-full py-3 text-[15px]" disabled={busy}>{busy && <Loader2 size={16} className="animate-spin" />}Sign in</button>
                     </div>
+                    <p className="mt-6 text-center text-sm text-ink/50">Not your society? <a href="/" className="font-semibold text-brand-600 hover:underline">Find yours</a></p>
                 </form>
             </div>
         </div>

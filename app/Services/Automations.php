@@ -52,7 +52,7 @@ class Automations
     public static function run(): void
     {
         foreach (self::RULES as $rule => [, , , $every]) {
-            if ($every <= 0 || ! Cache::add('auto:'.$rule, 1, $every)) {
+            if ($every <= 0 || ! Cache::add(\App\Support\Tenant::key('auto:'.$rule), 1, $every)) {
                 continue;
             }
             try {
@@ -174,7 +174,7 @@ class Automations
             $n++;
         }
         foreach (\App\Models\GuardShift::where('status', 'on_duty')->where('ends_at', '<', now()->subHours(2))->get() as $sh) {
-            if (! Cache::add('shift-open-'.$sh->id, 1, 6 * 3600)) {
+            if (! Cache::add(\App\Support\Tenant::key('shift-open-'.$sh->id), 1, 6 * 3600)) {
                 continue;
             }
             Activity::alertModule('security', 3, 'Shift not handed over: '.$sh->guard_name, $sh->post.' ended '.$sh->ends_at->format('h:i A').' — still open.', 'warning', '/security?tab=shifts');
@@ -192,7 +192,7 @@ class Automations
         }
         $missed = \App\Models\PatrolCheckpoint::where('active', true)->with('lastScan')->get()
             ->filter(fn ($c) => ! $c->lastScan || $c->lastScan->scanned_at->lt(now()->subMinutes($interval)));
-        if ($missed->isEmpty() || ! Cache::add('patrol-gap', 1, $interval * 60)) {
+        if ($missed->isEmpty() || ! Cache::add(\App\Support\Tenant::key('patrol-gap'), 1, $interval * 60)) {
             return null;
         }
         Activity::alertModule('security', 3, 'Patrol overdue at '.$missed->count().' checkpoint(s)', $missed->pluck('name')->take(6)->implode(', ').' — not checked in the last '.$interval.' min.', 'warning', '/security?tab=patrol');
@@ -215,7 +215,7 @@ class Automations
             if ($s->time_from && $s->time_to < $s->time_from) {
                 $end->addDay();
             }
-            if (now()->lt($end->copy()->addHour()) || ! Cache::add('ds-over-'.$e->id, 1, 12 * 3600)) {
+            if (now()->lt($end->copy()->addHour()) || ! Cache::add(\App\Support\Tenant::key('ds-over-'.$e->id), 1, 12 * 3600)) {
                 continue;
             }
             Activity::alertModule('security', 2, ucfirst($s->type).' still inside: '.$s->name, 'Working time ended '.$end->format('h:i A').($e->house ? ' · Plot '.$e->house->label : ''), 'warning', '/security?tab=staff', $e->house_id);
@@ -225,7 +225,7 @@ class Automations
             $n++;
         }
         foreach (\App\Models\DomesticStaff::where('active', true)->whereNotNull('valid_until')->whereBetween('valid_until', [today(), today()->addDays(7)])->get() as $s) {
-            if (! Cache::add('ds-exp-'.$s->id, 1, 3 * 86400)) {
+            if (! Cache::add(\App\Support\Tenant::key('ds-exp-'.$s->id), 1, 3 * 86400)) {
                 continue;
             }
             Activity::alertHouse($s->house_id, 'security', 'Staff card expiring: '.$s->name, 'Valid until '.$s->valid_until->format('d M Y').'. Renew it under Security → Domestic staff.', 'warning', '/security?tab=staff');
@@ -239,7 +239,7 @@ class Automations
     {
         $n = 0;
         foreach (SosAlert::with('house', 'user')->where('status', 'active')->where('created_at', '<', now()->subMinutes(2))->get() as $s) {
-            if (! Cache::add('sos-esc-'.$s->id, 1, 3600)) {
+            if (! Cache::add(\App\Support\Tenant::key('sos-esc-'.$s->id), 1, 3600)) {
                 continue;
             }
             Activity::alertAdmins('emergency', '🆘 NO RESPONSE to SOS — '.($s->user?->name ?? ''), 'House '.($s->house?->label ?? '?').' · '.strtoupper($s->type).' · raised '.$s->created_at->diffForHumans(), 'danger', '/emergency?sos='.$s->id, $s->house_id);
@@ -286,7 +286,7 @@ class Automations
         $period = now()->format('Y-m');
         $due = max(1, min(28, (int) Settings::get('maintenance_due_day')));
         $stage = now()->day >= $due ? 'overdue' : (now()->day >= 1 ? 'due' : null);
-        if (! $stage || ! Cache::add("maint-$stage-$period", 1, 40 * 86400)) {
+        if (! $stage || ! Cache::add(\App\Support\Tenant::key("maint-$stage-$period"), 1, 40 * 86400)) {
             return null;
         }
         $paid = Transaction::where('category', 'maintenance')->where('period', $period)->pluck('house_id')->flip();
@@ -360,7 +360,7 @@ class Automations
         $n = 0;
         $today = now()->toDateString();
         $grace = (int) Settings::get('late_grace_minutes');
-        if (self::on('staff_absent_alert') && Cache::add('absent-'.$today.'-'.now()->format('H'), 1, 3700)) {
+        if (self::on('staff_absent_alert') && Cache::add(\App\Support\Tenant::key('absent-'.$today.'-'.now()->format('H')), 1, 3700)) {
             $in = Attendance::whereDate('date', $today)->pluck('employee_id')->flip();
             $missing = Employee::where('status', 'active')->get()->filter(function ($e) use ($in, $today, $grace) {
                 $start = Carbon::parse($today.' '.$e->shift_start);
@@ -432,7 +432,7 @@ class Automations
 
     private static function rule_daily_digest(): ?array
     {
-        if (! self::on('daily_digest') || now()->hour < 8 || ! Cache::add('digest-'.now()->toDateString(), 1, 90000)) {
+        if (! self::on('daily_digest') || now()->hour < 8 || ! Cache::add(\App\Support\Tenant::key('digest-'.now()->toDateString()), 1, 90000)) {
             return null;
         }
         $y = now()->subDay();

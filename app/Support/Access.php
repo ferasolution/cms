@@ -76,6 +76,10 @@ class Access
 
     public static function level(User $user, string $module): int
     {
+        // the society's plan decides which modules exist at all
+        if (($soc = \App\Support\Tenant::get()) && ! in_array($module, $soc->allowedModules(), true)) {
+            return 0;
+        }
         if ($user->role === 'super_admin') {
             return self::MANAGE;
         }

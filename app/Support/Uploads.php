@@ -18,6 +18,7 @@ class Uploads
         }
         $name = now()->format('Ymd_His').'_'.Str::random(8).'.'.strtolower($file->getClientOriginalExtension() ?: 'bin');
 
-        return $file->storeAs($folder, $name, 'local');
+        // folder first (the file guard matches on it), then the society so tenants never share a directory
+        return $file->storeAs($folder.'/s'.(\App\Support\Tenant::id() ?? 0), $name, 'local');
     }
 }

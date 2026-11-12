@@ -285,9 +285,9 @@ export default function MapPage() {
         return (
             <div className="card mx-auto mt-10 max-w-lg p-6 text-center">
                 <MapIcon className="mx-auto mb-2 text-brand-600" size={32} />
-                <div className="font-bold">Site plan not loaded yet</div>
-                <p className="mt-1 text-sm text-ink/55">Load the Gulistan-e-Jauhar Block 19 plot map to place every house on the 3D map.</p>
-                {isSuper && <button className="btn-primary mt-4" onClick={() => post('settings/site-plan').then(reload)}>Load Block 19 site plan</button>}
+                <div className="font-bold">Your society's map is not set up yet</div>
+                <p className="mt-1 text-sm text-ink/55">Send the society's plot map (an image or PDF from the developer or the society office) to the Fera Solution team. Once it is digitised, every house appears here on the 2D and 3D map, with requests and emergencies pinned on the right house.</p>
+                <a className="btn-primary mt-4" href="https://www.ferasolution.com" target="_blank" rel="noreferrer">Contact Fera Solution</a>
             </div>
         );
     }

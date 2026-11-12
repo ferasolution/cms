@@ -2,10 +2,13 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\BelongsToSociety;
 use Illuminate\Database\Eloquent\Model;
 
 class VehicleLog extends Model
 {
+    use BelongsToSociety;
+
     protected $table = 'vehicle_logs';
 
     protected $guarded = ['id'];

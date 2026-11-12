@@ -2,10 +2,13 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\BelongsToSociety;
 use Illuminate\Database\Eloquent\Model;
 
 class PatrolRound extends Model
 {
+    use BelongsToSociety;
+
     protected $table = 'patrol_rounds';
 
     protected $guarded = ['id'];

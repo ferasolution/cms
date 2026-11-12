@@ -2,10 +2,13 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\BelongsToSociety;
 use Illuminate\Database\Eloquent\Model;
 
 class Noc extends Model
 {
+    use BelongsToSociety;
+
     protected $table = 'nocs';
 
     protected $guarded = ['id'];

@@ -2,10 +2,13 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\BelongsToSociety;
 use Illuminate\Database\Eloquent\Model;
 
 class Task extends Model
 {
+    use BelongsToSociety;
+
     protected $table = 'tasks';
 
     protected $guarded = ['id'];

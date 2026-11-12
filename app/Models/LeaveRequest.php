@@ -2,10 +2,13 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\BelongsToSociety;
 use Illuminate\Database\Eloquent\Model;
 
 class LeaveRequest extends Model
 {
+    use BelongsToSociety;
+
     protected $table = 'leave_requests';
 
     protected $guarded = ['id'];

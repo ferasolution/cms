@@ -31,8 +31,11 @@ function toFormData(data) {
 
 const hasFile = (o) => o && typeof o === 'object' && Object.values(o).some((v) => v instanceof File || (Array.isArray(v) && v.some((x) => x instanceof File)));
 
-export async function api(method, url, data, { params } = {}) {
-    let full = '/api/' + url.replace(/^\//, '');
+/** Base of the current society, e.g. "/block19" ('' on the platform site). */
+export const BASE = window.APP?.base || '';
+
+export async function api(method, url, data, { params, root } = {}) {
+    let full = (root ?? BASE + '/api/') + url.replace(/^\//, '');
     if (params) {
         const qs = new URLSearchParams(Object.entries(params).filter(([, v]) => v !== '' && v !== null && v !== undefined && v !== false));
         if ([...qs].length) full += '?' + qs;
@@ -64,8 +67,14 @@ export const get = (url, params) => api('GET', url, undefined, { params });
 export const post = (url, data) => api('POST', url, data ?? {});
 export const put = (url, data) => api('PUT', url, data ?? {});
 export const del = (url) => api('DELETE', url);
+/** Platform (SaaS) API — landing, sign-up and the owner console. */
+export const papi = {
+    get: (url, params) => api('GET', url, undefined, { params, root: '/_p/api/' }),
+    post: (url, data) => api('POST', url, data ?? {}, { root: '/_p/api/' }),
+    put: (url, data) => api('PUT', url, data ?? {}, { root: '/_p/api/' }),
+};
 
-export const fileUrl = (path, download = false) => (path ? `/files/${path}${download ? '?download=1' : ''}` : null);
+export const fileUrl = (path, download = false) => (path ? `${BASE}/files/${path}${download ? '?download=1' : ''}` : null);
 export const money = (n) => 'Rs ' + Number(n || 0).toLocaleString('en-PK', { maximumFractionDigits: 0 });
 export const dt = (s, withTime = true) => {
     if (!s) return '—';

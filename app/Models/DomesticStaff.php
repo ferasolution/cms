@@ -2,10 +2,13 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\BelongsToSociety;
 use Illuminate\Database\Eloquent\Model;
 
 class DomesticStaff extends Model
 {
+    use BelongsToSociety;
+
     protected $table = 'domestic_staff';
 
     protected $guarded = ['id'];

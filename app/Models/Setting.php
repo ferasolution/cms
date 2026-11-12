@@ -2,23 +2,21 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\BelongsToSociety;
 use Illuminate\Database\Eloquent\Model;
 
+/** Key/value settings, one set per society. */
 class Setting extends Model
 {
-    protected $primaryKey = 'key';
-
-    public $incrementing = false;
-
-    protected $keyType = 'string';
+    use BelongsToSociety;
 
     public $timestamps = false;
 
-    protected $guarded = [];
+    protected $guarded = ['id'];
 
     public static function get(string $key, $default = null)
     {
-        $row = static::find($key);
+        $row = static::where('key', $key)->first();
 
         return $row ? json_decode($row->value, true) : $default;
     }

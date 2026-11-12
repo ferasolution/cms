@@ -19,7 +19,7 @@ class Watchers
 {
     public static function run(): void
     {
-        if (! Cache::add('watchers-lock', 1, 15)) {
+        if (! Cache::add(\App\Support\Tenant::key('watchers-lock'), 1, 15)) {
             return;
         }
         Automations::run();

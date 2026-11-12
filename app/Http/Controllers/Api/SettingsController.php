@@ -88,9 +88,9 @@ class SettingsController extends Controller
     {
         abort_unless($request->user()->isAdmin(), 403);
         foreach (array_keys(Automations::RULES) as $r) {
-            \Illuminate\Support\Facades\Cache::forget('auto:'.$r);
+            \Illuminate\Support\Facades\Cache::forget(\App\Support\Tenant::key('auto:'.$r));
         }
-        \Illuminate\Support\Facades\Cache::forget('watchers-lock');
+        \Illuminate\Support\Facades\Cache::forget(\App\Support\Tenant::key('watchers-lock'));
         \App\Services\Watchers::run();
         Activity::log('settings', 'automation', 'Ran all automations manually');
 

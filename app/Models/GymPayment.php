@@ -2,10 +2,13 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\BelongsToSociety;
 use Illuminate\Database\Eloquent\Model;
 
 class GymPayment extends Model
 {
+    use BelongsToSociety;
+
     protected $table = 'gym_payments';
 
     protected $guarded = ['id'];
