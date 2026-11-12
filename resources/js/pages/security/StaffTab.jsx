@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { UserPlus, ShieldCheck, ShieldX, LogIn, LogOut, IdCard, Printer, Clock, CalendarDays, Phone } from 'lucide-react';
 import { useList, Table, Badge, Modal, Form, SearchBox, Select, useAction, useToast, QrImage, Confirm, FileLink } from '../../components/ui';
-import { post, del, dt, duration, title, fileUrl } from '../../lib/api';
+import { post, del, dt, duration, title, fileUrl, UNIT, ID_LABEL } from '../../lib/api';
 import { useLive } from '../../lib/alerts';
 
 const TYPES = ['maid', 'driver', 'gardener', 'cook', 'nanny', 'cleaner', 'guard', 'tutor', 'other'];
@@ -21,7 +21,7 @@ async function printCard(s) {
         .ph{width:20mm;height:24mm;object-fit:cover;background:#eee;border-radius:2mm}.q{width:22mm;height:22mm;margin-top:auto}
         h2{margin:0;font-size:12px;color:#2737a3}.n{font-size:13px;font-weight:700;margin-top:1mm}.s{font-size:9px;color:#333;line-height:1.4}.k{font:700 11px monospace;letter-spacing:1px}</style></head>
         <body><div class="c"><div>${photo}<img class="q" src="${qr}"></div><div><h2>STAFF ENTRY CARD</h2><div class="n">${esc(s.name)}</div>
-        <div class="s">${esc(title(s.type))}<br>${s.house ? 'Plot ' + esc(s.house.label) : ''}<br>CNIC ${esc(s.cnic)}<br>${esc(s.work_days || 'All days')} ${s.time_from ? esc(s.time_from.slice(0, 5)) + '–' + esc((s.time_to || '').slice(0, 5)) : ''}<br>
+        <div class="s">${esc(title(s.type))}<br>${s.house ? UNIT + ' ' + esc(s.house.label) : ''}<br>${esc(ID_LABEL)} ${esc(s.cnic)}<br>${esc(s.work_days || 'All days')} ${s.time_from ? esc(s.time_from.slice(0, 5)) + '–' + esc((s.time_to || '').slice(0, 5)) : ''}<br>
         Valid till ${s.valid_until ? esc(new Date(s.valid_until).toLocaleDateString()) : '—'}</div><div class="k">${esc(s.code)}</div></div></div>
         <script>window.onload=()=>{setTimeout(()=>{window.print();window.close()},300)}<\/script></body></html>`);
     w.document.close();
@@ -65,7 +65,7 @@ export default function StaffTab({ manage, approve, isResident, houses, gates })
     return (
         <>
             <div className="mb-3 flex flex-wrap items-center gap-2">
-                <SearchBox value={list.params.q} onChange={(q) => list.set({ q })} placeholder="Name, CNIC, card…" />
+                <SearchBox value={list.params.q} onChange={(q) => list.set({ q })} placeholder={`Name, ${ID_LABEL}, card…`} />
                 <Select value={list.params.verification} onChange={(verification) => list.set({ verification })} placeholder="All" options={['pending', 'verified', 'rejected']} />
                 <Select value={list.params.type} onChange={(type) => list.set({ type })} placeholder="All types" options={TYPES} />
                 {!isResident && <Select value={list.params.house_id} onChange={(house_id) => list.set({ house_id })} placeholder="All houses" options={houses} className="max-w-48" />}
@@ -86,7 +86,7 @@ export default function StaffTab({ manage, approve, isResident, houses, gates })
                                 {s.photo_path ? <img src={fileUrl(s.photo_path)} className="size-16 shrink-0 rounded-xl object-cover" alt="" /> : <div className="grid size-16 shrink-0 place-items-center rounded-xl bg-ink/5 text-3xl">{ICON[s.type]}</div>}
                                 <div className="min-w-0 flex-1">
                                     <div className="flex items-center gap-1.5"><span className="truncate font-bold">{s.name}</span>{s.inside && <span className="size-2 rounded-full bg-emerald-500" />}</div>
-                                    <div className="text-xs text-ink/55">{title(s.type)}{s.house ? ' · Plot ' + s.house.label : ''}</div>
+                                    <div className="text-xs text-ink/55">{title(s.type)}{s.house ? ` · ${UNIT} ` + s.house.label : ''}</div>
                                     <div className="mt-1"><Badge value={VER[s.verification][0]}>{VER[s.verification][1]}</Badge></div>
                                     <div className="mt-1 truncate text-[11px] text-ink/45">{s.work_days || 'All days'}{s.time_from ? ` · ${s.time_from.slice(0, 5)}–${(s.time_to || '').slice(0, 5)}` : ''}</div>
                                 </div>
@@ -98,7 +98,7 @@ export default function StaffTab({ manage, approve, isResident, houses, gates })
                             </div>
                         </div>
                     ))}
-                    {!list.rows.length && !list.loading && <div className="card col-span-full p-8 text-center text-sm text-ink/45">No domestic staff registered yet. {isResident ? 'Register your maid, driver, cook… — security verifies the CNIC once and they get a card for quick entry.' : ''}</div>}
+                    {!list.rows.length && !list.loading && <div className="card col-span-full p-8 text-center text-sm text-ink/45">No domestic staff registered yet. {isResident ? 'Register your maid, driver, cook… — security verifies the ID once and they get a card for quick entry.' : ''}</div>}
                 </div>
             ) : (
                 <Table list={entries} empty="No staff entries yet." columns={[
@@ -119,8 +119,8 @@ export default function StaffTab({ manage, approve, isResident, houses, gates })
                             {view.photo_path ? <img src={fileUrl(view.photo_path)} className="h-28 w-24 rounded-xl object-cover" alt="" /> : <div className="grid h-28 w-24 place-items-center rounded-xl bg-ink/5 text-4xl">{ICON[view.type]}</div>}
                             <div className="flex-1 space-y-1">
                                 <div><Badge value={VER[view.verification][0]}>{VER[view.verification][1]}</Badge></div>
-                                <div>{title(view.type)}{view.house ? ' · Plot ' + view.house.label : ''}</div>
-                                <div className="text-ink/60">CNIC {view.cnic}</div>
+                                <div>{title(view.type)}{view.house ? ` · ${UNIT} ` + view.house.label : ''}</div>
+                                <div className="text-ink/60">{ID_LABEL} {view.cnic}</div>
                                 {view.phone && <a href={`tel:${view.phone}`} className="flex items-center gap-1 text-brand-600"><Phone size={13} />{view.phone}</a>}
                                 <div className="flex items-center gap-1 text-ink/60"><CalendarDays size={13} />{view.work_days || 'All days'}</div>
                                 {view.time_from && <div className="flex items-center gap-1 text-ink/60"><Clock size={13} />{view.time_from.slice(0, 5)} – {(view.time_to || '').slice(0, 5)}</div>}
@@ -131,7 +131,7 @@ export default function StaffTab({ manage, approve, isResident, houses, gates })
                         {view.verification_note && <p className="rounded-xl bg-amber-50 p-3 text-amber-900">{view.verification_note}</p>}
                         {view.verifier && <p className="text-xs text-ink/45">Checked by {view.verifier.name} · {dt(view.verified_at)}</p>}
                         <div className="flex flex-wrap gap-2">
-                            <FileLink path={view.cnic_photo_path} label="CNIC copy" /><FileLink path={view.police_doc_path} label="Police verification" />
+                            <FileLink path={view.cnic_photo_path} label={`${ID_LABEL} copy`} /><FileLink path={view.police_doc_path} label="Police verification" />
                         </div>
                         <div className="flex flex-wrap gap-2 border-t border-ink/5 pt-3">
                             <button className="btn-outline btn-sm" onClick={() => printCard(view)}><Printer size={13} />Print staff card</button>
@@ -149,14 +149,14 @@ export default function StaffTab({ manage, approve, isResident, houses, gates })
                 {modal && <Form initial={modal} onSubmit={save} submitLabel={modal.id ? 'Save' : 'Register'} fields={[
                     { name: 'name', label: 'Full name', required: true, half: true },
                     { name: 'type', label: 'Work', type: 'select', options: TYPES, required: true, half: true, default: 'maid' },
-                    { name: 'cnic', label: 'CNIC', required: true, half: true, placeholder: '42101-1234567-1' },
+                    { name: 'cnic', label: ID_LABEL, required: true, half: true, placeholder: '' },
                     { name: 'phone', label: 'Phone', half: true },
                     !isResident && { name: 'house_id', label: 'Works at house', type: 'select', options: houses, half: true },
                     { name: 'address', label: 'Home address', half: !isResident },
                     { name: 'time_from', label: 'Arrives at', type: 'time', half: true }, { name: 'time_to', label: 'Leaves by', type: 'time', half: true },
                     { name: 'valid_until', label: 'Card valid until', type: 'date', half: true },
                     { name: 'photo', label: 'Photo', type: 'file', accept: 'image/*', capture: 'user', half: true },
-                    { name: 'cnic_photo', label: 'CNIC copy', type: 'file', accept: 'image/*', capture: 'environment', half: true },
+                    { name: 'cnic_photo', label: `${ID_LABEL} copy`, type: 'file', accept: 'image/*', capture: 'environment', half: true },
                     { name: 'police_doc', label: 'Police verification (optional)', type: 'file', accept: 'image/*,application/pdf', half: true },
                     manage && { name: 'active', label: 'Card active', type: 'checkbox' },
                 ].filter(Boolean)}>

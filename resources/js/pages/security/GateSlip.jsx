@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Printer, Share2, Clock, Car, Home, Phone, IdCard } from 'lucide-react';
 import { QrImage, Spinner } from '../../components/ui';
-import { get, dt, title } from '../../lib/api';
+import { get, dt, title, UNIT, ID_LABEL } from '../../lib/api';
 
 const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
@@ -9,8 +9,8 @@ const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<
 export async function printSlip(v) {
     const QR = await import('qrcode');
     const qr = await QR.toDataURL(v.token, { width: 360, margin: 1 });
-    const rows = [['Name', v.name], ['Phone', v.phone], ['CNIC', v.cnic], ['Vehicle', [v.vehicle_type && title(v.vehicle_type), v.vehicle_no].filter(Boolean).join(' · ')],
-        ['Visiting', v.house ? `Plot ${v.house.label}${v.house.owner_name ? ' — ' + v.house.owner_name : ''}` : '—'], ['Reason', v.purpose], ['Persons', v.persons],
+    const rows = [['Name', v.name], ['Phone', v.phone], [ID_LABEL, v.cnic], ['Vehicle', [v.vehicle_type && title(v.vehicle_type), v.vehicle_no].filter(Boolean).join(' · ')],
+        ['Visiting', v.house ? `${UNIT} ${v.house.label}${v.house.owner_name ? ' — ' + v.house.owner_name : ''}` : '—'], ['Reason', v.purpose], ['Persons', v.persons],
         ['Gate', v.gate], ['Entry', v.entry_at ? dt(v.entry_at) : 'Waiting for approval'], ['Valid until', v.expected_exit_at ? dt(v.expected_exit_at) : '—'], ['Issued by', v.logger?.name]]
         .filter(([, x]) => x !== null && x !== undefined && x !== '');
     const w = window.open('', '_blank', 'width=420,height=720');
@@ -36,7 +36,7 @@ export default function GateSlip({ id, initial, autoPrint }) {
     useEffect(() => { get(`visitors/${id || initial.id}`).then((d) => { setV(d); if (autoPrint) printSlip(d); }).catch(() => setV(initial)); }, [id]); // eslint-disable-line
     if (!v) return <div className="grid h-40 place-items-center"><Spinner /></div>;
     const share = () => {
-        const text = `Gate slip ${v.token}\n${v.name} → ${v.house ? 'Plot ' + v.house.label : ''}\nValid until ${v.expected_exit_at ? dt(v.expected_exit_at) : '—'}\nShow this code at the gate when leaving.`;
+        const text = `Gate slip ${v.token}\n${v.name} → ${v.house ? UNIT + ' ' + v.house.label : ''}\nValid until ${v.expected_exit_at ? dt(v.expected_exit_at) : '—'}\nShow this code at the gate when leaving.`;
         if (navigator.share) navigator.share({ title: 'Gate slip', text }).catch(() => {}); else navigator.clipboard?.writeText(text);
     };
     return (
@@ -54,7 +54,7 @@ export default function GateSlip({ id, initial, autoPrint }) {
                 <div className="mx-5 my-4 border-t border-dashed border-ink/15" />
                 <div className="space-y-1.5 px-5 pb-5 text-sm">
                     <div className="text-lg font-bold">{v.name}</div>
-                    {v.house && <div className="flex items-center gap-2 text-ink/70"><Home size={14} />Plot {v.house.label}{v.house.owner_name ? ' — ' + v.house.owner_name : ''}</div>}
+                    {v.house && <div className="flex items-center gap-2 text-ink/70"><Home size={14} />{UNIT} {v.house.label}{v.house.owner_name ? ' — ' + v.house.owner_name : ''}</div>}
                     {(v.phone || v.cnic) && <div className="flex flex-wrap items-center gap-x-3 text-ink/70">{v.phone && <span className="flex items-center gap-1"><Phone size={13} />{v.phone}</span>}{v.cnic && <span className="flex items-center gap-1"><IdCard size={13} />{v.cnic}</span>}</div>}
                     {v.vehicle_no && <div className="flex items-center gap-2 text-ink/70"><Car size={14} />{title(v.vehicle_type || 'vehicle')} · <span className="rounded border border-ink/60 px-1.5 font-mono text-xs font-bold">{v.vehicle_no}</span></div>}
                     <div className="text-ink/70">{v.purpose}</div>

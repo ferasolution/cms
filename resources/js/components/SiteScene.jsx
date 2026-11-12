@@ -1,4 +1,5 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { UNIT } from '../lib/api';
 import { useFrame } from '@react-three/fiber';
 import { Html, Line } from '@react-three/drei';
 import { gatesOf, routeTo, signalsByHouse, SIGNAL_META } from '../lib/siteplan';
@@ -109,7 +110,7 @@ function Zone({ z, to, night }) {
                             </group>
                         ))}
                     </group>
-                    <Label text="MOSQUE" pos={[x, 5.3, zz]} />
+                    <Label text={(z.label || "Mosque").toUpperCase()} pos={[x, 5.3, zz]} />
                 </group>
             );
         case 'commercial':
@@ -416,7 +417,7 @@ export default function SiteScene({ data, layer, selected, onSelect, night, walk
             {tip && tip.mx != null && (
                 <Html position={top(tip).map((v, i) => (i === 1 ? v + 1.2 : v))} center style={{ pointerEvents: 'none' }} zIndexRange={[20, 10]}>
                     <div className="whitespace-nowrap rounded-xl bg-night/90 px-2.5 py-1.5 text-xs font-semibold text-white shadow-xl backdrop-blur">
-                        <div>Plot {tip.label}{tip.owner ? ' · ' + tip.owner : ''}</div>
+                        <div>{UNIT} {tip.label}{tip.owner ? ' · ' + tip.owner : ''}</div>
                         <div className="mt-0.5 flex gap-2 text-[10px] font-normal text-white/70">
                             {tip.sos && <span className="font-bold text-red-300">SOS {tip.sos}</span>}
                             {tip.awaiting > 0 && <span className="text-amber-300">{tip.awaiting} at gate</span>}

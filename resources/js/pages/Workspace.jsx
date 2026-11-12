@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Briefcase, LogIn, LogOut, CalendarOff, Banknote, Check } from 'lucide-react';
 import { useGet, useList, PageHeader, Modal, Form, Badge, Table, useAction, useToast } from '../components/ui';
-import { post, dt, title, money } from '../lib/api';
+import { post, dt, title, money, LOCALE, CURRENCY } from '../lib/api';
 import { useLive } from '../lib/alerts';
 
 const hm = (m) => `${Math.floor((m || 0) / 60)}h ${String((m || 0) % 60).padStart(2, '0')}m`;
@@ -9,7 +9,7 @@ const hm = (m) => `${Math.floor((m || 0) / 60)}h ${String((m || 0) % 60).padStar
 function Clock() {
     const [now, setNow] = useState(new Date());
     useEffect(() => { const i = setInterval(() => setNow(new Date()), 1000); return () => clearInterval(i); }, []);
-    return <div className="font-mono text-4xl font-bold tracking-tight">{now.toLocaleTimeString('en-PK')}</div>;
+    return <div className="font-mono text-4xl font-bold tracking-tight">{now.toLocaleTimeString(LOCALE)}</div>;
 }
 
 /** Self-service for staff: check in / out, my tasks, leave and expense requests. */
@@ -32,14 +32,14 @@ export default function Workspace() {
             <div className="grid gap-5 lg:grid-cols-5">
                 <div className="card flex flex-col items-center justify-center gap-3 p-6 text-center lg:col-span-2">
                     <Clock />
-                    <div className="text-sm text-ink/55">{new Date().toLocaleDateString('en-PK', { weekday: 'long', day: 'numeric', month: 'long' })}</div>
+                    <div className="text-sm text-ink/55">{new Date().toLocaleDateString(LOCALE, { weekday: 'long', day: 'numeric', month: 'long' })}</div>
                     {!t?.check_out && (
                         <button onClick={() => act(() => post('crm/punch'), t?.check_in ? 'Checked out — have a good day!' : 'Checked in', ws.reload)}
                             className={`mt-2 flex size-36 flex-col items-center justify-center gap-1 rounded-full text-white shadow-xl transition hover:scale-105 ${t?.check_in ? 'bg-sand-500 shadow-sand-500/30' : 'bg-brand-600 shadow-brand-600/30'}`}>
                             {t?.check_in ? <LogOut size={30} /> : <LogIn size={30} />}<span className="text-lg font-bold">{t?.check_in ? 'Check out' : 'Check in'}</span>
                         </button>
                     )}
-                    {t?.check_in && <div className="text-sm">In at <b>{new Date(t.check_in).toLocaleTimeString('en-PK', { hour: '2-digit', minute: '2-digit' })}</b>{t.check_out && <> · out at <b>{new Date(t.check_out).toLocaleTimeString('en-PK', { hour: '2-digit', minute: '2-digit' })}</b></>} · worked <b>{hm(worked)}</b>{t.late_minutes > 0 && <span className="text-red-600"> · {t.late_minutes}m late</span>}</div>}
+                    {t?.check_in && <div className="text-sm">In at <b>{new Date(t.check_in).toLocaleTimeString(LOCALE, { hour: '2-digit', minute: '2-digit' })}</b>{t.check_out && <> · out at <b>{new Date(t.check_out).toLocaleTimeString(LOCALE, { hour: '2-digit', minute: '2-digit' })}</b></>} · worked <b>{hm(worked)}</b>{t.late_minutes > 0 && <span className="text-red-600"> · {t.late_minutes}m late</span>}</div>}
                     {t?.check_out && <Badge value="completed">Day complete</Badge>}
                 </div>
                 <div className="card p-5 lg:col-span-3">
@@ -79,7 +79,7 @@ export default function Workspace() {
             </Modal>
             <Modal open={modal === 'expense'} onClose={() => setModal(null)} title="Expense request">
                 {modal === 'expense' && <Form submitLabel="Submit for approval" onSubmit={async (v) => { await post('finance/expense-requests', v); toast('Request sent to Admin for approval'); setModal(null); reqs.reload(); }} fields={[
-                    { name: 'title', label: 'What is it for?', required: true }, { name: 'amount', label: 'Amount (Rs)', type: 'number', min: 1, required: true, half: true },
+                    { name: 'title', label: 'What is it for?', required: true }, { name: 'amount', label: `Amount (${CURRENCY})`, type: 'number', min: 1, required: true, half: true },
                     { name: 'category', label: 'Category', type: 'select', options: ['utilities', 'repair', 'security', 'cleaning', 'gardening', 'events', 'office', 'allowance', 'other'], default: 'other', required: true, half: true },
                     { name: 'purpose', label: 'Details', type: 'textarea' }, { name: 'receipt', label: 'Quotation / bill', type: 'file', accept: 'image/*,.pdf' },
                 ]} />}

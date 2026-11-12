@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { LOCALE } from '../lib/api';
 
 const reduced = () => typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
 
@@ -28,7 +29,7 @@ export function CountUp({ value, duration = 900 }) {
                 const v = a + (b - a) * e;
                 const dec = (m.split('.')[1] || '').length;
                 const out = dec ? v.toFixed(dec) : Math.round(v).toString();
-                return m.includes(',') ? Number(out).toLocaleString('en-PK', { maximumFractionDigits: dec }) : out;
+                return m.includes(',') ? Number(out).toLocaleString(LOCALE, { maximumFractionDigits: dec }) : out;
             }));
             if (k < 1) raf = requestAnimationFrame(tick);
         };

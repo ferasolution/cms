@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { UNIT } from '../lib/api';
 import { Plus, Minus, Maximize } from 'lucide-react';
 import { corners, centroid, gatesOf, signalsByHouse, SIGNAL_META } from '../lib/siteplan';
 
@@ -142,7 +143,7 @@ export default function PlanMap({ site, houses, signals = [], selectedId, onSele
 
             {hover && (
                 <div className="pointer-events-none absolute left-3 top-3 max-w-[70%] rounded-xl bg-night/90 px-3 py-2 text-xs text-white shadow-xl backdrop-blur">
-                    <div className="font-bold">Plot {hover.label}{hover.owner ? ' · ' + hover.owner : ''}</div>
+                    <div className="font-bold">{UNIT} {hover.label}{hover.owner ? ' · ' + hover.owner : ''}</div>
                     <div className="text-white/60">{hover.street}</div>
                     {groups.find((g) => g.house_id === hover.id)?.list.map((s) => <div key={s.key} className="mt-0.5">{SIGNAL_META[s.type]?.icon} {s.title}</div>)}
                 </div>

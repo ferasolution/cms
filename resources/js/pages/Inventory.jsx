@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Boxes, Plus, ArrowUpRight, Undo2, AlertTriangle, Pencil } from 'lucide-react';
 import { useList, PageHeader, Table, Modal, Form, Badge, SearchBox, Select, Tabs, Confirm, useAction, useToast } from '../components/ui';
-import { post, put, del, dt, money } from '../lib/api';
+import { post, put, del, dt, money, CURRENCY } from '../lib/api';
 import { useAuth } from '../lib/auth';
 import { useLive } from '../lib/alerts';
 
@@ -24,7 +24,7 @@ export default function Inventory() {
         { name: 'quantity', label: 'Quantity in stock', type: 'number', min: 0, required: true, half: true },
         { name: 'unit', label: 'Unit', default: 'pcs', half: true },
         { name: 'min_quantity', label: 'Low-stock alert at', type: 'number', min: 0, half: true },
-        { name: 'unit_cost', label: 'Unit cost (Rs)', type: 'number', min: 0, half: true },
+        { name: 'unit_cost', label: `Unit cost (${CURRENCY})`, type: 'number', min: 0, half: true },
     ];
     const issueFields = [
         { name: 'inventory_item_id', label: 'Item', type: 'select', required: true, options: all.rows.map((i) => ({ value: i.id, label: `${i.name} (${i.quantity} ${i.unit} available)` })) },

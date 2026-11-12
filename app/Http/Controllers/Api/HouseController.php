@@ -164,7 +164,7 @@ class HouseController extends Controller
                 $add('emergency_entry', $v->house_id, 'e'.$v->id, $v->name, 'Priority entry via '.($v->gate ?: 'gate').' · '.($v->vehicle_no ?: '').' · '.$v->persons.' crew', 'danger', '/map?house='.$v->house_id.'&route=1', $v->entry_at);
             }
             foreach ($scope(\App\Models\DomesticStaff::where('verification', 'pending'))->get() as $d) {
-                $add('staff', $d->house_id, $d->id, 'Verify staff: '.$d->name, ucfirst($d->type).' · CNIC '.$d->cnic, 'info', '/security?tab=staff', $d->created_at);
+                $add('staff', $d->house_id, $d->id, 'Verify staff: '.$d->name, ucfirst($d->type).' · '.\App\Support\Settings::idLabel().' '.$d->cnic, 'info', '/security?tab=staff', $d->created_at);
             }
             foreach ($scope(Visitor::where('status', 'inside')->where('access_type', '!=', 'emergency')->where('expected_exit_at', '<', now()))->get() as $v) {
                 $add('overstay', $v->house_id, $v->id, 'Overstay: '.$v->name, 'Allowed until '.$v->expected_exit_at->format('h:i A'), 'warning', '/security', $v->expected_exit_at);
@@ -199,7 +199,7 @@ class HouseController extends Controller
             $q = \App\Models\GymPayment::with('member:id,name,house_id')->where('status', 'pending')->whereNotNull('proof_path');
             foreach ($q->get() as $p) {
                 if (! $own || $p->member?->house_id === $hid) {
-                    $add('payment', $p->member?->house_id, $p->id, 'Gym payment to verify', ($p->member?->name ?? '').' · Rs '.number_format($p->amount), 'info', '/gym?tab=payments', $p->updated_at);
+                    $add('payment', $p->member?->house_id, $p->id, 'Gym payment to verify', ($p->member?->name ?? '').' · '.\App\Support\Settings::money($p->amount), 'info', '/gym?tab=payments', $p->updated_at);
                 }
             }
         }

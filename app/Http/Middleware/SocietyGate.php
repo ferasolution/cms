@@ -24,7 +24,11 @@ class SocietyGate
 
     public static function closed(Request $request, Society $soc)
     {
-        $msg = $soc->status === 'suspended' ? 'This society\'s account is paused. Please contact the platform team.' : 'The free trial of this society has ended. Please choose a plan to continue.';
+        $msg = match ($soc->status) {
+            'suspended' => 'This community\'s account is paused. Please contact the platform team.',
+            'expired' => 'This community\'s subscription has ended. Please choose a plan to continue.',
+            default => 'The free trial of this community has ended. Please choose a plan to continue.',
+        };
         if ($request->expectsJson() || str_contains($request->path(), '/api')) {
             return response()->json(['message' => $msg, 'code' => 'society_closed'], 402);
         }

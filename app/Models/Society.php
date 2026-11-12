@@ -14,7 +14,7 @@ class Society extends Model
 
     protected function casts(): array
     {
-        return ['site_plan' => 'array', 'modules' => 'array', 'trial_ends_at' => 'datetime', 'paid_until' => 'date'];
+        return ['site_plan' => 'array', 'modules' => 'array', 'trial_ends_at' => 'datetime', 'paid_until' => 'date', 'billing_renews_at' => 'datetime'];
     }
 
     public function plan(): array
@@ -41,7 +41,7 @@ class Society extends Model
     /** Can people use the portal right now? */
     public function isOpen(): bool
     {
-        if ($this->status === 'suspended') {
+        if (in_array($this->status, ['suspended', 'expired'], true)) {
             return false;
         }
         if ($this->status === 'trial') {
@@ -54,6 +54,6 @@ class Society extends Model
     public function publicInfo(): array
     {
         return ['id' => $this->id, 'slug' => $this->slug, 'name' => $this->name, 'city' => $this->city, 'logo' => $this->logo_path, 'status' => $this->status, 'plan' => $this->plan,
-            'trial_ends_at' => $this->trial_ends_at, 'has_map' => ! empty($this->site_plan)];
+            'trial_ends_at' => $this->trial_ends_at, 'paid_until' => $this->paid_until?->toDateString(), 'country' => $this->country, 'has_map' => ! empty($this->site_plan)];
     }
 }

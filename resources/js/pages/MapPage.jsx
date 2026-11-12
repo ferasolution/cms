@@ -7,7 +7,7 @@ import { Map as MapIcon, X, Users, MessageSquareWarning, Wallet, CalendarHeart, 
     Navigation, Route as RouteIcon, Box, Layers, Inbox, MapPin, Phone, Copy, Check, ExternalLink, Hash } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useGet, Spinner, Badge, Tabs, useAction, useToast } from '../components/ui';
-import { get, post, dt, money, title, ago } from '../lib/api';
+import { get, post, dt, money, title, ago, UNIT } from '../lib/api';
 import { useAuth } from '../lib/auth';
 import { useLive } from '../lib/alerts';
 import SiteScene, { housePos } from '../components/SiteScene';
@@ -73,12 +73,12 @@ function LocateCard({ info, house, compact }) {
     const [copied, setCopied] = useState(false);
     if (!info) return null;
     const r = info.route;
-    const text = `Plot ${info.plot}${info.street ? ', ' + info.street : ''} — ${info.series}${info.landmark ? ', near ' + info.landmark : ''}${r ? `. From ${r.gate.label}: ${r.metres} m (~${r.walkMin} min walk)` : ''}${info.gps ? `. GPS ${info.gps.lat}, ${info.gps.lng}` : ''}`;
+    const text = `${UNIT} ${info.plot}${info.street ? ', ' + info.street : ''} — ${info.series}${info.landmark ? ', near ' + info.landmark : ''}${r ? `. From ${r.gate.label}: ${r.metres} m (~${r.walkMin} min walk)` : ''}${info.gps ? `. GPS ${info.gps.lat}, ${info.gps.lng}` : ''}`;
     return (
         <div className={`rounded-2xl bg-sky-50 p-3 text-sm ${compact ? '' : 'mt-1'}`}>
             <div className="mb-1.5 flex items-center gap-1.5 text-[12.5px] font-bold text-sky-700"><Navigation size={13} />Locate</div>
             <div className="grid grid-cols-2 gap-x-3 gap-y-1">
-                <div><span className="text-[11px] text-ink/45">Plot</span><div className="font-bold">{info.plot}</div></div>
+                <div><span className="text-[11px] text-ink/45">{UNIT}</span><div className="font-bold">{info.plot}</div></div>
                 <div><span className="text-[11px] text-ink/45">Street</span><div className="font-semibold">{info.street || '—'}</div></div>
                 <div><span className="text-[11px] text-ink/45">Sector</span><div>{info.series}</div></div>
                 <div><span className="text-[11px] text-ink/45">Landmark</span><div>{info.landmark || '—'}</div></div>
@@ -119,7 +119,7 @@ function HousePanel({ house, data, signals, onClose, showRoute, setShowRoute, re
     return (
         <div className="flex h-full flex-col">
             <div className="flex items-start justify-between gap-2 border-b border-ink/5 px-4 py-3">
-                <div><div className="text-lg font-bold">Plot {house.label}</div><div className="text-xs text-ink/50">{house.owner || d?.house?.owner_name || 'Owner not set'}{house.street ? ' · ' + house.street : ''}</div></div>
+                <div><div className="text-lg font-bold">{UNIT} {house.label}</div><div className="text-xs text-ink/50">{house.owner || d?.house?.owner_name || 'Owner not set'}{house.street ? ' · ' + house.street : ''}</div></div>
                 <button className="btn-ghost btn-sm" onClick={onClose}><X size={15} /></button>
             </div>
             <div className="flex-1 space-y-4 overflow-y-auto p-4 text-sm">
@@ -184,7 +184,7 @@ function InboxPanel({ signals, byId, onPick, flash, filter, setFilter }) {
                             <span className="mt-0.5 grid size-8 shrink-0 place-items-center rounded-full text-sm" style={{ background: m.color + '22' }}>{m.icon}</span>
                             <span className="min-w-0 flex-1">
                                 <span className="flex items-center justify-between gap-2"><span className="truncate text-sm font-semibold">{s.title}</span><span className="shrink-0 text-[10px] text-ink/40">{ago(s.at)}</span></span>
-                                <span className="block truncate text-xs text-ink/55">{h ? 'Plot ' + h.label : ''}{s.sub ? ' · ' + s.sub : ''}</span>
+                                <span className="block truncate text-xs text-ink/55">{h ? UNIT + ' ' + h.label : ''}{s.sub ? ' · ' + s.sub : ''}</span>
                             </span>
                             <MapPin size={14} className="mt-1 shrink-0 text-ink/30" />
                         </button>
@@ -252,7 +252,7 @@ export default function MapPage() {
         const ids = [...new Set(fresh.map((s) => s.house_id))];
         setFlash((f) => [...new Set([...f, ...ids])]);
         setTimeout(() => setFlash((f) => f.filter((x) => !ids.includes(x))), 12000);
-        fresh.slice(0, 2).forEach((s) => toast(`${SIGNAL_META[s.type]?.icon || ''} ${s.title}`, s.level === 'danger' ? 'danger' : 'warning', `Plot ${byId[s.house_id]?.label || ''} — highlighted on the map`));
+        fresh.slice(0, 2).forEach((s) => toast(`${SIGNAL_META[s.type]?.icon || ''} ${s.title}`, s.level === 'danger' ? 'danger' : 'warning', `${UNIT} ${byId[s.house_id]?.label || ''} — highlighted on the map`));
         const sos = fresh.find((s) => s.type === 'sos');
         if (sos && byId[sos.house_id]) { select(byId[sos.house_id]); setShowRoute(true); }
     }, [data]); // eslint-disable-line
@@ -304,7 +304,7 @@ export default function MapPage() {
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
                     <form onSubmit={findHouse} className="flex gap-1.5">
-                        <label className="relative"><Hash size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-ink/35" /><input className="input w-48 pl-8" placeholder="Plot, owner or street" value={search} onChange={(e) => setSearch(e.target.value)} /></label>
+                        <label className="relative"><Hash size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-ink/35" /><input className="input w-48 pl-8" placeholder={`${UNIT}, owner or street`} value={search} onChange={(e) => setSearch(e.target.value)} /></label>
                         <button className="btn-outline"><Search size={15} /></button>
                     </form>
                     <div className="flex rounded-xl bg-ink/5 p-0.5">
@@ -321,7 +321,7 @@ export default function MapPage() {
                             <div key={s.key} className="flex flex-wrap items-center gap-3 px-4 py-3">
                                 <Siren className="animate-pulse" />
                                 <div className="min-w-0 flex-1">
-                                    <div className="font-bold">{s.title} — Plot {h?.label}{info?.street ? ', ' + info.street : ''}</div>
+                                    <div className="font-bold">{s.title} — {UNIT} {h?.label}{info?.street ? ', ' + info.street : ''}</div>
                                     <div className="text-sm text-white/85">{s.sub}{info?.landmark ? ' · near ' + info.landmark : ''}{info?.route ? ` · ${info.route.metres} m from ${info.route.gate.label} (~${info.route.walkMin} min)` : ''}</div>
                                 </div>
                                 <button className="rounded-xl bg-white px-3 py-2 text-sm font-bold text-red-700" onClick={() => { select(h); setShowRoute(true); }}><MapPin size={14} className="mr-1 inline" />Locate</button>

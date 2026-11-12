@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Timer, Plus, Ban, Printer, Car, LogIn, LogOut, Siren, MapPin, Clock, ArrowDownLeft, ArrowUpRight } from 'lucide-react';
 import { useList, useGet, Table, Badge, Modal, Form, SearchBox, Select, useAction, useToast } from '../../components/ui';
-import { post, dt, duration, title, ago } from '../../lib/api';
+import { post, dt, duration, title, ago, UNIT } from '../../lib/api';
 import { useLive } from '../../lib/alerts';
 import GateSlip from './GateSlip';
 
@@ -46,7 +46,7 @@ export function TemporaryTab({ manage, isResident }) {
                             <div className="min-w-0"><div className="truncate font-bold">{v.name}</div><div className="truncate text-xs text-ink/55">{title(v.category)} · {v.purpose}</div></div>
                             {v.access_type === 'emergency' ? <Badge value="urgent">Emergency</Badge> : <span className="font-mono text-[11px] font-bold text-ink/45">{v.token}</span>}
                         </div>
-                        <div className="my-2 text-xs text-ink/55">{[v.house && 'Plot ' + v.house.label, v.vehicle_no, v.gate, 'in ' + dt(v.entry_at)].filter(Boolean).join(' · ')}</div>
+                        <div className="my-2 text-xs text-ink/55">{[v.house && UNIT + ' ' + v.house.label, v.vehicle_no, v.gate, 'in ' + dt(v.entry_at)].filter(Boolean).join(' · ')}</div>
                         <TimeBar from={v.entry_at} to={v.expected_exit_at} />
                         <div className="mt-3 flex flex-wrap gap-1.5">
                             {(isResident || manage) && [30, 60, 120].map((m) => <button key={m} className="btn-outline btn-sm" onClick={() => extend(v, m)}><Plus size={12} />{m >= 60 ? m / 60 + 'h' : m + 'm'}</button>)}
@@ -114,7 +114,7 @@ export function VehicleRegister({ manage, isResident, houses, gates }) {
 
 const SERVICES = [
     ['ambulance', '🚑', 'Ambulance', 'bg-red-600'], ['fire', '🚒', 'Fire brigade', 'bg-orange-600'], ['police', '🚓', 'Police', 'bg-blue-700'],
-    ['rescue', '🛟', 'Rescue 1122', 'bg-rose-700'], ['utility', '⚡', 'Gas / electric', 'bg-amber-600'], ['other', '⚠️', 'Other service', 'bg-slate-700'],
+    ['rescue', '🛟', 'Rescue', 'bg-rose-700'], ['utility', '⚡', 'Gas / electric', 'bg-amber-600'], ['other', '⚠️', 'Other service', 'bg-slate-700'],
 ];
 
 export function EmergencyTab({ manage, houses, gates }) {
@@ -132,7 +132,7 @@ export function EmergencyTab({ manage, houses, gates }) {
             <div className="mb-4 rounded-2xl bg-red-600 p-4 text-white shadow-lg shadow-red-600/20">
                 <div className="flex items-center gap-2 text-lg font-black"><Siren size={22} />Emergency priority entry</div>
                 <p className="text-sm text-white/80">No approval, no slip queue — open the barrier, log it in one tap. The house, admins and all guards are alerted and the route is shown on the map.</p>
-                {activeSos.length > 0 && <div className="mt-2 rounded-xl bg-white/15 px-3 py-2 text-sm font-semibold">🆘 Active SOS: {activeSos.map((s) => `${title(s.type)} at ${s.house ? 'Plot ' + s.house.block + '-' + s.house.house_no : '?'}`).join(' · ')}</div>}
+                {activeSos.length > 0 && <div className="mt-2 rounded-xl bg-white/15 px-3 py-2 text-sm font-semibold">🆘 Active SOS: {activeSos.map((s) => `${title(s.type)} at ${s.house ? UNIT + ' ' + s.house.block + '-' + s.house.house_no : '?'}`).join(' · ')}</div>}
             </div>
             {manage && (
                 <div className="mb-5 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
@@ -150,7 +150,7 @@ export function EmergencyTab({ manage, houses, gates }) {
                         <span className="text-3xl">{SERVICES.find((s) => s[0] === v.emergency_service)?.[1] || '🚨'}</span>
                         <div className="min-w-0 flex-1">
                             <div className="truncate font-bold">{v.name}</div>
-                            <div className="text-xs text-ink/55">{[v.house && 'Plot ' + v.house.label, v.vehicle_no, v.persons + ' crew', 'in ' + ago(v.entry_at)].filter(Boolean).join(' · ')}</div>
+                            <div className="text-xs text-ink/55">{[v.house && UNIT + ' ' + v.house.label, v.vehicle_no, v.persons + ' crew', 'in ' + ago(v.entry_at)].filter(Boolean).join(' · ')}</div>
                         </div>
                         {v.house_id && <button className="btn-outline btn-sm" onClick={() => nav(`/map?house=${v.house_id}&route=1`)}><MapPin size={13} />Route</button>}
                         {manage && <button className="btn-outline btn-sm" onClick={() => act(() => post(`visitors/${v.id}/checkout`), 'Exit recorded', list.reload)}><LogOut size={13} />Exit</button>}
@@ -161,7 +161,7 @@ export function EmergencyTab({ manage, houses, gates }) {
             <div className="mb-2 mt-6 font-bold">History</div>
             <Table list={{ ...list, rows: list.rows.filter((v) => v.status !== 'inside') }} empty="No emergency entries yet." columns={[
                 { label: 'Service', render: (v) => v.name },
-                { label: 'Destination', render: (v) => v.house?.label ? 'Plot ' + v.house.label : v.remarks || '—' },
+                { label: 'Destination', render: (v) => v.house?.label ? UNIT + ' ' + v.house.label : v.remarks || '—' },
                 { label: 'Vehicle', key: 'vehicle_no' },
                 { label: 'In', render: (v) => dt(v.entry_at) },
                 { label: 'Time inside', render: (v) => v.exit_at ? duration(v.entry_at, v.exit_at) : '—' },
@@ -174,7 +174,7 @@ export function EmergencyTab({ manage, houses, gates }) {
                     if (r.house_id) nav(`/map?house=${r.house_id}&route=1`);
                 }} fields={[
                     { name: 'house_id', label: 'Going to house', type: 'select', options: houses, hint: activeSos.length ? 'Pre-filled from the active SOS' : undefined },
-                    { name: 'location', label: 'Or location (park, mosque, street…)', half: true }, { name: 'gate', label: 'Gate', type: 'select', options: gates || ['Main Gate'], half: true },
+                    { name: 'location', label: 'Or location (park, clubhouse, street…)', half: true }, { name: 'gate', label: 'Gate', type: 'select', options: gates || ['Main Gate'], half: true },
                     { name: 'vehicle_no', label: 'Vehicle no.', half: true }, { name: 'crew', label: 'Crew', type: 'number', min: 1, half: true },
                     { name: 'contact', label: 'In-charge name / phone' }, { name: 'notes', label: 'Notes', type: 'textarea', rows: 2 },
                 ]} />}

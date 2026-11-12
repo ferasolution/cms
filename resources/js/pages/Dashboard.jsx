@@ -9,7 +9,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { MODULE_META } from '../components/Layout';
 import { useAuth } from '../lib/auth';
 import { useLive, useAlerts } from '../lib/alerts';
-import { ago, money, title } from '../lib/api';
+import { ago, money, title, UNIT } from '../lib/api';
 
 const ALL = ['security', 'inventory', 'library', 'finance', 'events', 'complaints', 'noc', 'records', 'crm', 'gym', 'announcements', 'emergency'];
 
@@ -83,7 +83,7 @@ function LiveMapCard() {
                 <div className="max-h-[400px] overflow-y-auto border-t border-ink/5 lg:border-l lg:border-t-0">
                     {h ? (
                         <div className="space-y-2 p-4 text-sm">
-                            <div className="flex items-center justify-between"><b className="text-base">Plot {h.label}</b><button className="text-xs text-ink/45" onClick={() => setSel(null)}>back</button></div>
+                            <div className="flex items-center justify-between"><b className="text-base">{UNIT} {h.label}</b><button className="text-xs text-ink/45" onClick={() => setSel(null)}>back</button></div>
                             <div className="text-ink/60">{h.owner || ''}{h.street ? ' · ' + h.street : ''}{info?.landmark ? ' · near ' + info.landmark : ''}</div>
                             {info?.route && <div className="text-xs text-ink/55">{info.route.metres} m from {info.route.gate.label} · ~{info.route.walkMin} min walk</div>}
                             {groups.find((g) => g.house_id === h.id)?.list.map((s) => <button key={s.key} onClick={() => nav(s.link)} className="block w-full rounded-xl bg-ink/[.03] p-2 text-left hover:bg-ink/[.06]"><b>{SIGNAL_META[s.type]?.icon} {s.title}</b><div className="text-xs text-ink/55">{s.sub}</div></button>)}
@@ -97,7 +97,7 @@ function LiveMapCard() {
                             {[...signals].sort((a, b) => (a.type === 'sos' ? 0 : 1) - (b.type === 'sos' ? 0 : 1) || new Date(b.at) - new Date(a.at)).slice(0, 30).map((s) => (
                                 <button key={s.key} onClick={() => setSel(s.house_id)} className={`flex w-full gap-2.5 border-t border-ink/5 px-4 py-2 text-left hover:bg-ink/[.03] ${s.type === 'sos' ? 'bg-red-50 dark:bg-red-500/10' : ''} ${flash.includes(s.house_id) ? 'flash-in' : ''}`}>
                                     <span className="text-base">{SIGNAL_META[s.type]?.icon}</span>
-                                    <span className="min-w-0"><span className="block truncate text-sm font-semibold">{s.title}</span><span className="block truncate text-xs text-ink/50">Plot {byId[s.house_id]?.label} · {ago(s.at)}</span></span>
+                                    <span className="min-w-0"><span className="block truncate text-sm font-semibold">{s.title}</span><span className="block truncate text-xs text-ink/50">{UNIT} {byId[s.house_id]?.label} · {ago(s.at)}</span></span>
                                 </button>
                             ))}
                         </>
@@ -131,7 +131,7 @@ export default function Dashboard() {
                     <div>
                         <div className="flex items-center gap-2 text-[13px] font-medium text-sand-400"><span className="lamp-breathe size-1.5 rounded-full bg-sand-400" />{new Date().toLocaleDateString([], { weekday: 'long', day: 'numeric', month: 'long' })}</div>
                         <h1 className="mt-2 text-[28px] font-bold leading-tight tracking-tight sm:text-[38px]">{greet}, {user.name.split(' ')[0]}</h1>
-                        <p className="mt-1 text-sm text-white/60">{isAdmin ? 'Every module, every gate, every rupee — live.' : isResident ? 'Your household at a glance.' : 'Your modules, live.'}</p>
+                        <p className="mt-1 text-sm text-white/60">{isAdmin ? 'Every module, every gate, every payment — live.' : isResident ? 'Your household at a glance.' : 'Your modules, live.'}</p>
                     </div>
                     <div className="flex flex-wrap gap-2">
                         {isAdmin && data?.people && [['Households', data.people.houses, Home, '/map'], ['Residents', data.people.residents, Users, '/users?role=user'], ['Staff', data.people.staff, Users, '/users?role=editor'], ['Active today', data.people.online, Wifi, '/activity']].map(([l, v, I, to]) => (

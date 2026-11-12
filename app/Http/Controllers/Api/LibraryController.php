@@ -152,7 +152,7 @@ class LibraryController extends Controller
         $lateDays = $issue->due_at && now()->startOfDay()->greaterThan($issue->due_at) ? (int) $issue->due_at->diffInDays(now()->startOfDay()) : 0;
         $issue->update(['status' => 'returned', 'returned_at' => now(), 'fine' => $lateDays * (float) $request->input('fine_per_day', 20)]);
         $issue->book->increment('available');
-        Activity::log('library', 'return', "{$issue->user->name} returned \"{$issue->book->title}\"".($lateDays ? " ({$lateDays} days late, fine Rs {$issue->fine})" : ''), $issue);
+        Activity::log('library', 'return', "{$issue->user->name} returned \"{$issue->book->title}\"".($lateDays ? " ({$lateDays} days late, fine ".\App\Support\Settings::money($issue->fine).")" : ''), $issue);
 
         return $issue->load('book', 'user');
     }

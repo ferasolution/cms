@@ -11,13 +11,14 @@ class SpaController extends Controller
 {
     /** First path segments of the portal pages — old links using them are redirected into the default society. */
     public const APP_ROUTES = ['security', 'map', 'events', 'complaints', 'announcements', 'emergency', 'inventory', 'finance', 'noc', 'records', 'crm', 'library',
-        'gym', 'users', 'settings', 'automations', 'profile', 'dashboard', 'houses', 'workspace', 'activity'];
+        'gym', 'users', 'settings', 'automations', 'profile', 'dashboard', 'houses', 'workspace', 'activity', 'billing'];
 
     public static function tenantData(Society $soc): array
     {
-        $name = Tenant::run($soc, fn () => Settings::get('community_name')) ?: $soc->name;
+        [$name, $region] = Tenant::run($soc, fn () => [Settings::get('community_name'), array_intersect_key(Settings::all(), array_flip(['country', 'currency', 'locale', 'timezone', 'unit_label', 'id_label']))]);
+        $name = $name ?: $soc->name;
 
-        return ['app' => ['mode' => 'tenant', 'name' => $name, 'base' => '/'.$soc->slug, 'society' => $soc->publicInfo() + ['open' => $soc->isOpen(), 'display_name' => $name]],
+        return ['app' => ['mode' => 'tenant', 'name' => $name, 'base' => '/'.$soc->slug, 'society' => $soc->publicInfo() + ['open' => $soc->isOpen(), 'display_name' => $name] + $region],
             'title' => $name, 'manifest' => '/'.$soc->slug.'/manifest.webmanifest'];
     }
 

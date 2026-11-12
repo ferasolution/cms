@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Dumbbell, Plus, CreditCard, QrCode, Banknote, Check, X, Upload, Pencil, Users, Wallet, Ban } from 'lucide-react';
 import { useList, useGet, PageHeader, Table, Modal, Form, Badge, SearchBox, Select, Tabs, useTab, urlParam, useAction, useToast, Stat, QrImage, FileLink, useHouses } from '../components/ui';
-import { post, put, dt, money, title, today } from '../lib/api';
+import { post, put, dt, money, title, today, CURRENCY } from '../lib/api';
 import { useAuth } from '../lib/auth';
 import { useLive } from '../lib/alerts';
 
@@ -168,7 +168,7 @@ export default function Gym() {
             <Modal open={modal?.mode === 'plan'} onClose={() => setModal(null)} title={modal?.id ? 'Edit plan' : 'New plan'}>
                 {modal?.mode === 'plan' && <Form initial={{ active: true, type: 'individual', duration_days: 30, ...modal }} onSubmit={async (v) => { modal.id ? await put(`gym/plans/${modal.id}`, v) : await post('gym/plans', v); toast('Plan saved'); setModal(null); refresh(); }} fields={[
                     { name: 'name', label: 'Plan name', required: true }, { name: 'type', label: 'Type', type: 'select', options: ['individual', 'family', 'trial', 'guest'], required: true, half: true },
-                    { name: 'duration_days', label: 'Days', type: 'number', min: 1, required: true, half: true }, { name: 'price', label: 'Price (Rs)', type: 'number', min: 0, required: true, half: true },
+                    { name: 'duration_days', label: 'Days', type: 'number', min: 1, required: true, half: true }, { name: 'price', label: `Price (${CURRENCY})`, type: 'number', min: 0, required: true, half: true },
                     { name: 'facilities', label: 'Facilities (comma separated)', half: true, placeholder: 'gym,pool,courts' }, { name: 'active', label: 'Available for new members', type: 'checkbox' },
                 ]} />}
             </Modal>

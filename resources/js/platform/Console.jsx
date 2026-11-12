@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Building2, Home, Users, Wallet, Hourglass, Plus, ExternalLink, LogIn, Upload, LogOut, Search, Loader2 } from 'lucide-react';
+import { Building2, Home, Users, Wallet, Hourglass, Plus, ExternalLink, LogIn, Upload, LogOut, Search, Loader2, CreditCard, Copy } from 'lucide-react';
 import { papi, dt, ago } from '../lib/api';
 import { Modal, Form, Stat, Spinner, useToast } from '../components/ui';
 import { Logo } from './Brand';
 
-const STATUS = { active: 'bg-emerald-50 text-emerald-700', trial: 'bg-sky-50 text-sky-700', suspended: 'bg-red-50 text-red-700' };
+const STATUS = { active: 'bg-emerald-50 text-emerald-700', trial: 'bg-sky-50 text-sky-700', suspended: 'bg-red-50 text-red-700', expired: 'bg-amber-50 text-amber-700' };
 
 function AuthCard({ status, onDone }) {
     const toast = useToast();
@@ -38,8 +38,8 @@ function SocietyForm({ s, plans, modules, onSaved }) {
             toast(isNew ? 'Society created' : 'Saved', 'success'); onSaved(r);
         }} fields={[
             { name: 'name', label: 'Society name', required: true, half: true }, { name: 'slug', label: 'Address (cms.ferasolution.com/…)', required: true, half: true },
-            { name: 'city', label: 'City', half: true }, { name: 'plan', label: 'Plan', type: 'select', required: true, half: true, options: plans.map((p) => ({ value: p.key, label: `${p.name} — Rs ${Number(p.price).toLocaleString('en-PK')}` })) },
-            { name: 'status', label: 'Status', type: 'select', required: true, half: true, options: ['trial', 'active', 'suspended'] },
+            { name: 'city', label: 'City', half: true }, { name: 'plan', label: 'Plan', type: 'select', required: true, half: true, options: plans.map((p) => ({ value: p.key, label: `${p.name} — $${Number(p.price).toLocaleString('en-US')}` })) },
+            { name: 'status', label: 'Status', type: 'select', required: true, half: true, options: ['trial', 'active', 'suspended', 'expired'] },
             !isNew && { name: 'trial_ends_at', label: 'Trial ends', type: 'date', half: true },
             !isNew && { name: 'paid_until', label: 'Paid until', type: 'date', half: true },
             !isNew && { name: 'max_houses', label: 'House limit (empty = plan limit)', type: 'number', half: true },
@@ -67,12 +67,59 @@ function SocietyForm({ s, plans, modules, onSaved }) {
     );
 }
 
+/** Which payment provider takes subscriptions, and its keys. Secrets are write-only. */
+function PaymentSettings({ onSaved }) {
+    const toast = useToast();
+    const [cfg, setCfg] = useState(null);
+    const [provider, setProvider] = useState('manual');
+    useEffect(() => { papi.get('billing').then((c) => { setCfg(c); setProvider(c.provider); }); }, []);
+    if (!cfg) return <div className="grid h-40 place-items-center"><Spinner /></div>;
+    const secret = (name, label, hint) => ({ name, label, type: 'password', hint: cfg[name] ? `Saved (${cfg[name]}). Leave empty to keep it.` : hint });
+    const hook = (url) => (
+        <div className="flex items-center gap-2 rounded-xl bg-canvas px-3 py-2 text-xs">
+            <code className="min-w-0 flex-1 truncate">{url}</code>
+            <button type="button" className="btn-ghost btn-sm" onClick={() => { navigator.clipboard?.writeText(url); toast('Copied'); }}><Copy size={13} /></button>
+        </div>
+    );
+    return (
+        <Form initial={{ ...cfg, ls_api_key: '', ls_webhook_secret: '', stripe_secret: '', stripe_webhook_secret: '', ls_test_mode: !!cfg.ls_test_mode }} submitLabel="Save payment settings"
+            onChange={(v) => setProvider(v.provider)}
+            onSubmit={async (v) => { const r = await papi.put('billing', v); setCfg(r); toast(r.ready ? 'Saved — online payment is on' : 'Saved', 'success'); onSaved?.(); }}
+            fields={[
+                { name: 'provider', label: 'Take payments with', type: 'select', required: true, options: [{ value: 'manual', label: 'Manual — invoices by email (no card checkout)' }, { value: 'lemonsqueezy', label: 'Lemon Squeezy (merchant of record)' }, { value: 'stripe', label: 'Stripe' }] },
+                { name: 'support_email', label: 'Billing contact email (shown to communities)', type: 'email' },
+                ...(provider === 'lemonsqueezy' ? [
+                    secret('ls_api_key', 'API key', 'Lemon Squeezy → Settings → API → new key'),
+                    { name: 'ls_store_id', label: 'Store ID', half: true, hint: 'Settings → Stores (the number)' },
+                    { name: 'ls_test_mode', label: 'Test mode checkouts', type: 'checkbox', half: true },
+                    { name: 'ls_variant_basic', label: 'Variant ID — Starter $99', half: true },
+                    { name: 'ls_variant_pro', label: 'Variant ID — Pro $249', half: true },
+                    { name: 'ls_variant_enterprise', label: 'Variant ID — Enterprise $499', half: true },
+                    secret('ls_webhook_secret', 'Webhook signing secret', 'Any long random text; paste the same text in the webhook'),
+                ] : []),
+                ...(provider === 'stripe' ? [
+                    secret('stripe_secret', 'Secret key', 'sk_live_… (Developers → API keys)'),
+                    secret('stripe_webhook_secret', 'Webhook signing secret', 'whsec_… (shown after you add the webhook)'),
+                ] : []),
+            ]}>
+            {provider !== 'manual' && (
+                <div className="space-y-2">
+                    <div className="label">Webhook URL — add it in {provider === 'stripe' ? 'Stripe → Developers → Webhooks' : 'Lemon Squeezy → Settings → Webhooks'}</div>
+                    {hook(cfg.webhooks[provider])}
+                    <p className="text-[11px] text-ink/45">{provider === 'stripe' ? 'Events: checkout.session.completed, customer.subscription.updated, customer.subscription.deleted.' : 'Events: subscription_created, subscription_updated, subscription_cancelled, subscription_resumed, subscription_expired, subscription_payment_success.'}</p>
+                </div>
+            )}
+        </Form>
+    );
+}
+
 export default function Console() {
     const [status, setStatus] = useState(null);
     const [data, setData] = useState(null);
     const [edit, setEdit] = useState(null);
     const [q, setQ] = useState('');
     const [busy, setBusy] = useState(null);
+    const [payments, setPayments] = useState(false);
     const toast = useToast();
     const loadStatus = useCallback(() => papi.get('status').then(setStatus).catch(() => setStatus({ needs_setup: false })), []);
     const load = useCallback(() => papi.get('overview').then(setData).catch(() => {}), []);
@@ -109,7 +156,7 @@ export default function Console() {
             <main className="stagger mx-auto max-w-7xl space-y-5 px-5 py-6">
                 <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
                     <Stat label="Societies" value={st.societies} icon={Building2} sub={`${st.active} active · ${st.trial} on trial`} />
-                    <Stat label="Monthly revenue (active plans)" value={`Rs ${Number(st.mrr).toLocaleString('en-PK')}`} icon={Wallet} tone="green" />
+                    <Stat label="Monthly revenue (paying)" value={`$${Number(st.mrr).toLocaleString('en-US')}`} icon={Wallet} tone="green" />
                     <Stat label="Houses managed" value={st.houses} icon={Home} tone="blue" />
                     <Stat label="Portal users" value={st.users} icon={Users} tone="sand" />
                     <Stat label="Trials ending in 5 days" value={st.trials_ending} icon={Hourglass} tone={st.trials_ending ? 'red' : 'brand'} />
@@ -117,7 +164,8 @@ export default function Console() {
                 <div className="card overflow-hidden">
                     <div className="flex flex-wrap items-center gap-2 border-b border-ink/[.06] p-4">
                         <div className="relative w-full max-w-xs"><Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-ink/35" /><input className="input pl-9" placeholder="Search societies" value={q} onChange={(e) => setQ(e.target.value)} /></div>
-                        <button className="btn-primary ml-auto" onClick={() => setEdit({ plan: 'pro', status: 'active' })}><Plus size={15} />Add society</button>
+                        <button className="btn-outline ml-auto" onClick={() => setPayments(true)}><CreditCard size={15} />Payments</button>
+                        <button className="btn-primary" onClick={() => setEdit({ plan: 'pro', status: 'active' })}><Plus size={15} />Add society</button>
                     </div>
                     <div className="overflow-x-auto">
                         <table className="w-full min-w-[980px] text-sm">
@@ -126,8 +174,9 @@ export default function Console() {
                                 {rows.map((s, i) => (
                                     <tr key={s.id} className="hover:bg-ink/[.015]" style={{ animation: `stagger-in .45s ${Math.min(i, 12) * 0.03}s both` }}>
                                         <td className="td"><button className="text-left" onClick={() => setEdit(s)}><div className="font-semibold">{s.name}</div><div className="text-xs text-ink/45">/{s.slug}{s.city ? ' · ' + s.city : ''}</div></button></td>
-                                        <td className="td"><span className="font-semibold capitalize">{s.plan}</span><div className="text-xs text-ink/45">Rs {Number(s.price).toLocaleString('en-PK')}</div></td>
+                                        <td className="td"><span className="font-semibold capitalize">{s.plan}</span><div className="text-xs text-ink/45">${Number(s.price).toLocaleString('en-US')}</div></td>
                                         <td className="td"><span className={`rounded-full px-2 py-0.5 text-xs font-semibold capitalize ${STATUS[s.status]}`}>{s.status}</span>
+                                            {s.billing?.provider && <div className="mt-0.5 text-[11px] text-ink/55">{s.billing.provider === 'stripe' ? 'Stripe' : 'Lemon Squeezy'} · {s.billing.status}</div>}
                                             <div className="mt-0.5 text-[11px] text-ink/45">{s.status === 'trial' && s.trial_ends_at ? (s.open ? 'ends ' + dt(s.trial_ends_at, false) : 'trial ended') : s.paid_until ? 'paid till ' + dt(s.paid_until, false) : ''}</div></td>
                                         <td className="td">{s.houses}<span className="text-ink/40"> / {s.max_houses || s.plan_max_houses || '∞'}</span></td>
                                         <td className="td">{s.users}</td>
@@ -147,6 +196,9 @@ export default function Console() {
                 </div>
                 <p className="text-xs text-ink/45">"Sign in as admin" opens the society as its first Super Admin for support; it is written to that society's activity log. Joined {data.societies.length ? dt(data.societies[data.societies.length - 1].created_at, false) : '—'} → today.</p>
             </main>
+            <Modal open={payments} onClose={() => setPayments(false)} title="Payments" wide>
+                {payments && <PaymentSettings onSaved={() => setPayments(false)} />}
+            </Modal>
             <Modal open={!!edit} onClose={() => setEdit(null)} title={edit?.id ? edit.name : 'Add society'} wide>
                 {edit && <SocietyForm s={edit} plans={data.plans} modules={data.modules} onSaved={() => { setEdit(null); load(); }} />}
             </Modal>

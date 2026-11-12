@@ -24,6 +24,9 @@ $api = function () {
 
     Route::middleware('auth')->group(function () {
         Route::get('me', [Api\AuthController::class, 'me']);
+        Route::get('billing', [Api\BillingController::class, 'show']);
+        Route::post('billing/checkout', [Api\BillingController::class, 'checkout'])->middleware('throttle:10,1');
+        Route::post('billing/portal', [Api\BillingController::class, 'portal'])->middleware('throttle:10,1');
         Route::put('profile', [Api\AuthController::class, 'updateProfile']);
         Route::get('dashboard', [Api\DashboardController::class, 'index']);
         Route::get('activity', [Api\DashboardController::class, 'activity']);
@@ -229,7 +232,12 @@ Route::prefix('_p/api')->middleware(PlatformOwner::class.':owner')->group(functi
     Route::put('societies/{society}', [PlatformController::class, 'update']);
     Route::post('societies/{society}/site-plan', [PlatformController::class, 'sitePlan']);
     Route::post('societies/{society}/impersonate', [PlatformController::class, 'impersonate']);
+    Route::get('billing', [PlatformController::class, 'billing']);
+    Route::put('billing', [PlatformController::class, 'saveBilling']);
 });
+// payment provider callbacks (signed by the provider, no session or CSRF)
+Route::post('_p/webhooks/lemonsqueezy', [Api\BillingController::class, 'lemonsqueezy'])->withoutMiddleware(ValidateCsrfToken::class);
+Route::post('_p/webhooks/stripe', [Api\BillingController::class, 'stripe'])->withoutMiddleware(ValidateCsrfToken::class);
 Route::any('_p/api/{any}', fn () => response()->json(['message' => 'Not found.'], 404))->where('any', '.*');
 
 Route::match(['get', 'post'], 'system/deploy', [SystemController::class, 'deploy'])->withoutMiddleware(ValidateCsrfToken::class)->middleware('throttle:10,1');

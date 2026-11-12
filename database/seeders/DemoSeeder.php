@@ -30,8 +30,9 @@ class DemoSeeder extends Seeder
         if (! \App\Support\Tenant::id()) {
             \App\Support\Tenant::set(\App\Models\Society::orderBy('id')->first());
         }
-        $names = ['Ahmed Khan', 'Fatima Ali', 'Usman Tariq', 'Ayesha Siddiqui', 'Bilal Hussain', 'Sana Malik', 'Hamza Qureshi', 'Zainab Raza',
-            'Imran Sheikh', 'Hira Javed', 'Faisal Mirza', 'Mariam Aslam', 'Kashif Abbasi', 'Nadia Iqbal', 'Omar Farooq', 'Rabia Anwar'];
+        $D = \App\Support\DemoData::for();
+        $amt = fn ($pkr) => \App\Support\DemoData::amount($pkr, $D);
+        $names = $D['owners'];
 
         $houses = [];
         $i = 0;
@@ -43,12 +44,12 @@ class DemoSeeder extends Seeder
                         'block' => $block,
                         'street' => 'Street '.$street,
                         'owner_name' => $names[$i % count($names)],
-                        'owner_phone' => '0300-'.str_pad((string) (1000000 + $i * 7919 % 8999999), 7, '0', STR_PAD_LEFT),
+                        'owner_phone' => \App\Support\DemoData::phone($i, $D),
                         'type' => $n === 6 && $street === 1 ? 'commercial' : 'house',
                         'grid_x' => ($bi % 2) * 8 + $n,
                         'grid_y' => intdiv($bi, 2) * 5 + $street,
                         'floors' => 1 + ($i % 3),
-                        'monthly_maintenance' => 3000 + ($i % 3) * 1000,
+                        'monthly_maintenance' => $amt(3000 + ($i % 3) * 1000),
                     ]);
                     $i++;
                 }
@@ -56,12 +57,12 @@ class DemoSeeder extends Seeder
         }
 
         // Demo staff = editors with a designation template (demo password for everyone: "password").
-        $roles = ['manager' => ['Saad Manager', 'Community Manager'], 'security' => ['Gate Security', 'Security Manager'], 'inventory' => ['Store Keeper', 'Inventory Manager'],
-            'librarian' => ['Librarian', 'Librarian'], 'finance' => ['Accounts Officer', 'Finance Manager'], 'hr' => ['Hina HR', 'HR Manager'], 'gym' => ['Club Manager', 'Gym Manager'], 'guard' => ['Guard Shift B', 'Security Guard']];
+        $roles = ['manager' => [$D['staff']['manager'], 'Community Manager'], 'security' => [$D['staff']['security'], 'Security Manager'], 'inventory' => [$D['staff']['inventory'], 'Inventory Manager'],
+            'librarian' => [$D['staff']['librarian'], 'Librarian'], 'finance' => [$D['staff']['finance'], 'Finance Manager'], 'hr' => [$D['staff']['hr'], 'HR Manager'], 'gym' => [$D['staff']['gym'], 'Gym Manager'], 'guard' => [$D['staff']['guard'], 'Security Guard']];
         $staff = [];
-        User::firstOrCreate(['email' => 'admin@demo.local'], ['name' => 'Community Admin', 'role' => 'admin', 'password' => 'password', 'phone' => '0300-5550100']);
+        User::firstOrCreate(['email' => 'admin@demo.local'], ['name' => 'Community Admin', 'role' => 'admin', 'password' => 'password', 'phone' => \App\Support\DemoData::phone(9001, $D)]);
         foreach ($roles as $key => [$name, $designation]) {
-            $staff[$key] = User::firstOrCreate(['email' => $key.'@demo.local'], ['name' => $name, 'role' => 'editor', 'designation' => $designation, 'permissions' => \App\Support\Access::TEMPLATES[$designation], 'password' => 'password', 'phone' => '0321-5550'.rand(100, 999)]);
+            $staff[$key] = User::firstOrCreate(['email' => $key.'@demo.local'], ['name' => $name, 'role' => 'editor', 'designation' => $designation, 'permissions' => \App\Support\Access::TEMPLATES[$designation], 'password' => 'password', 'phone' => \App\Support\DemoData::phone(rand(100, 999), $D)]);
         }
         $resident = User::firstOrCreate(['email' => 'resident@demo.local'], ['name' => $houses[0]->owner_name, 'role' => 'user', 'designation' => 'Household Owner', 'household_role' => 'owner', 'password' => 'password', 'house_id' => $houses[0]->id]);
         $residents = [$resident];
@@ -71,17 +72,17 @@ class DemoSeeder extends Seeder
 
         // Security
         $cats = ['visitor', 'guest', 'worker', 'relative', 'friend', 'delivery'];
-        $purposes = ['Family visit', 'Plumbing work', 'Courier delivery', 'Dinner invitation', 'Electric repair', 'Tuition', 'House cleaning'];
+        $purposes = $D['purposes'];
         for ($v = 0; $v < 30; $v++) {
             $entry = Carbon::now()->subHours(rand(0, 96))->subMinutes(rand(0, 59));
             Visitor::create([
                 'house_id' => $houses[array_rand($houses)]->id,
-                'name' => ['Ali Raza', 'Kamran', 'Shahid', 'Asif', 'Naveed', 'Tahir', 'Waqas', 'Junaid'][$v % 8].' '.['Ahmed', 'Butt', 'Khan', 'Shah'][$v % 4],
-                'cnic' => '42101-'.rand(1000000, 9999999).'-'.rand(1, 9),
-                'phone' => '0333-'.rand(1000000, 9999999),
+                'name' => $D['visitor_first'][$v % 8].' '.$D['visitor_last'][$v % 4],
+                'cnic' => \App\Support\DemoData::idNumber(rand(1, 99999), $D),
+                'phone' => \App\Support\DemoData::phone(rand(1, 99999), $D),
                 'category' => $cats[$v % count($cats)],
                 'purpose' => $purposes[$v % count($purposes)],
-                'vehicle_no' => $v % 3 ? 'KHI-'.rand(100, 9999) : null,
+                'vehicle_no' => $v % 3 ? \App\Support\DemoData::plate($v, $D) : null,
                 'persons' => 1 + $v % 3,
                 'gate' => $v % 2 ? 'Main Gate' : 'Gate 2',
                 'entry_at' => $entry,
@@ -91,21 +92,19 @@ class DemoSeeder extends Seeder
         }
 
         // Inventory
-        $items = [['Plastic Chairs', 'Furniture', 200, 'pcs'], ['Shamiana Tent', 'Events', 6, 'pcs'], ['Water Pump 1HP', 'Maintenance', 3, 'pcs'],
+        $items = [['Plastic Chairs', 'Furniture', 200, 'pcs'], [$D['tent'], 'Events', 6, 'pcs'], ['Water Pump 1HP', 'Maintenance', 3, 'pcs'],
             ['LED Flood Light', 'Electrical', 25, 'pcs'], ['Walkie Talkie', 'Security', 12, 'pcs'], ['Grass Cutter', 'Gardening', 2, 'pcs'],
             ['Paint (Gallons)', 'Maintenance', 4, 'gal'], ['Sound System', 'Events', 1, 'set'], ['First Aid Kit', 'Safety', 8, 'pcs'], ['Ladder 12ft', 'Maintenance', 2, 'pcs']];
         foreach ($items as $k => [$name, $cat, $qty, $unit]) {
-            $item = InventoryItem::create(['name' => $name, 'sku' => 'INV-'.str_pad((string) ($k + 1), 4, '0', STR_PAD_LEFT), 'category' => $cat, 'quantity' => $qty, 'min_quantity' => max(1, intdiv($qty, 5)), 'unit' => $unit, 'location' => 'Main Store', 'unit_cost' => rand(5, 300) * 100]);
+            $item = InventoryItem::create(['name' => $name, 'sku' => 'INV-'.str_pad((string) ($k + 1), 4, '0', STR_PAD_LEFT), 'category' => $cat, 'quantity' => $qty, 'min_quantity' => max(1, intdiv($qty, 5)), 'unit' => $unit, 'location' => 'Main Store', 'unit_cost' => $amt(rand(5, 300) * 100)]);
             if ($k < 5) {
-                InventoryIssue::create(['inventory_item_id' => $item->id, 'quantity' => min($qty, 1 + $k), 'issued_by' => $staff['inventory']->id, 'issued_to' => ['Gardener Rafiq', 'Electrician Javed', 'Security Supervisor', 'Event Committee', 'Plumber Akram'][$k], 'purpose' => ['Park maintenance', 'Street light repair', 'Night patrol', 'Community iftar', 'Water line fix'][$k], 'issued_at' => now()->subDays($k + 1), 'expected_return' => now()->addDays(3 - $k), 'returned_at' => $k === 0 ? now() : null, 'returned_quantity' => $k === 0 ? 1 : 0]);
+                InventoryIssue::create(['inventory_item_id' => $item->id, 'quantity' => min($qty, 1 + $k), 'issued_by' => $staff['inventory']->id, 'issued_to' => $D['issued_to'][$k], 'purpose' => $D['issue_purpose'][$k], 'issued_at' => now()->subDays($k + 1), 'expected_return' => now()->addDays(3 - $k), 'returned_at' => $k === 0 ? now() : null, 'returned_quantity' => $k === 0 ? 1 : 0]);
                 $item->decrement('quantity', $k === 0 ? 0 : min($qty, 1 + $k));
             }
         }
 
         // Library
-        $books = [['Aangan', 'Khadija Mastoor', 'Urdu Novel'], ['Udaas Naslain', 'Abdullah Hussain', 'Urdu Novel'], ['Raja Gidh', 'Bano Qudsia', 'Urdu Novel'],
-            ['Atomic Habits', 'James Clear', 'Self Help'], ['Sapiens', 'Yuval Noah Harari', 'History'], ['Clean Code', 'Robert C. Martin', 'Technology'],
-            ['The Alchemist', 'Paulo Coelho', 'Fiction'], ['Shahab Nama', 'Qudratullah Shahab', 'Biography'], ['Pir-e-Kamil', 'Umera Ahmed', 'Urdu Novel'], ['A Brief History of Time', 'Stephen Hawking', 'Science']];
+        $books = $D['books'];
         foreach ($books as $k => [$t, $a, $c]) {
             $book = Book::create(['title' => $t, 'author' => $a, 'category' => $c, 'isbn' => '978'.rand(1000000000, 9999999999), 'shelf' => 'S-'.(1 + $k % 4), 'copies' => 2, 'available' => 2]);
             if ($k < 4) {
@@ -128,22 +127,22 @@ class DemoSeeder extends Seeder
                 Transaction::create(['type' => 'revenue', 'category' => 'maintenance', 'amount' => $h->monthly_maintenance, 'house_id' => $h->id, 'period' => $period, 'date' => (clone $d)->addDays(rand(0, 9)), 'reference' => 'MNT-'.$period.'-'.$h->id, 'recorded_by' => $staff['finance']->id]);
             }
             foreach (array_values($staff) as $si => $s) {
-                Transaction::create(['type' => 'salary', 'category' => 'salary', 'amount' => [55000, 45000, 38000, 40000, 60000, 50000, 42000, 32000][$si % 8], 'staff_id' => $s->id, 'party' => $s->name, 'period' => $period, 'date' => (clone $d)->endOfMonth(), 'recorded_by' => $staff['finance']->id]);
+                Transaction::create(['type' => 'salary', 'category' => 'salary', 'amount' => $amt([55000, 45000, 38000, 40000, 60000, 50000, 42000, 32000][$si % 8]), 'staff_id' => $s->id, 'party' => $s->name, 'period' => $period, 'date' => (clone $d)->endOfMonth(), 'recorded_by' => $staff['finance']->id]);
             }
-            Transaction::create(['type' => 'expense', 'category' => 'utilities', 'amount' => rand(60, 95) * 1000, 'party' => 'K-Electric', 'description' => 'Street lights & pumps', 'date' => (clone $d)->addDays(14), 'recorded_by' => $staff['finance']->id]);
-            Transaction::create(['type' => 'expense', 'category' => 'repair', 'amount' => rand(10, 40) * 1000, 'party' => 'Local vendor', 'description' => 'General repairs', 'date' => (clone $d)->addDays(18), 'recorded_by' => $staff['finance']->id]);
-            Transaction::create(['type' => 'revenue', 'category' => 'event', 'amount' => rand(10, 30) * 1000, 'description' => 'Hall booking charges', 'date' => (clone $d)->addDays(20), 'recorded_by' => $staff['finance']->id]);
-            Transaction::create(['type' => 'revenue', 'category' => 'fine', 'amount' => rand(2, 8) * 1000, 'description' => 'Late payment / parking fines', 'date' => (clone $d)->addDays(22), 'recorded_by' => $staff['finance']->id]);
+            Transaction::create(['type' => 'expense', 'category' => 'utilities', 'amount' => $amt(rand(60, 95) * 1000), 'party' => $D['utility'], 'description' => 'Street lights & pumps', 'date' => (clone $d)->addDays(14), 'recorded_by' => $staff['finance']->id]);
+            Transaction::create(['type' => 'expense', 'category' => 'repair', 'amount' => $amt(rand(10, 40) * 1000), 'party' => 'Local vendor', 'description' => 'General repairs', 'date' => (clone $d)->addDays(18), 'recorded_by' => $staff['finance']->id]);
+            Transaction::create(['type' => 'revenue', 'category' => 'event', 'amount' => $amt(rand(10, 30) * 1000), 'description' => 'Hall booking charges', 'date' => (clone $d)->addDays(20), 'recorded_by' => $staff['finance']->id]);
+            Transaction::create(['type' => 'revenue', 'category' => 'fine', 'amount' => $amt(rand(2, 8) * 1000), 'description' => 'Late payment / parking fines', 'date' => (clone $d)->addDays(22), 'recorded_by' => $staff['finance']->id]);
         }
-        ExpenseRequest::create(['requested_by' => $staff['manager']->id, 'title' => 'Park benches replacement', 'amount' => 85000, 'category' => 'repair', 'purpose' => '6 broken benches in Block B park']);
-        ExpenseRequest::create(['requested_by' => $staff['security']->id, 'title' => 'CCTV camera for Gate 2', 'amount' => 42000, 'category' => 'security', 'purpose' => 'Existing camera not working']);
+        ExpenseRequest::create(['requested_by' => $staff['manager']->id, 'title' => 'Park benches replacement', 'amount' => $amt(85000), 'category' => 'repair', 'purpose' => '6 broken benches in Block B park']);
+        ExpenseRequest::create(['requested_by' => $staff['security']->id, 'title' => 'CCTV camera for Gate 2', 'amount' => $amt(42000), 'category' => 'security', 'purpose' => 'Existing camera not working']);
 
         // Events
-        $evs = [['Walima Reception', 'wedding', 'Community Hall', 2, 'pending', 150], ['Birthday Party', 'birthday', 'Club Lawn', 0, 'approved', 40], ['Milad Mehfil', 'religious', 'Mosque Lawn', 5, 'approved', 200], ['Cricket Tournament', 'sports', 'Ground', -3, 'completed', 80]];
+        $evs = array_map(fn ($e, $x) => [...$e, ...$x], $D['events'], [[2, 'pending', 150], [0, 'approved', 40], [5, 'approved', 200], [-3, 'completed', 80]]);
         foreach ($evs as $k => [$t, $type, $venue, $days, $status, $guests]) {
             $start = $days === 0 ? now()->subHours(2)->format('H:00') : '19:00';
             $end = $days === 0 ? now()->addMinutes(50)->format('H:i') : '23:00';
-            Event::create(['code' => $status === 'pending' ? null : 'EVT-'.strtoupper(substr(md5($t), 0, 6)), 'house_id' => $houses[$k + 2]->id, 'requested_by' => $residents[$k]->id, 'title' => $t, 'type' => $type, 'venue' => $venue, 'date' => now()->addDays($days)->toDateString(), 'start_time' => $start, 'end_time' => $end, 'guests' => $guests, 'vehicles' => intdiv($guests, 5), 'charges' => 5000 + $guests * 50, 'status' => $status, 'approved_by' => $status !== 'pending' ? $staff['manager']->id : null]);
+            Event::create(['code' => $status === 'pending' ? null : 'EVT-'.strtoupper(substr(md5($t), 0, 6)), 'house_id' => $houses[$k + 2]->id, 'requested_by' => $residents[$k]->id, 'title' => $t, 'type' => $type, 'venue' => $venue, 'date' => now()->addDays($days)->toDateString(), 'start_time' => $start, 'end_time' => $end, 'guests' => $guests, 'vehicles' => intdiv($guests, 5), 'charges' => $amt(5000 + $guests * 50), 'status' => $status, 'approved_by' => $status !== 'pending' ? $staff['manager']->id : null]);
         }
 
         // Complaints
@@ -151,7 +150,7 @@ class DemoSeeder extends Seeder
             ['gardening', 'Park grass overgrown', 'low', 'resolved'], ['security', 'Gate 2 barrier stuck', 'high', 'resolved'], ['construction', 'Neighbour construction debris', 'normal', 'open']];
         foreach ($cs as $k => [$cat, $title, $pri, $status]) {
             Complaint::create(['ticket_no' => 'CMP-'.str_pad((string) ($k + 1), 5, '0', STR_PAD_LEFT), 'house_id' => $residents[$k]->house_id, 'user_id' => $residents[$k]->id, 'category' => $cat, 'title' => $title, 'description' => $title.' — please resolve soon.', 'priority' => $pri, 'status' => $status,
-                'assigned_worker' => $status !== 'open' ? ['Akram (Plumber)', 'Javed (Electrician)', 'Sweeper Team', 'Rafiq (Gardener)', 'Maintenance Team'][$k % 5] : null, 'assigned_by' => $status !== 'open' ? $staff['manager']->id : null, 'assigned_at' => $status !== 'open' ? now()->subDays(2) : null,
+                'assigned_worker' => $status !== 'open' ? $D['workers'][$k % 5] : null, 'assigned_by' => $status !== 'open' ? $staff['manager']->id : null, 'assigned_at' => $status !== 'open' ? now()->subDays(2) : null,
                 'resolution' => $status === 'resolved' ? 'Issue fixed and verified on site.' : null, 'resolved_at' => $status === 'resolved' ? now()->subDay() : null, 'created_at' => now()->subDays(6 - $k)]);
         }
 
@@ -166,8 +165,8 @@ class DemoSeeder extends Seeder
             }
         }
 
-        $log = [['security', 'create', 'Visitor Ali Raza Ahmed entered for A-101'], ['inventory', 'issue', 'Issued 3 × LED Flood Light to Electrician Javed'], ['library', 'issue', 'Issued "Udaas Naslain" to resident'],
-            ['finance', 'create', 'Recorded maintenance payment from A-102'], ['events', 'approve', 'Approved event "Milad Mehfil"'], ['complaints', 'assign', 'Assigned CMP-00002 to Javed (Electrician)'], ['noc', 'status', 'NOC-'.now()->format('y').'-0002 marked documents required']];
+        $log = [['security', 'create', 'Visitor '.$D['visitor_first'][0].' '.$D['visitor_last'][0].' entered for A-101'], ['inventory', 'issue', 'Issued 3 × LED Flood Light to '.$D['issued_to'][1]], ['library', 'issue', 'Issued "'.$D['books'][1][0].'" to resident'],
+            ['finance', 'create', 'Recorded maintenance payment from A-102'], ['events', 'approve', 'Approved event "'.$D['events'][2][0].'"'], ['complaints', 'assign', 'Assigned CMP-00002 to '.$D['workers'][1]], ['noc', 'status', 'NOC-'.now()->format('y').'-0002 marked documents required']];
         foreach ($log as $k => [$mod, $act, $desc]) {
             ActivityLog::create(['user_id' => $staff[['security' => 'security', 'inventory' => 'inventory', 'library' => 'librarian', 'finance' => 'finance'][$mod] ?? 'manager']->id, 'module' => $mod, 'action' => $act, 'description' => $desc, 'created_at' => now()->subMinutes(15 * (7 - $k))]);
         }

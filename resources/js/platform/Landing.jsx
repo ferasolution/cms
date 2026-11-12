@@ -6,13 +6,13 @@ import { Logo, PlanArt } from './Brand';
 
 const FEATURES = [
     [ShieldCheck, 'Gate & security', 'Walk-in entries with QR slips, household approval on the phone, vehicles, domestic staff, patrol rounds, guard shifts and CCTV.'],
-    [Map, '3D map of your society', 'Every house on a live 3D map. A request or an SOS lights up the exact house, with the route from the gate.'],
-    [Siren, 'Emergency', 'One-tap SOS, priority entry for ambulance and fire brigade, and the location ready to share.'],
-    [MessageSquareWarning, 'Complaints', 'Residents raise complaints, they are auto-assigned to the right worker and escalate when they wait too long.'],
-    [Wallet, 'Maintenance & finance', 'Dues, receipts, expenses with approval, and monthly reminders that send themselves.'],
-    [CalendarDays, 'Events & bookings', 'Hall and lawn bookings with rates, approvals and time alerts.'],
-    [FileCheck2, 'NOC processing', 'Applications with documents, checklists and a clear status for the applicant.'],
-    [Users, 'Staff CRM', 'Attendance, leave, tasks and payroll-ready reports for society staff.'],
+    [Map, '3D map of your community', 'Every home on a live 3D map. A request or an SOS lights up the exact home, with the route from the gate.'],
+    [Siren, 'Emergency', 'One-tap SOS, priority entry for EMS, fire and police, and the exact home ready to share.'],
+    [MessageSquareWarning, 'Work orders & complaints', 'Residents raise requests, they are auto-assigned to the right worker and escalate when they wait too long.'],
+    [Wallet, 'HOA dues & finance', 'Dues, receipts, expenses with approval, and monthly reminders that send themselves.'],
+    [CalendarDays, 'Events & bookings', 'Clubhouse, pool and lawn bookings with rates, approvals and time alerts.'],
+    [FileCheck2, 'Architectural & resale approvals', 'Applications with documents, checklists and a clear status for the applicant.'],
+    [Users, 'Staff CRM', 'Attendance, leave, tasks and payroll-ready reports for community staff.'],
     [Dumbbell, 'Gym & club', 'Members, cards, payments and check-ins.'],
     [BookOpen, 'Library', 'Books, e-books and issue tracking.'],
     [Archive, 'Record room', 'House files kept digitally, each resident sees their own.'],
@@ -31,7 +31,7 @@ function Finder() {
         <div className="relative w-full max-w-md">
             <div className="flex items-center gap-2 rounded-2xl border border-white/12 bg-white/[.06] px-3.5 py-3 backdrop-blur focus-within:border-sand-400/60">
                 <Search size={17} className="text-white/45" />
-                <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Find your society to sign in" className="w-full bg-transparent text-[15px] text-white outline-none placeholder:text-white/40" />
+                <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Find your community to sign in" className="w-full bg-transparent text-[15px] text-white outline-none placeholder:text-white/40" />
             </div>
             {res.length > 0 && (
                 <div className="card absolute inset-x-0 top-full z-20 mt-2 overflow-hidden p-1 text-ink">
@@ -43,7 +43,7 @@ function Finder() {
                     ))}
                 </div>
             )}
-            {q.trim().length >= 2 && !res.length && <p className="mt-2 text-xs text-white/45">No society found with that name.</p>}
+            {q.trim().length >= 2 && !res.length && <p className="mt-2 text-xs text-white/45">No community found with that name.</p>}
         </div>
     );
 }
@@ -63,14 +63,14 @@ export default function Landing() {
                     <div className="flex items-center gap-1 text-sm">
                         <a href="#features" className="hidden rounded-lg px-3 py-2 text-white/65 hover:text-white sm:block">Features</a>
                         <a href="#pricing" className="hidden rounded-lg px-3 py-2 text-white/65 hover:text-white sm:block">Pricing</a>
-                        <Link to="/register" className="btn ml-2 bg-sand-400 text-night hover:bg-sand-100">Register your society</Link>
+                        <Link to="/register" className="btn ml-2 bg-sand-400 text-night hover:bg-sand-100">Register your community</Link>
                     </div>
                 </nav>
                 <div className="stagger relative mx-auto grid max-w-6xl items-center gap-12 px-5 pb-20 pt-10 lg:grid-cols-[1.1fr_.9fr] lg:pt-16">
                     <div>
-                        {missing && <div className="mb-5 rounded-xl border border-sand-400/30 bg-sand-400/10 px-4 py-2.5 text-sm text-sand-100">There is no society at /{missing}. Search for yours below.</div>}
-                        <h1 className="max-w-xl text-[40px] font-bold leading-[1.04] tracking-tight sm:text-[56px]">Run your housing society from one control room.</h1>
-                        <p className="mt-5 max-w-lg text-[16px] leading-relaxed text-white/65">Security gate, residents, complaints, maintenance, emergencies and a live 3D map of every house — for the office, the guards and the residents, on any phone.</p>
+                        {missing && <div className="mb-5 rounded-xl border border-sand-400/30 bg-sand-400/10 px-4 py-2.5 text-sm text-sand-100">There is no community at /{missing}. Search for yours below.</div>}
+                        <h1 className="max-w-xl text-[40px] font-bold leading-[1.04] tracking-tight sm:text-[56px]">Run your community from one control room.</h1>
+                        <p className="mt-5 max-w-lg text-[16px] leading-relaxed text-white/65">Gated communities, HOAs and housing societies: gatehouse and visitors, residents, work orders, dues, emergencies and a live 3D map of every home — for the office, the guards and the residents, on any phone.</p>
                         <div className="mt-8 flex flex-wrap items-center gap-3">
                             <Link to="/register" className="btn bg-sand-400 px-5 py-3 text-[15px] text-night shadow-[0_10px_30px_-12px_rgba(245,165,36,.8)] hover:bg-sand-100">Start the 14-day free trial</Link>
                             <a href="#how" className="btn px-4 py-3 text-white/75 hover:bg-white/[.07] hover:text-white">How it works</a>
@@ -82,7 +82,7 @@ export default function Landing() {
             </section>
 
             <section id="features" className="mx-auto max-w-6xl px-5 py-20">
-                <h2 className="max-w-2xl text-[32px] font-bold leading-tight tracking-tight">Everything a society office does, in one place.</h2>
+                <h2 className="max-w-2xl text-[32px] font-bold leading-tight tracking-tight">Everything a community office does, in one place.</h2>
                 <p className="mt-3 max-w-xl text-ink/60">Turn modules on as you need them. Residents get the same portal on their phone, limited to their own house.</p>
                 <div className="mt-10 grid gap-x-10 gap-y-7 sm:grid-cols-2 lg:grid-cols-3">
                     {FEATURES.map(([I, t, d]) => (
@@ -96,7 +96,7 @@ export default function Landing() {
 
             <section id="how" className="border-y border-ink/[.06] bg-surface">
                 <div className="mx-auto grid max-w-6xl gap-10 px-5 py-16 md:grid-cols-3">
-                    {[['Register your society', 'Pick an address like cms.ferasolution.com/your-society and create the Super Admin account. The trial starts at once.'],
+                    {[['Register your community', 'Pick an address like cms.ferasolution.com/your-community and create the Super Admin account. The trial starts at once.'],
                         ['Add houses and staff', 'Import houses and residents, add guards and office staff, and set who can see what.'],
                         ['Residents join on their phones', 'They install the portal like an app, approve visitors at the gate and raise requests that show on the map.']].map(([t, d], i) => (
                         <div key={t}>
@@ -110,16 +110,16 @@ export default function Landing() {
 
             <section id="pricing" className="mx-auto max-w-6xl px-5 py-20">
                 <h2 className="text-[32px] font-bold tracking-tight">Plans</h2>
-                <p className="mt-2 text-ink/60">Monthly, per society. Every plan starts with a 14-day free trial.</p>
+                <p className="mt-2 text-ink/60">Monthly, per community, in US dollars. Every plan starts with a 14-day free trial.</p>
                 <div className="mt-10 grid gap-4 lg:grid-cols-3">
                     {plans.map((p) => (
                         <div key={p.key} className={`card spot lift p-6 ${p.key === 'pro' ? 'ring-2 ring-brand-500' : ''}`}>
                             <div className="flex items-center justify-between"><span className="text-lg font-bold">{p.name}</span>{p.key === 'pro' && <span className="rounded-full bg-brand-50 px-2.5 py-0.5 text-xs font-semibold text-brand-700">Most societies pick this</span>}</div>
-                            <div className="mt-4 text-[34px] font-bold tracking-tight">Rs {Number(p.price).toLocaleString('en-PK')}<span className="text-sm font-medium text-ink/45"> / month</span></div>
+                            <div className="mt-4 text-[34px] font-bold tracking-tight">${Number(p.price).toLocaleString('en-US')}<span className="text-sm font-medium text-ink/45"> / month</span></div>
                             <div className="mt-1 text-sm text-ink/55">{p.max_houses ? `Up to ${p.max_houses} houses` : 'Unlimited houses'}</div>
                             <ul className="mt-5 space-y-2 text-sm">
                                 {(p.modules === '*' ? ['Every module', '3D map & inner view', 'Security suite with CCTV & patrol', 'Gym & club', 'Priority support'] : p.key === 'pro'
-                                    ? ['Security, complaints, finance, events', 'NOC, record room, inventory, library', 'Staff CRM', '3D map of your society'] : ['Security & visitor approvals', 'Complaints & announcements', 'Maintenance & finance', 'Events & SOS'])
+                                    ? ['Gatehouse, work orders, dues, events', 'Approvals, record room, inventory, library', 'Staff CRM', '3D map of your community'] : ['Security & visitor approvals', 'Complaints & announcements', 'Maintenance & finance', 'Events & SOS'])
                                     .map((f) => <li key={f} className="flex gap-2"><Check size={16} className="mt-0.5 shrink-0 text-emerald-600" />{f}</li>)}
                             </ul>
                             <Link to={`/register?plan=${p.key}`} className={`mt-6 w-full ${p.key === 'pro' ? 'btn-primary' : 'btn-outline'}`}>Start free trial</Link>

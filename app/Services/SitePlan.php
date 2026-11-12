@@ -15,8 +15,6 @@ class SitePlan
 {
     public const FILE = 'data/block19-site.json';
 
-    private const FIRST = ['Ahmed', 'Fatima', 'Usman', 'Ayesha', 'Bilal', 'Sana', 'Hamza', 'Zainab', 'Imran', 'Hira', 'Faisal', 'Mariam', 'Kashif', 'Nadia', 'Omar', 'Rabia', 'Tariq', 'Saima', 'Adeel', 'Nida', 'Junaid', 'Amna', 'Shoaib', 'Mehwish'];
-    private const LAST = ['Khan', 'Ali', 'Siddiqui', 'Hussain', 'Malik', 'Qureshi', 'Raza', 'Sheikh', 'Javed', 'Mirza', 'Aslam', 'Abbasi', 'Iqbal', 'Farooq', 'Anwar', 'Baig', 'Rizvi', 'Zaidi', 'Memon', 'Butt'];
 
     /** The current society's digitised plan (plots + site). Outside a society (old migrations) the bundled Block 19 plan. */
     public static function data(): ?array
@@ -31,6 +29,43 @@ class SitePlan
     public static function bundled(): array
     {
         return json_decode(file_get_contents(database_path(self::FILE)), true);
+    }
+
+    /** The bundled plot plan dressed up as an American subdivision (for the US demo community). */
+    public static function usDemo(): array
+    {
+        $d = self::bundled();
+        $s = &$d['site'];
+        $s['name'] = 'Maple Grove Estates';
+        $s['labels'] = [['text' => 'MAPLE GROVE BLVD', 'x' => 360, 'y' => 395, 'ang' => 62, 'size' => 'l', 'outside' => true], ['text' => 'Ranch Road 620', 'x' => 200, 'y' => 420, 'ang' => 8, 'size' => 'm', 'outside' => true]];
+        $zone = ['Mosque' => ['amenity', 'Clubhouse & Pool'], 'Shopping Complex' => ['commercial', 'Town Center'], 'Amenity Plot' => ['amenity', 'Sports Courts'], 'Office' => ['office', 'HOA Office'],
+            'Hina Bungalows' => ['outside', 'Cedar Park Homes'], 'Gulshan Bungalows' => ['outside', 'Willow Creek'], 'FL Mun Fountains' => ['outside', 'The Fountains Apartments'], 'Apartments' => ['outside', 'Lakeview Apartments'],
+            'Gulshan Complex' => ['outside', 'Riverside Plaza'], 'Habib Bank' => ['outside_commercial', 'Chase Bank']];
+        foreach ($s['zones'] as &$z) {
+            if (($z['tone'] ?? null) === 'graveyard') {
+                $z = ['type' => 'outside', 'label' => 'Greenbelt Preserve', 'pts' => $z['pts']];
+            } elseif (isset($zone[$z['label'] ?? ''])) {
+                [$z['type'], $z['label']] = $zone[$z['label']];
+            }
+        }
+        unset($z);
+        $s['gate'] = ['label' => 'Main Gate · Maple Grove Blvd'] + $s['gate'];
+        $s['gate']['label'] = 'Main Gate · Maple Grove Blvd';
+        $s['gates'][0]['road'] = 'Maple Grove Blvd';
+        $s['gates'][1]['road'] = 'Cedar Hollow Rd';
+        $s['roads'][0]['name'] = 'Maple Grove Blvd';
+        $s['roads'][1]['name'] = 'Park Avenue';
+        $names = ['Oak', 'Elm', 'Birch', 'Cedar', 'Willow', 'Aspen', 'Magnolia', 'Hickory', 'Juniper', 'Sycamore', 'Laurel', 'Chestnut', 'Cypress', 'Poplar', 'Redwood', 'Dogwood', 'Linden', 'Holly', 'Spruce', 'Alder', 'Hawthorn', 'Mesquite'];
+        $kinds = ['Lane', 'Court', 'Drive', 'Way', 'Trail', 'Circle'];
+        foreach ($s['streets'] as $k => &$st) {
+            $st['text'] = $names[$k % count($names)].' '.$kinds[($k * 5) % count($kinds)];
+        }
+        unset($st);
+        $s['series'] = ['N' => 'North (Estate Homes)', 'E' => 'East Village', 'W' => 'West Village'];
+        // Austin, Texas area (approximate; owners can correct it in Settings → Map location)
+        $s['geo'] = ['note' => $s['geo']['note'] ?? null, 'p1' => ['x' => 950, 'y' => 95, 'lat' => 30.42385, 'lng' => -97.83102], 'p2' => ['x' => 1300, 'y' => 560, 'lat' => 30.42009, 'lng' => -97.82788]];
+
+        return $d;
     }
 
     /** The site metadata (boundary, roads, landmarks, gates, street labels, geo-reference) — null when the society has no map yet. */
@@ -118,6 +153,7 @@ class SitePlan
                 $taken[$i] = true;
                 $moved++;
             }
+            $DD = \App\Support\DemoData::for();
             foreach ($plots as $i => $p) {
                 if (isset($taken[$i])) {
                     continue;
@@ -125,8 +161,8 @@ class SitePlan
                 $small = $p['series'] !== 'N';
                 $h = new House([
                     'type' => 'house',
-                    'owner_name' => $demo ? self::FIRST[($i * 7) % count(self::FIRST)].' '.self::LAST[($i * 11) % count(self::LAST)] : null,
-                    'monthly_maintenance' => $demo ? ($small ? 2500 : 5000) : 0,
+                    'owner_name' => $demo ? $DD['first'][($i * 7) % count($DD['first'])].' '.$DD['last'][($i * 11) % count($DD['last'])] : null,
+                    'monthly_maintenance' => $demo ? \App\Support\DemoData::amount($small ? 2500 : 5000, $DD) : 0,
                     'floors' => $small ? 2 + ($i % 2) : 1 + ($i % 2),
                 ]);
                 self::place($h, $p);

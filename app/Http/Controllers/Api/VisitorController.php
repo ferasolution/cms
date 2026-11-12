@@ -248,7 +248,7 @@ class VisitorController extends Controller
         $visitor->update(['expected_exit_at' => now(), 'revoked_by' => $u->id, 'overstay_alerted_at' => now()]);
         $why = trim((string) $request->input('reason'));
         Activity::log('security', 'revoke', "Access of {$visitor->name} revoked".($why ? " — {$why}" : ''), $visitor);
-        Activity::alertModule('security', 2, '⛔ Access revoked: '.$visitor->name, ($visitor->house?->label ? 'Plot '.$visitor->house->label.' · ' : '').'Please make sure the visitor leaves.'.($why ? ' '.$why : ''), 'danger', '/security?tab=temporary', $visitor->house_id);
+        Activity::alertModule('security', 2, '⛔ Access revoked: '.$visitor->name, ($visitor->house?->label ? ''.\App\Support\Settings::unit().' '.$visitor->house->label.' · ' : '').'Please make sure the visitor leaves.'.($why ? ' '.$why : ''), 'danger', '/security?tab=temporary', $visitor->house_id);
 
         return $visitor->load('house');
     }

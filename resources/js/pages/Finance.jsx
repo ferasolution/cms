@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { Wallet, Plus, Check, X, Banknote, Printer, TrendingUp, TrendingDown, Users } from 'lucide-react';
 import { useList, useGet, PageHeader, Table, Modal, Form, Badge, SearchBox, Select, Tabs, Stat, FileLink, Confirm, useAction, useToast, useHouses, useTab } from '../components/ui';
 import { useLive } from '../lib/alerts';
-import { post, del, dt, money, title, today } from '../lib/api';
+import { post, del, dt, money, title, today, LOCALE, CURRENCY } from '../lib/api';
 import { useAuth } from '../lib/auth';
 
 const CATS = {
@@ -43,7 +43,7 @@ function MyBills() {
                     <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
                         {data.months.map((m) => (
                             <div key={m.period} className={`rounded-xl p-3 text-center ${m.paid ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-700'}`}>
-                                <div className="text-xs font-semibold">{new Date(m.period + '-01').toLocaleDateString('en-PK', { month: 'short', year: '2-digit' })}</div>
+                                <div className="text-xs font-semibold">{new Date(m.period + '-01').toLocaleDateString(LOCALE, { month: 'short', year: '2-digit' })}</div>
                                 <div className="text-sm font-bold">{m.paid ? '✓ Paid' : money(m.due)}</div>
                             </div>
                         ))}
@@ -92,7 +92,7 @@ function FinanceStaff() {
     const txFields = (type) => [
         { name: 'type', label: 'Type', type: 'select', options: ['revenue', 'expense', 'salary'], required: true, half: true, default: type || 'revenue' },
         { name: 'category', label: 'Category', type: 'select', required: true, half: true, options: CATS[modal?.values?.type || modal?.type || 'revenue'] },
-        { name: 'amount', label: 'Amount (Rs)', type: 'number', min: 1, required: true, half: true },
+        { name: 'amount', label: `Amount (${CURRENCY})`, type: 'number', min: 1, required: true, half: true },
         { name: 'date', label: 'Date', type: 'date', required: true, half: true, default: today() },
         { name: 'house_id', label: 'House', type: 'select', options: houses, half: true, show: (v) => v.type === 'revenue' },
         { name: 'period', label: 'For month', type: 'month', half: true, show: (v) => ['maintenance', 'subscription', 'salary'].includes(v.category) },
@@ -252,7 +252,7 @@ function FinanceStaff() {
             <Modal open={modal?.mode === 'request'} onClose={() => setModal(null)} title="Expense request">
                 {modal?.mode === 'request' && <Form onSubmit={async (v) => { await post('finance/expense-requests', v); toast('Request sent to Admin for approval'); setModal(null); setTab('requests'); reqs.reload(); }} submitLabel="Submit request" fields={[
                     { name: 'title', label: 'What is it for?', required: true },
-                    { name: 'amount', label: 'Amount (Rs)', type: 'number', min: 1, required: true, half: true },
+                    { name: 'amount', label: `Amount (${CURRENCY})`, type: 'number', min: 1, required: true, half: true },
                     { name: 'category', label: 'Category', type: 'select', options: CATS.expense, required: true, half: true, default: 'other' },
                     { name: 'purpose', label: 'Details / justification', type: 'textarea' },
                     { name: 'receipt', label: 'Quotation / bill', type: 'file', accept: 'image/*,.pdf' },

@@ -1,12 +1,12 @@
 import { useState } from 'react';
 import { BriefcaseBusiness, Plus, Clock, CalendarOff, ListTodo, Users, Pencil, Check, X, CreditCard, Download } from 'lucide-react';
 import { useList, useGet, PageHeader, Table, Modal, Form, Badge, SearchBox, Select, Tabs, useTab, urlParam, useAction, useToast, Stat, exportCsv } from '../components/ui';
-import { post, put, dt, title, money, today } from '../lib/api';
+import { post, put, dt, title, money, today, LOCALE, ID_LABEL, CURRENCY } from '../lib/api';
 import { useAuth } from '../lib/auth';
 import { useLive } from '../lib/alerts';
 
 const hm = (m) => `${Math.floor((m || 0) / 60)}h ${String((m || 0) % 60).padStart(2, '0')}m`;
-const time = (s) => (s ? new Date(s).toLocaleTimeString('en-PK', { hour: '2-digit', minute: '2-digit' }) : '—');
+const time = (s) => (s ? new Date(s).toLocaleTimeString(LOCALE, { hour: '2-digit', minute: '2-digit' }) : '—');
 
 export default function Crm() {
     const { can, approve } = useAuth();
@@ -155,9 +155,9 @@ export default function Crm() {
                 {modal?.mode === 'emp' && <Form initial={{ status: 'active', shift_start: '09:00', shift_end: '17:00', ...modal }} onSubmit={async (v) => { modal.id ? await put(`crm/employees/${modal.id}`, v) : await post('crm/employees', v); toast('Employee saved'); setModal(null); refresh(); }} fields={[
                     { name: 'name', label: 'Full name', required: true, half: true }, { name: 'department', label: 'Department', required: true, half: true, placeholder: 'Security, Maintenance…' },
                     { name: 'designation', label: 'Designation', half: true }, { name: 'phone', label: 'Phone', half: true },
-                    { name: 'cnic', label: 'CNIC', half: true }, { name: 'emergency_contact', label: 'Emergency contact', half: true },
+                    { name: 'cnic', label: ID_LABEL, half: true }, { name: 'emergency_contact', label: 'Emergency contact', half: true },
                     { name: 'shift_start', label: 'Shift start', type: 'time', required: true, half: true }, { name: 'shift_end', label: 'Shift end', type: 'time', required: true, half: true },
-                    { name: 'joined_on', label: 'Joined on', type: 'date', half: true }, { name: 'basic_salary', label: 'Basic salary (Rs)', type: 'number', min: 0, half: true },
+                    { name: 'joined_on', label: 'Joined on', type: 'date', half: true }, { name: 'basic_salary', label: `Basic salary (${CURRENCY})`, type: 'number', min: 0, half: true },
                     { name: 'rfid_card', label: 'RFID card no.', half: true }, { name: 'status', label: 'Status', type: 'select', options: ['active', 'on_leave', 'terminated'], required: true, half: true },
                     { name: 'user_id', label: 'Portal login (for self check-in)', type: 'select', options: (staffUsers.data || []).map((u) => ({ value: u.id, label: `${u.name} · ${u.designation || u.role}` })) },
                 ]} />}

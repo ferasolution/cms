@@ -159,7 +159,7 @@ class EventController extends Controller
             Transaction::create(['type' => 'revenue', 'category' => 'event', 'amount' => $event->charges, 'house_id' => $event->house_id, 'reference' => $event->code, 'description' => 'Event: '.$event->title, 'date' => now()->toDateString(), 'recorded_by' => $request->user()->id]);
         }
         Activity::log('events', $data['status'], ucfirst($data['status'])." event \"{$event->title}\"".($event->code ? " ({$event->code})" : ''), $event);
-        Activity::alertUser($event->requested_by, 'events', 'Event '.$data['status'].': '.$event->title, $data['status'] === 'approved' ? 'Your event code is '.$event->code.'. Charges Rs '.number_format($event->charges) : null, $data['status'] === 'approved' ? 'success' : 'warning', '/events');
+        Activity::alertUser($event->requested_by, 'events', 'Event '.$data['status'].': '.$event->title, $data['status'] === 'approved' ? 'Your event code is '.$event->code.'. Charges '.\App\Support\Settings::money($event->charges) : null, $data['status'] === 'approved' ? 'success' : 'warning', '/events');
         if ($data['status'] === 'approved') {
             Activity::alertModule('security', 2, 'Event scheduled: '.$event->title, $event->code.' · '.$event->date->format('d M').' '.$event->start_time.'–'.$event->end_time.' · '.$event->venue.' · '.$event->guests.' guests', 'info', '/events');
         }

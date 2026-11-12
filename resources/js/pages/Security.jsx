@@ -7,7 +7,7 @@ import CctvTab, { FootageLinks } from './security/CctvTab';
 import PatrolTab from './security/PatrolTab';
 import ShiftsTab from './security/ShiftsTab';
 import { useList, useGet, PageHeader, Table, Modal, Form, Badge, SearchBox, Select, Stat, FileLink, Confirm, useAction, useHouses, useToast, Tabs, useTab, urlParam, QrImage, QrScanner } from '../components/ui';
-import { post, put, del, dt, duration, title } from '../lib/api';
+import { post, put, del, dt, duration, title, UNIT, ID_LABEL } from '../lib/api';
 import { useAuth } from '../lib/auth';
 import { useLive } from '../lib/alerts';
 
@@ -65,7 +65,7 @@ export default function Security() {
         { name: 'category', label: 'Type', type: 'select', options: CATS, required: true, half: true, default: 'visitor' },
         { name: 'house_id', label: 'Visiting household (HH)', type: 'select', options: houses, half: true },
         { name: 'purpose', label: 'Purpose of visit', required: true, half: true },
-        { name: 'cnic', label: 'CNIC', half: true, placeholder: '42101-1234567-1' },
+        { name: 'cnic', label: ID_LABEL, half: true, placeholder: '' },
         { name: 'phone', label: 'Phone', half: true },
         { name: 'vehicle_type', label: 'Vehicle type', type: 'select', options: ['car', 'bike', 'rickshaw', 'van', 'suv', 'truck', 'other'], half: true, placeholder: 'On foot' },
         { name: 'vehicle_no', label: 'Vehicle no.', half: true, show: (v) => !!v.vehicle_type },
@@ -150,7 +150,7 @@ export default function Security() {
             {['gate', 'approvals', 'log'].includes(tab) && (
                 <>
                     <div className="mb-3 flex flex-wrap gap-2">
-                        <SearchBox value={list.params.q} onChange={(q) => list.set({ q })} placeholder="Name, CNIC, vehicle…" />
+                        <SearchBox value={list.params.q} onChange={(q) => list.set({ q })} placeholder={`Name, ${ID_LABEL}, vehicle…`} />
                         {tab === 'log' && <Select value={list.params.status} onChange={(status) => list.set({ status })} placeholder="All" options={[{ value: 'inside', label: 'Inside' }, { value: 'overstay', label: 'Overstaying' }, { value: 'awaiting', label: 'Waiting' }, { value: 'exited', label: 'Exited' }, { value: 'rejected', label: 'Rejected' }]} />}
                         <Select value={list.params.category} onChange={(category) => list.set({ category })} placeholder="All types" options={CATS} />
                         {!isResident && <Select value={list.params.house_id} onChange={(house_id) => list.set({ house_id })} placeholder="All houses" options={houses} className="max-w-56" />}
@@ -226,12 +226,12 @@ export default function Security() {
                                     <button className="btn-primary mt-3 w-full" onClick={() => act(() => post('gate/vehicle-logs', { plate: scan.vehicle?.plate || scan.plate, kind: scan.vehicle ? 'resident' : 'visitor', gate: gates[0] }), scan.inside_log ? 'Vehicle exit recorded' : 'Vehicle entry recorded', () => { setScan(null); refresh(); })}>{scan.inside_log ? <><LogOut size={15} />Record exit</> : <><LogIn size={15} />Record entry</>}</button></div>}
                                 {scan.kind === 'exit' && <div>
                                     <div className="text-lg font-bold">{scan.visitor.name}</div>
-                                    <div className="text-xs text-ink/55">{[scan.visitor.house && 'Plot ' + scan.visitor.house.label, title(scan.visitor.category), scan.visitor.vehicle_no, 'in ' + (scan.visitor.entry_at ? dt(scan.visitor.entry_at) : '—'), scan.visitor.entry_at && 'stayed ' + duration(scan.visitor.entry_at)].filter(Boolean).join(' · ')}</div>
+                                    <div className="text-xs text-ink/55">{[scan.visitor.house && UNIT + ' ' + scan.visitor.house.label, title(scan.visitor.category), scan.visitor.vehicle_no, 'in ' + (scan.visitor.entry_at ? dt(scan.visitor.entry_at) : '—'), scan.visitor.entry_at && 'stayed ' + duration(scan.visitor.entry_at)].filter(Boolean).join(' · ')}</div>
                                     {scan.overstay && <div className="mt-2 rounded-xl bg-amber-50 p-2 text-xs font-semibold text-amber-800">Overstayed — note it in the log if needed.</div>}
                                     {scan.valid && <button className="btn-primary mt-3 w-full py-3 text-base" onClick={() => act(() => post(`visitors/${scan.visitor.id}/checkout`, { scanned: true, gate: gates[0] }), `${scan.visitor.name} left — household informed`, () => { setScan(null); refresh(); })}><LogOut size={16} />Confirm exit</button>}</div>}
                                 {scan.kind === 'staff' && <div className="flex gap-3">
                                     {scan.staff.photo_path ? <img src={`/files/${scan.staff.photo_path}`} className="h-20 w-16 rounded-lg object-cover" alt="" /> : <div className="grid h-20 w-16 place-items-center rounded-lg bg-ink/5 text-2xl">👤</div>}
-                                    <div className="flex-1"><div className="font-bold">{scan.staff.name}</div><div className="text-xs text-ink/55">{title(scan.staff.type)} · Plot {scan.staff.house?.label} · {title(scan.staff.verification)}</div>
+                                    <div className="flex-1"><div className="font-bold">{scan.staff.name}</div><div className="text-xs text-ink/55">{title(scan.staff.type)} · {UNIT} {scan.staff.house?.label} · {title(scan.staff.verification)}</div>
                                         <div className="text-xs text-ink/55">{scan.inside ? 'Inside now' : 'Outside'}</div>
                                         {(scan.valid || scan.inside) && <button className={`mt-2 w-full ${scan.inside ? 'btn-outline' : 'btn-primary'}`} onClick={() => act(() => post(`staff/${scan.staff.id}/move`, { gate: gates[0] }), scan.inside ? 'Staff checked out' : 'Staff checked in — household informed', () => { setScan(null); refresh(); })}>{scan.inside ? <><LogOut size={14} />Check out</> : <><LogIn size={14} />Check in</>}</button>}</div></div>}
                             </div>
@@ -311,7 +311,7 @@ export default function Security() {
                         { name: 'visitor_name', label: 'Visitor name', required: true, half: true },
                         { name: 'category', label: 'Type', type: 'select', options: ['guest', 'relative', 'friend', 'worker', 'delivery', 'contractor', 'visitor', 'other'], required: true, half: true, default: 'guest' },
                         !isResident && { name: 'house_id', label: 'House', type: 'select', options: houses, required: true },
-                        { name: 'phone', label: 'Phone', half: true }, { name: 'cnic', label: 'CNIC', half: true },
+                        { name: 'phone', label: 'Phone', half: true }, { name: 'cnic', label: ID_LABEL, half: true },
                         { name: 'vehicle_no', label: 'Vehicle no.', half: true }, { name: 'persons', label: 'Persons', type: 'number', min: 1, default: 1, half: true },
                         { name: 'valid_from', label: 'Valid from', type: 'datetime-local', required: true, half: true }, { name: 'valid_until', label: 'Valid until', type: 'datetime-local', required: true, half: true },
                         { name: 'max_stay_minutes', label: 'Max stay (minutes)', type: 'number', min: 15, half: true, placeholder: '240' },
@@ -332,7 +332,7 @@ export default function Security() {
             <Modal open={modal?.mode === 'watch'} onClose={() => setModal(null)} title="Blacklist / watchlist">
                 {modal?.mode === 'watch' && <Form submitLabel="Add" onSubmit={async (v) => { await post('gate/watchlist', v); toast('Added'); setModal(null); refresh(); }} fields={[
                     { name: 'level', label: 'Level', type: 'select', options: [{ value: 'blocked', label: 'BLOCKED — deny entry' }, { value: 'watch', label: 'Watch — allow but alert supervisor' }], default: 'blocked', required: true },
-                    { name: 'name', label: 'Name', half: true }, { name: 'cnic', label: 'CNIC', half: true }, { name: 'phone', label: 'Phone', half: true }, { name: 'vehicle_no', label: 'Vehicle no.', half: true },
+                    { name: 'name', label: 'Name', half: true }, { name: 'cnic', label: ID_LABEL, half: true }, { name: 'phone', label: 'Phone', half: true }, { name: 'vehicle_no', label: 'Vehicle no.', half: true },
                     { name: 'reason', label: 'Reason', required: true }, { name: 'until', label: 'Until (blank = permanent)', type: 'date' },
                 ]} />}
             </Modal>
@@ -362,7 +362,7 @@ export default function Security() {
                 {view && (
                     <div className="space-y-4 text-sm">
                         <div className="grid grid-cols-2 gap-3">
-                            {[['Type', title(view.category)], ['House', view.house?.label], ['Purpose', view.purpose], ['CNIC', view.cnic], ['Phone', view.phone], ['Vehicle', view.vehicle_no], ['Persons', view.persons], ['Gate', view.gate],
+                            {[['Type', title(view.category)], ['House', view.house?.label], ['Purpose', view.purpose], [ID_LABEL, view.cnic], ['Phone', view.phone], ['Vehicle', view.vehicle_no], ['Persons', view.persons], ['Gate', view.gate],
                                 ['Status', title(view.status)], ['Arrived', dt(view.created_at)], ['Entered', view.entry_at ? dt(view.entry_at) : '—'], ['Allowed until', view.expected_exit_at ? dt(view.expected_exit_at) : '—'],
                                 ['Exit', view.exit_at ? dt(view.exit_at) + (view.exit_gate ? ' · ' + view.exit_gate : '') : view.status === 'inside' ? 'Still inside' : '—'], ['Slip', view.token], ['Vehicle type', title(view.vehicle_type || '')], ['Duration of stay', view.entry_at ? duration(view.entry_at, view.exit_at) : '—'], ['Decision by', view.responder?.name], ['Logged by', view.logger?.name]].map(([k, v]) => (
                                 <div key={k}><div className="text-[11px] font-semibold text-ink/45">{k}</div><div>{v || '—'}</div></div>

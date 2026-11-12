@@ -33,6 +33,12 @@ const hasFile = (o) => o && typeof o === 'object' && Object.values(o).some((v) =
 
 /** Base of the current society, e.g. "/block19" ('' on the platform site). */
 export const BASE = window.APP?.base || '';
+/** The society's region: currency, locale and wording (set from its country, editable in Settings). */
+const R = window.APP?.society || {};
+export const CURRENCY = R.currency || 'USD';
+export const LOCALE = R.locale || undefined;
+export const UNIT = R.unit_label || 'Lot';
+export const ID_LABEL = R.id_label || 'ID number';
 
 export async function api(method, url, data, { params, root } = {}) {
     let full = (root ?? BASE + '/api/') + url.replace(/^\//, '');
@@ -75,11 +81,12 @@ export const papi = {
 };
 
 export const fileUrl = (path, download = false) => (path ? `${BASE}/files/${path}${download ? '?download=1' : ''}` : null);
-export const money = (n) => 'Rs ' + Number(n || 0).toLocaleString('en-PK', { maximumFractionDigits: 0 });
+const SYM = { USD: '$', CAD: 'CA$', AUD: 'A$', GBP: '£', EUR: '€', PKR: 'Rs ', INR: '₹', AED: 'AED ', SAR: 'SAR ', QAR: 'QAR ' };
+export const money = (n, cur = CURRENCY) => (SYM[cur] ?? cur + ' ') + Number(n || 0).toLocaleString(LOCALE, { maximumFractionDigits: 0 });
 export const dt = (s, withTime = true) => {
     if (!s) return '—';
     const d = new Date(s);
-    return d.toLocaleString('en-PK', withTime ? { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' } : { day: '2-digit', month: 'short', year: 'numeric' });
+    return d.toLocaleString(LOCALE, withTime ? { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' } : { day: '2-digit', month: 'short', year: 'numeric' });
 };
 export const ago = (s) => {
     const sec = Math.round((Date.now() - new Date(s)) / 1000);

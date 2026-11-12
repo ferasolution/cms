@@ -4,7 +4,7 @@ import { Siren, Phone, MapPin, Check, Truck, Navigation, Copy, Box } from 'lucid
 import { useList, useGet, PageHeader, Table, Badge, useAction, useToast } from '../components/ui';
 import PlanMap from '../components/PlanMap';
 import { locateInfo, mapsLink } from '../lib/siteplan';
-import { post, dt, ago, title } from '../lib/api';
+import { post, dt, ago, title, UNIT } from '../lib/api';
 import { useAuth } from '../lib/auth';
 import { useLive } from '../lib/alerts';
 
@@ -17,14 +17,14 @@ function LocatePanel({ sos, map }) {
     const h = map.houses.find((x) => x.id === sos.house_id);
     const info = useMemo(() => (h ? locateInfo(map.site, map.houses, h) : null), [h, map]);
     const gps = sos.lat ? { lat: +sos.lat, lng: +sos.lng } : info?.gps;
-    const steps = info?.route ? `Enter from ${info.route.gate.label}${info.route.gate.road ? ' (' + info.route.gate.road + ')' : ''}, go ${info.route.metres} m to Plot ${h.label}${h.street ? ', ' + h.street : ''}${info.landmark ? ' — near ' + info.landmark : ''}.` : '';
+    const steps = info?.route ? `Enter from ${info.route.gate.label}${info.route.gate.road ? ' (' + info.route.gate.road + ')' : ''}, go ${info.route.metres} m to ${UNIT} ${h.label}${h.street ? ', ' + h.street : ''}${info.landmark ? ' — near ' + info.landmark : ''}.` : '';
     const sig = [{ key: 'sos-' + sos.id, type: 'sos', id: sos.id, house_id: sos.house_id, title: 'SOS', level: 3 }];
     return (
         <div className="grid border-t border-ink/5 md:grid-cols-[1fr_260px]">
             {h ? <div className="p-2"><PlanMap site={map.site} houses={map.houses} signals={sig} flash={sos.status === 'active' ? [h.id] : []} selectedId={h.id} focus={h.id} route={info?.route} height={300} compact /></div>
                 : <div className="grid place-items-center p-6 text-sm text-ink/50">This caller is not linked to a house — use the GPS link.</div>}
             <div className="space-y-2 p-4 text-sm md:border-l md:border-ink/5">
-                {h && <><div className="text-2xl font-black">Plot {h.label}</div>
+                {h && <><div className="text-2xl font-black">{UNIT} {h.label}</div>
                     <div className="text-ink/65">{h.street || ''}{info?.series ? ' · ' + info.series : ''}</div>
                     {info?.landmark && <div className="text-ink/65">Near <b>{info.landmark}</b></div>}
                     {info?.route && <div className="rounded-xl bg-sky-50 p-2.5 text-sky-900 dark:bg-sky-500/10 dark:text-sky-200"><b>{info.route.metres} m</b> from {info.route.gate.label} · ~{info.route.walkMin} min walk · ~{info.route.driveMin} min drive</div>}</>}

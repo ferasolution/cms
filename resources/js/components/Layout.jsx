@@ -3,7 +3,7 @@ import { NavLink, useLocation, useNavigate, useOutlet } from 'react-router-dom';
 import {
     LayoutDashboard, ShieldCheck, Boxes, BookOpen, Wallet, CalendarHeart, MessageSquareWarning, FileCheck2, Archive,
     Users, Map, Bell, LogOut, Menu, X, Activity, BellRing, Search, Siren, Moon, Sun, Megaphone, Dumbbell, BriefcaseBusiness,
-    Settings, Briefcase, Loader2, CornerDownLeft, Wifi, WifiOff, MapPin, Workflow, Home as HomeIcon, Menu as MenuIcon,
+    Settings, Briefcase, Loader2, CornerDownLeft, Wifi, WifiOff, MapPin, Workflow, CreditCard, Home as HomeIcon, Menu as MenuIcon,
 } from 'lucide-react';
 import { useAuth, applyTheme } from '../lib/auth';
 import { useAlerts } from '../lib/alerts';
@@ -104,7 +104,7 @@ function SearchPalette({ open, onClose }) {
                 </div>
                 <div className="max-h-[55vh] overflow-y-auto p-2">
                     {q.length >= 2 && !busy && !rows.length && <div className="py-8 text-center text-sm text-ink/45">Nothing found for “{q}”</div>}
-                    {q.length < 2 && <div className="px-3 py-6 text-center text-xs text-ink/40">Type at least 2 letters. Try “A-101”, a CNIC, a number plate or a ticket number.</div>}
+                    {q.length < 2 && <div className="px-3 py-6 text-center text-xs text-ink/40">Type at least 2 letters. Try “A-101”, an ID number, a license plate or a ticket number.</div>}
                     {rows.map((r, i) => (
                         <button key={r.type + r.id} onMouseEnter={() => setSel(i)} onClick={() => go(r)}
                             className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left ${i === sel ? 'bg-brand-50' : ''}`}>
@@ -265,6 +265,7 @@ export default function Layout() {
                     ))}
                     {isAdmin && link('/automations', Workflow, 'Automations')}
                     {isAdmin && link('/activity', Activity, 'Audit & Activity Log')}
+                    {isAdmin && link('/billing', CreditCard, 'Subscription')}
                 </nav>
                 <div className="relative mt-3 rounded-2xl border border-white/[.07] bg-white/[.04] p-2.5">
                     <NavLink to="/profile" onClick={() => setOpen(false)} className="flex items-center gap-2.5 rounded-xl p-1 hover:bg-white/[.05]">
@@ -301,7 +302,7 @@ export default function Layout() {
                         <div className="mb-4 flex flex-wrap items-center gap-2 rounded-2xl border border-sand-400/30 bg-sand-50 px-4 py-2.5 text-sm text-sand-500">
                             <span className="lamp-breathe size-2 rounded-full bg-sand-400" />
                             <b>Free trial</b> — {Math.max(0, Math.ceil((new Date(window.APP.society.trial_ends_at) - Date.now()) / 86400000))} days left. Every feature of your plan is on.
-                            <a href="https://www.ferasolution.com" target="_blank" rel="noreferrer" className="ml-auto font-semibold underline-offset-2 hover:underline">Choose a plan</a>
+                            {isAdmin && <NavLink to="/billing" className="ml-auto font-semibold underline-offset-2 hover:underline">Choose a plan</NavLink>}
                         </div>
                     )}<AnimatePresence mode="wait" initial={false}>
                     <motion.div key={location.pathname} className="h-full [&>div]:stagger" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={{ duration: 0.22, ease: [0.2, 0.7, 0.2, 1] }}>{outlet}</motion.div>

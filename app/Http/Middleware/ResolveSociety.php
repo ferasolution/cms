@@ -35,6 +35,8 @@ class ResolveSociety
         }
         Tenant::set($soc);
         $request->attributes->set('society', $soc);
+        // dates and times in the society's own timezone
+        Tenant::applyTimezone();
         // a signed-in user of another society (or the platform owner) is a guest here — checked
         // explicitly so a user already resolved earlier in the request can never leak across
         $u = Auth::user();
@@ -42,7 +44,7 @@ class ResolveSociety
             Auth::forgetUser();
         }
 
-        if ($soc && ! $soc->isOpen() && ! $request->is('*api/login', '*api/logout', '*api/me', 'api/login', 'api/logout', 'api/me')) {
+        if ($soc && ! $soc->isOpen() && ! $request->is('*api/login', '*api/logout', '*api/me', '*api/billing', '*api/billing/*', 'api/login', 'api/logout', 'api/me')) {
             return SocietyGate::closed($request, $soc);
         }
 

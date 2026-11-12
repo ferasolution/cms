@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Users as UsersIcon, Plus, Home, Pencil, Trash2, Crown, ShieldCheck, PenLine, User, History, Loader2, Download } from 'lucide-react';
 import { useList, useGet, PageHeader, Table, Modal, Form, Badge, SearchBox, Select, Tabs, Confirm, useAction, useToast, useHouses, clearHouseCache, useTab, urlParam, exportCsv } from '../components/ui';
-import { post, put, del, get, money, title, dt, ago } from '../lib/api';
+import { post, put, del, get, money, title, dt, ago, CURRENCY } from '../lib/api';
 import { useAuth } from '../lib/auth';
 import { useLive } from '../lib/alerts';
 
@@ -229,7 +229,7 @@ export default function Users() {
                     { name: 'type', label: 'Type', type: 'select', options: ['house', 'flat', 'commercial', 'plot'], required: true, half: true, default: 'house' },
                     { name: 'owner_name', label: 'Owner name', half: true },
                     { name: 'owner_phone', label: 'Owner phone', half: true },
-                    { name: 'monthly_maintenance', label: 'Monthly maintenance (Rs)', type: 'number', min: 0, half: true },
+                    { name: 'monthly_maintenance', label: `Monthly maintenance (${CURRENCY})`, type: 'number', min: 0, half: true },
                     { name: 'floors', label: 'Floors', type: 'number', min: 0, max: 20, half: true, default: 1 },
                     { name: 'grid_x', label: '3D map column (X)', type: 'number', min: 0, half: true, default: 0 },
                     { name: 'grid_y', label: '3D map row (Y)', type: 'number', min: 0, half: true, default: 0 },

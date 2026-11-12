@@ -62,7 +62,7 @@ class PlatformController extends Controller
         }
         $request->merge(['slug' => strtolower((string) $request->input('slug'))]);
         $d = $request->validate([
-            'name' => 'required|string|max:120', 'slug' => $this->slugRules(), 'city' => 'required|string|max:80', 'address' => 'nullable|string|max:255',
+            'name' => 'required|string|max:120', 'slug' => $this->slugRules(), 'city' => 'required|string|max:80', 'address' => 'nullable|string|max:255', 'country' => 'required|string|size:2',
             'houses' => 'nullable|integer|min:1|max:20000', 'admin_name' => 'required|string|max:120', 'email' => 'required|email|max:190', 'phone' => 'required|string|max:30',
             'password' => 'required|string|min:8|max:100', 'plan' => ['nullable', Rule::in(array_keys(Plans::PLANS))],
         ]);
@@ -70,12 +70,12 @@ class PlatformController extends Controller
 
         $soc = DB::transaction(function () use ($d) {
             $soc = Society::create([
-                'slug' => $d['slug'], 'name' => $d['name'], 'city' => $d['city'], 'address' => $d['address'] ?? null, 'status' => 'trial', 'plan' => $d['plan'] ?? 'pro',
+                'slug' => $d['slug'], 'name' => $d['name'], 'city' => $d['city'], 'address' => $d['address'] ?? null, 'country' => strtoupper($d['country']), 'status' => 'trial', 'plan' => $d['plan'] ?? 'pro',
                 'trial_ends_at' => now()->addDays(config('saas.trial_days')), 'contact_name' => $d['admin_name'], 'contact_email' => $d['email'], 'contact_phone' => $d['phone'],
                 'notes' => isset($d['houses']) ? "About {$d['houses']} houses (from sign-up)" : null,
             ]);
             Tenant::run($soc, function () use ($soc, $d) {
-                Settings::save(['community_name' => $soc->name]);
+                Settings::save(Settings::region($soc->country) + ['community_name' => $soc->name]);
                 User::create(['name' => $d['admin_name'], 'email' => strtolower($d['email']), 'phone' => $d['phone'], 'password' => Hash::make($d['password']), 'role' => 'super_admin', 'active' => true]);
                 ActivityLog::create(['module' => 'system', 'action' => 'created', 'description' => "{$soc->name} joined the platform (trial)"]);
             });
@@ -154,6 +154,7 @@ class PlatformController extends Controller
             'houses' => $count(House::class)->count(), 'users' => $count(User::class)->count(),
             'last_activity' => $count(ActivityLog::class)->max('created_at'),
             'price' => $s->plan()['price'],
+            'billing' => ['provider' => $s->billing_provider, 'status' => $s->billing_status, 'renews_at' => $s->billing_renews_at, 'customer' => $s->billing_customer_id, 'subscription' => $s->billing_subscription_id],
         ];
     }
 
@@ -166,8 +167,8 @@ class PlatformController extends Controller
             'societies' => $rows,
             'stats' => [
                 'societies' => $all->count(), 'active' => $all->where('status', 'active')->count(), 'trial' => $all->where('status', 'trial')->count(),
-                'suspended' => $all->where('status', 'suspended')->count(), 'houses' => $rows->sum('houses'), 'users' => $rows->sum('users'),
-                'mrr' => $all->where('status', 'active')->sum(fn ($s) => $s->plan()['price']),
+                'suspended' => $all->whereIn('status', ['suspended', 'expired'])->count(), 'houses' => $rows->sum('houses'), 'users' => $rows->sum('users'),
+                'mrr' => $all->where('status', 'active')->whereNotNull('billing_subscription_id')->sum(fn ($s) => $s->plan()['price']),
                 'trials_ending' => $all->where('status', 'trial')->filter(fn ($s) => $s->trial_ends_at && $s->trial_ends_at->between(now(), now()->addDays(5)))->count(),
             ],
             'plans' => $this->plans(),
@@ -178,9 +179,9 @@ class PlatformController extends Controller
     public function store(Request $request)
     {
         $request->merge(['slug' => strtolower((string) $request->input('slug'))]);
-        $d = $request->validate(['name' => 'required|string|max:120', 'slug' => $this->slugRules(), 'city' => 'nullable|string|max:80', 'plan' => ['required', Rule::in(array_keys(Plans::PLANS))],
-            'status' => 'required|in:trial,active,suspended', 'admin_name' => 'required|string|max:120', 'email' => 'required|email', 'password' => 'required|string|min:8', 'phone' => 'nullable|string|max:30']);
-        $soc = Society::create(['name' => $d['name'], 'slug' => $d['slug'], 'city' => $d['city'] ?? null, 'plan' => $d['plan'], 'status' => $d['status'],
+        $d = $request->validate(['name' => 'required|string|max:120', 'slug' => $this->slugRules(), 'city' => 'nullable|string|max:80', 'plan' => ['required', Rule::in(array_keys(Plans::PLANS))], 'country' => 'nullable|string|size:2',
+            'status' => 'required|in:trial,active,suspended,expired', 'admin_name' => 'required|string|max:120', 'email' => 'required|email', 'password' => 'required|string|min:8', 'phone' => 'nullable|string|max:30']);
+        $soc = Society::create(['name' => $d['name'], 'slug' => $d['slug'], 'city' => $d['city'] ?? null, 'country' => strtoupper($d['country'] ?? 'US'), 'plan' => $d['plan'], 'status' => $d['status'],
             'trial_ends_at' => $d['status'] === 'trial' ? now()->addDays(config('saas.trial_days')) : null, 'contact_name' => $d['admin_name'], 'contact_email' => $d['email'], 'contact_phone' => $d['phone'] ?? null]);
         Tenant::run($soc, function () use ($soc, $d) {
             Settings::save(['community_name' => $soc->name]);
@@ -188,6 +189,24 @@ class PlatformController extends Controller
         });
 
         return $this->row($soc);
+    }
+
+    public function billing()
+    {
+        return \App\Services\Billing::publicConfig();
+    }
+
+    public function saveBilling(Request $request)
+    {
+        $d = $request->validate([
+            'provider' => 'required|in:manual,lemonsqueezy,stripe', 'support_email' => 'nullable|email',
+            'ls_store_id' => 'nullable|string|max:20', 'ls_variant_basic' => 'nullable|string|max:20', 'ls_variant_pro' => 'nullable|string|max:20', 'ls_variant_enterprise' => 'nullable|string|max:20',
+            'ls_test_mode' => 'boolean', 'ls_api_key' => 'nullable|string|max:2000', 'ls_webhook_secret' => 'nullable|string|max:200',
+            'stripe_secret' => ['nullable', 'string', 'max:300', 'regex:/^(sk|rk)_(live|test)_/'], 'stripe_webhook_secret' => ['nullable', 'string', 'max:300', 'regex:/^whsec_/'],
+        ], ['stripe_secret.regex' => 'Stripe secret keys start with sk_live_ or sk_test_.', 'stripe_webhook_secret.regex' => 'Stripe webhook secrets start with whsec_.']);
+        \App\Services\Billing::save($d);
+
+        return \App\Services\Billing::publicConfig();
     }
 
     public function update(Request $request, Society $society)

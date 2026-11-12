@@ -22,11 +22,19 @@ class NocController extends Controller
         'other' => ['label' => 'Other', 'docs' => ['CNIC of applicant', 'Supporting documents']],
     ];
 
+    /** Checklists with the society's own ID name (CNIC, ID number, Emirates ID…). */
+    public static function checklists_(): array
+    {
+        $id = \App\Support\Settings::idLabel();
+
+        return json_decode(str_replace('CNIC', $id, json_encode(self::CHECKLISTS, JSON_UNESCAPED_UNICODE)), true);
+    }
+
     public const STATUSES = ['submitted', 'under_review', 'documents_required', 'approved', 'completed', 'rejected'];
 
     public function checklists()
     {
-        return self::CHECKLISTS;
+        return self::checklists_();
     }
 
     public function index(Request $request)
@@ -48,7 +56,7 @@ class NocController extends Controller
         $this->authorizeView($request, 'noc');
         abort_if($request->user()->isResident() && $noc->user_id !== $request->user()->id, 403);
 
-        return $noc->load(['house', 'user:id,name,phone,email', 'documents', 'logs.user:id,name']) ->setAttribute('checklist', self::CHECKLISTS[$noc->type] ?? null);
+        return $noc->load(['house', 'user:id,name,phone,email', 'documents', 'logs.user:id,name']) ->setAttribute('checklist', self::checklists_()[$noc->type] ?? null);
     }
 
     public function store(Request $request)

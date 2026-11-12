@@ -169,7 +169,7 @@ class GateController extends Controller
         $this->authorizeManage($request, 'security');
         $data = $request->validate(['name' => 'nullable|string|max:120', 'cnic' => 'nullable|string|max:20', 'phone' => 'nullable|string|max:30', 'vehicle_no' => 'nullable|string|max:30',
             'level' => 'required|in:blocked,watch', 'reason' => 'required|string|max:255', 'until' => 'nullable|date']);
-        abort_if(empty($data['name']) && empty($data['cnic']) && empty($data['phone']) && empty($data['vehicle_no']), 422, 'Enter at least a name, CNIC, phone or vehicle number.');
+        abort_if(empty($data['name']) && empty($data['cnic']) && empty($data['phone']) && empty($data['vehicle_no']), 422, 'Enter at least a name, '.\App\Support\Settings::idLabel().', phone or vehicle number.');
         $w = Watchlist::create($data + ['added_by' => $request->user()->id]);
         Activity::log('security', 'watchlist', ucfirst($w->level).': '.($w->name ?: $w->cnic ?: $w->vehicle_no).' — '.$w->reason, $w);
 

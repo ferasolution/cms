@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { CalendarHeart, Plus, Calculator, Check, X, ScanLine, Settings2, Flag, BellRing } from 'lucide-react';
 import { useList, useGet, PageHeader, Table, Modal, Form, Badge, SearchBox, Select, Tabs, Confirm, useAction, useToast, useHouses, QrImage, QrScanner } from '../components/ui';
-import { get, post, put, del, dt, money, title, today } from '../lib/api';
+import { get, post, put, del, dt, money, title, today, CURRENCY } from '../lib/api';
 import { useAuth } from '../lib/auth';
 import { useLive, ringAlarm } from '../lib/alerts';
 
@@ -177,7 +177,7 @@ function RatesForm({ rates, onSaved }) {
     return (
         <div className="space-y-4 text-sm">
             <div>
-                <div className="label">Venues (Rs per hour)</div>
+                <div className="label">Venues ({CURRENCY} per hour)</div>
                 {Object.entries(r.venues).map(([k, v]) => (
                     <div key={k} className="mb-1.5 flex items-center gap-2">
                         <span className="flex-1">{k}</span>

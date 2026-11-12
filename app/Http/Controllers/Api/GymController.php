@@ -33,7 +33,7 @@ class GymController extends Controller
         $data = $request->validate(['name' => 'required|string|max:80', 'type' => 'required|in:individual,family,trial,guest', 'duration_days' => 'required|integer|min:1|max:730',
             'price' => 'required|numeric|min:0', 'facilities' => 'nullable|string|max:200', 'active' => 'boolean']);
         $plan = $plan?->exists ? tap($plan)->update($data) : GymPlan::create($data);
-        Activity::log('gym', 'plan', "Saved plan {$plan->name} (Rs ".number_format($plan->price).')', $plan);
+        Activity::log('gym', 'plan', "Saved plan {$plan->name} (".\App\Support\Settings::money($plan->price).')', $plan);
 
         return $plan;
     }
@@ -152,9 +152,9 @@ class GymController extends Controller
             'reference' => 'GP-'.strtoupper(Str::random(8)), 'method' => $data['method'] ?? 'qr', 'status' => 'pending',
             'proof_path' => Uploads::store($request->file('proof'), 'gym'),
         ]);
-        Activity::log('gym', 'payment', "{$member->name} started payment {$p->reference} (Rs ".number_format($p->amount).')', $p);
+        Activity::log('gym', 'payment', "{$member->name} started payment {$p->reference} (".\App\Support\Settings::money($p->amount).')', $p);
         if ($p->proof_path) {
-            Activity::alertModule('gym', 2, 'Payment proof received', "{$member->name} · Rs ".number_format($p->amount)." · {$p->reference}", 'info', '/gym?tab=payments', $member->house_id);
+            Activity::alertModule('gym', 2, 'Payment proof received', "{$member->name} · ".\App\Support\Settings::money($p->amount)." · {$p->reference}", 'info', '/gym?tab=payments', $member->house_id);
         }
 
         return $p->toArray() + ['qr' => $this->qrPayload($p, $member)];
@@ -166,7 +166,7 @@ class GymController extends Controller
         $text = implode("\n", array_filter([
             'PAY TO: '.$s['payment_title'], $s['payment_bank'] ? 'BANK: '.$s['payment_bank'] : null, $s['payment_account'] ? 'ACCOUNT: '.$s['payment_account'] : null,
             $s['payment_iban'] ? 'IBAN: '.$s['payment_iban'] : null, $s['payment_wallet'] ? 'WALLET: '.$s['payment_wallet'] : null,
-            'AMOUNT: PKR '.number_format((float) $p->amount, 0, '.', ''), 'REFERENCE: '.$p->reference, 'MEMBER: '.$m->member_no.' '.$m->name,
+            'AMOUNT: '.\App\Support\Settings::get('currency').' '.number_format((float) $p->amount, 0, '.', ''), 'REFERENCE: '.$p->reference, 'MEMBER: '.$m->member_no.' '.$m->name,
         ]));
 
         return ['text' => $text, 'account' => array_intersect_key($s, array_flip(['payment_title', 'payment_bank', 'payment_account', 'payment_iban', 'payment_wallet']))];
@@ -179,7 +179,7 @@ class GymController extends Controller
         abort_unless($u->canManage('gym') || $m->user_id === $u->id || ($m->house_id && $m->house_id === $u->house_id), 403);
         $request->validate(['proof' => 'required|file|mimes:jpg,jpeg,png,pdf|max:8192']);
         $payment->update(['proof_path' => Uploads::store($request->file('proof'), 'gym')]);
-        Activity::alertModule('gym', 2, 'Payment proof received', "{$m->name} · Rs ".number_format($payment->amount)." · {$payment->reference}", 'info', '/gym?tab=payments', $m->house_id);
+        Activity::alertModule('gym', 2, 'Payment proof received', "{$m->name} · ".\App\Support\Settings::money($payment->amount)." · {$payment->reference}", 'info', '/gym?tab=payments', $m->house_id);
         Activity::log('gym', 'payment', "Proof uploaded for {$payment->reference}", $payment);
 
         return $payment;
@@ -240,7 +240,7 @@ class GymController extends Controller
     {
         $this->authorizeManage($request, 'gym');
         $p = $this->recordPaid($member, (float) ($member->plan?->price ?? 0), $member->plan?->duration_days ?? 30, 'cash', $request->user()->id);
-        Activity::log('gym', 'paid', "Cash Rs ".number_format($p->amount)." received from {$member->name}", $p);
+        Activity::log('gym', 'paid', "Cash ".\App\Support\Settings::money($p->amount)." received from {$member->name}", $p);
         Activity::alertUser($member->user_id, 'gym', 'Payment received ✅', 'Valid till '.$member->fresh()->end_date->format('d M Y'), 'success', '/gym');
 
         return $p->load('member');

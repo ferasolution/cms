@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Settings, Map as MapIcon, Navigation, Workflow } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useGet, PageHeader, Form, Spinner, useToast } from '../components/ui';
-import { put, post } from '../lib/api';
+import { put, post, UNIT, CURRENCY } from '../lib/api';
 import { useAuth } from '../lib/auth';
 
 /** Two plots + their real GPS → every plot gets a "Navigate (Google Maps)" link. */
@@ -26,7 +26,7 @@ function GeoCard({ edit, toast }) {
     };
     const row = (k, label) => (
         <div className="grid gap-2 sm:grid-cols-[1fr_120px_120px]">
-            <select className="input" disabled={!edit} value={f[k] || ''} onChange={(e) => set(k, e.target.value)}><option value="">{label}</option>{houses.map((h) => <option key={h.id} value={h.id}>Plot {h.label}</option>)}</select>
+            <select className="input" disabled={!edit} value={f[k] || ''} onChange={(e) => set(k, e.target.value)}><option value="">{label}</option>{houses.map((h) => <option key={h.id} value={h.id}>{UNIT} {h.label}</option>)}</select>
             <input className="input" disabled={!edit} placeholder="Latitude" value={f[k + 'lat'] ?? ''} onChange={(e) => set(k + 'lat', e.target.value)} />
             <input className="input" disabled={!edit} placeholder="Longitude" value={f[k + 'lng'] ?? ''} onChange={(e) => set(k + 'lng', e.target.value)} />
         </div>
@@ -66,7 +66,7 @@ export default function SettingsPage() {
                     n('visitor_max_stay_minutes', 'Default visitor stay (minutes)'), n('visitor_approval_timeout_minutes', 'Gate approval wait alert (minutes)'),
                     { name: 'visitor_approval_required', label: 'Visitors need household approval by default', type: 'checkbox', disabled: !edit },
                     n('event_warning_minutes', 'Event warning before end (minutes)'), n('event_grace_minutes', 'Event grace period (minutes)'),
-                    n('library_loan_days', 'Library loan days'), n('library_fine_per_day', 'Library fine per day (Rs)'),
+                    n('library_loan_days', 'Library loan days'), n('library_fine_per_day', `Library fine per day (${CURRENCY})`),
                     n('late_fee_percent', 'Late payment fee (%)'), n('gym_due_reminder_days', 'Gym due reminder (days before)'),
                     n('work_day_minutes', 'Staff work day (minutes)'), n('late_grace_minutes', 'Late arrival grace (minutes)'),
                     { name: 'payment_title', label: 'Payments: account title', disabled: !edit, half: true }, { name: 'payment_bank', label: 'Bank', disabled: !edit, half: true },

@@ -4,11 +4,14 @@ import { Check, X, Loader2 } from 'lucide-react';
 import { papi } from '../lib/api';
 import { Logo, PlanArt } from './Brand';
 
+const COUNTRIES = [['US', 'United States'], ['CA', 'Canada'], ['GB', 'United Kingdom'], ['AU', 'Australia'], ['AE', 'United Arab Emirates'], ['SA', 'Saudi Arabia'], ['QA', 'Qatar'], ['PK', 'Pakistan'], ['IN', 'India']];
+const guessCountry = () => { const l = (navigator.language || 'en-US').split('-')[1]; return COUNTRIES.some(([c]) => c === l) ? l : 'US'; };
+
 const slugify = (s) => s.toLowerCase().normalize('NFKD').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40);
 
 export default function Register() {
     const [params] = useSearchParams();
-    const [f, setF] = useState({ name: '', slug: '', city: 'Karachi', houses: '', admin_name: '', email: '', phone: '', password: '', plan: params.get('plan') || 'pro', website: '' });
+    const [f, setF] = useState({ name: '', slug: '', city: '', country: guessCountry(), houses: '', admin_name: '', email: '', phone: '', password: '', plan: params.get('plan') || 'pro', website: '' });
     const [touchedSlug, setTouchedSlug] = useState(false);
     const [check, setCheck] = useState(null);
     const [busy, setBusy] = useState(false);
@@ -47,7 +50,7 @@ export default function Register() {
                 <div className="relative"><Logo /></div>
                 <div className="relative">
                     <PlanArt className="w-full max-w-sm" />
-                    <h2 className="mt-8 max-w-sm text-[30px] font-bold leading-tight tracking-tight">Your society gets its own address and its own app.</h2>
+                    <h2 className="mt-8 max-w-sm text-[30px] font-bold leading-tight tracking-tight">Your community gets its own address and its own app.</h2>
                     <p className="mt-3 max-w-sm text-white/60">14 days free with every feature of your plan. No card needed — the platform team will contact you before the trial ends.</p>
                 </div>
                 <div className="relative text-xs text-white/35">Built by Fera Solution</div>
@@ -56,12 +59,12 @@ export default function Register() {
                 <form onSubmit={submit} className="stagger w-full max-w-xl space-y-6">
                     <div className="lg:hidden"><Link to="/" className="text-sm font-semibold text-brand-600">← Fera Community Cloud</Link></div>
                     <div>
-                        <h1 className="text-[30px] font-bold tracking-tight">Register your society</h1>
-                        <p className="mt-1 text-ink/55">Already registered? <Link to="/" className="font-semibold text-brand-600">Find your society</Link></p>
+                        <h1 className="text-[30px] font-bold tracking-tight">Register your community</h1>
+                        <p className="mt-1 text-ink/55">Already registered? <Link to="/" className="font-semibold text-brand-600">Find your community</Link></p>
                     </div>
                     <div className="card space-y-4 p-5">
-                        <div className="font-bold">Society</div>
-                        {field('name', 'Society name', { required: true, placeholder: 'e.g. Bahria Town Precinct 10' })}
+                        <div className="font-bold">Community</div>
+                        {field('name', 'Community name', { required: true, placeholder: 'e.g. Maple Grove Estates HOA' })}
                         <label className="block">
                             <span className="label">Web address</span>
                             <div className="flex items-stretch overflow-hidden rounded-xl border border-ink/12 focus-within:border-brand-500 focus-within:ring-4 focus-within:ring-brand-500/12">
@@ -72,7 +75,11 @@ export default function Register() {
                             {check && check !== 'busy' && !check.ok && <span className="mt-1 block text-xs text-red-600">{check.message || 'Not available'}</span>}
                             {err.slug && <span className="mt-1 block text-xs text-red-600">{err.slug[0]}</span>}
                         </label>
-                        <div className="grid gap-4 sm:grid-cols-2">{field('city', 'City', { required: true })}{field('houses', 'Number of houses (about)', { type: 'number', min: 1 })}</div>
+                        <div className="grid gap-4 sm:grid-cols-3">
+                            <label className="block"><span className="label">Country</span><select className="input" value={f.country} onChange={set('country')}>{COUNTRIES.map(([c, n]) => <option key={c} value={c}>{n}</option>)}</select></label>
+                            {field('city', 'City', { required: true })}{field('houses', 'Homes (about)', { type: 'number', min: 1 })}
+                        </div>
+                        <p className="-mt-1 text-xs text-ink/45">The country sets your currency, time zone and wording — you can change them later in Settings.</p>
                         <div>
                             <span className="label">Plan</span>
                             <div className="grid grid-cols-3 gap-2">{[['basic', 'Basic'], ['pro', 'Pro'], ['enterprise', 'Enterprise']].map(([k, l]) => <button type="button" key={k} onClick={() => setF({ ...f, plan: k })} className={`rounded-xl border px-3 py-2 text-sm font-semibold transition ${f.plan === k ? 'border-brand-500 bg-brand-50 text-brand-700' : 'border-ink/12 hover:border-ink/25'}`}>{l}</button>)}</div>
@@ -80,13 +87,13 @@ export default function Register() {
                     </div>
                     <div className="card space-y-4 p-5">
                         <div className="font-bold">Your account <span className="font-normal text-ink/45">— you become the Super Admin</span></div>
-                        <div className="grid gap-4 sm:grid-cols-2">{field('admin_name', 'Full name', { required: true })}{field('phone', 'Mobile number', { required: true, placeholder: '03xx-xxxxxxx' })}</div>
+                        <div className="grid gap-4 sm:grid-cols-2">{field('admin_name', 'Full name', { required: true })}{field('phone', 'Mobile number', { required: true, placeholder: '+1 (512) 555-0123' })}</div>
                         {field('email', 'Email', { type: 'email', required: true })}
                         {field('password', 'Password (8+ characters)', { type: 'password', required: true, minLength: 8 })}
                         <input className="hidden" tabIndex={-1} autoComplete="off" value={f.website} onChange={set('website')} aria-hidden="true" />
                     </div>
                     {err._ && !Object.keys(err).some((k) => k !== '_') && <p className="rounded-xl bg-red-50 px-4 py-2.5 text-sm text-red-700">{err._}</p>}
-                    <button className="btn-primary w-full py-3 text-[15px]" disabled={busy || (check && check !== 'busy' && !check.ok)}>{busy ? <Loader2 size={16} className="animate-spin" /> : null}Create society and start the trial</button>
+                    <button className="btn-primary w-full py-3 text-[15px]" disabled={busy || (check && check !== 'busy' && !check.ok)}>{busy ? <Loader2 size={16} className="animate-spin" /> : null}Create community and start the free trial</button>
                 </form>
             </div>
         </div>

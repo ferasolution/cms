@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { BookOpen, Plus, BookMarked, FileText, Check, X, Undo2, Pencil } from 'lucide-react';
 import { useList, useGet, PageHeader, Table, Modal, Form, Badge, SearchBox, Select, Tabs, Confirm, useAction, useToast, Empty, Spinner } from '../components/ui';
-import { get, post, del, dt, fileUrl } from '../lib/api';
+import { get, post, del, dt, fileUrl, money } from '../lib/api';
 import { useAuth } from '../lib/auth';
 import { useLive } from '../lib/alerts';
 
@@ -113,7 +113,7 @@ export default function Library() {
                         { label: 'Issued', render: (r) => (r.issued_at ? dt(r.issued_at) : '—') },
                         { label: 'Due', render: (r) => (r.due_at ? dt(r.due_at, false) : '—') },
                         { label: 'Issued by', render: (r) => r.issuer?.name || '—' },
-                        { label: 'Fine', render: (r) => (r.fine > 0 ? 'Rs ' + r.fine : '—') },
+                        { label: 'Fine', render: (r) => (r.fine > 0 ? money(r.fine) : '—') },
                         manage && { label: '', className: 'text-right', render: (r) => (
                             <div className="flex justify-end gap-1">
                                 {r.status === 'requested' && <button className="btn-primary btn-sm" onClick={() => act(() => post('library/issues', { issue_id: r.id }), 'Book issued', refresh)}><Check size={13} />Issue</button>}

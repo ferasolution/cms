@@ -218,7 +218,7 @@ class Automations
             if (now()->lt($end->copy()->addHour()) || ! Cache::add(\App\Support\Tenant::key('ds-over-'.$e->id), 1, 12 * 3600)) {
                 continue;
             }
-            Activity::alertModule('security', 2, ucfirst($s->type).' still inside: '.$s->name, 'Working time ended '.$end->format('h:i A').($e->house ? ' · Plot '.$e->house->label : ''), 'warning', '/security?tab=staff', $e->house_id);
+            Activity::alertModule('security', 2, ucfirst($s->type).' still inside: '.$s->name, 'Working time ended '.$end->format('h:i A').($e->house ? ' · '.\App\Support\Settings::unit().' '.$e->house->label : ''), 'warning', '/security?tab=staff', $e->house_id);
             if (Settings::get('staff_notify_household')) {
                 Activity::alertHouse($e->house_id, 'security', $s->name.' has not left yet', 'Working time ended at '.$end->format('h:i A').'.', 'info', '/security?tab=staff');
             }
@@ -292,7 +292,7 @@ class Automations
         $paid = Transaction::where('category', 'maintenance')->where('period', $period)->pluck('house_id')->flip();
         $unpaid = House::whereHas('residents')->where('monthly_maintenance', '>', 0)->get()->reject(fn ($h) => isset($paid[$h->id]));
         foreach ($unpaid as $h) {
-            Activity::alertHouse($h->id, 'finance', $stage === 'due' ? 'Maintenance bill for '.now()->format('F') : 'Maintenance overdue', 'Rs '.number_format($h->monthly_maintenance).($stage === 'due' ? " — please pay by the {$due}th." : ' — a late fee of '.Settings::get('late_fee_percent').'% may apply.'), $stage === 'due' ? 'info' : 'warning', '/finance');
+            Activity::alertHouse($h->id, 'finance', $stage === 'due' ? 'Maintenance bill for '.now()->format('F') : 'Maintenance overdue', \App\Support\Settings::money($h->monthly_maintenance).($stage === 'due' ? " — please pay by the {$due}th." : ' — a late fee of '.Settings::get('late_fee_percent').'% may apply.'), $stage === 'due' ? 'info' : 'warning', '/finance');
         }
         if ($stage === 'overdue' && $unpaid->count()) {
             Activity::alertModule('finance', 2, $unpaid->count().' households have not paid maintenance', now()->format('F Y').' · '.$unpaid->take(8)->pluck('label')->join(', ').($unpaid->count() > 8 ? '…' : ''), 'warning', '/finance?tab=maintenance');
@@ -311,7 +311,7 @@ class Automations
             ->where(fn ($q) => $q->whereNull('reminded_at')->orWhere('reminded_at', '<', now()->subDays(2)))->limit(100)->get();
         foreach ($list as $b) {
             $late = $b->due_at->isPast() && ! $b->due_at->isToday();
-            Activity::alertUser($b->user_id, 'library', $late ? 'Book overdue: '.$b->book?->title : 'Book due tomorrow: '.$b->book?->title, $late ? 'Fine Rs '.Settings::get('library_fine_per_day').' per day — please return it.' : 'Due '.$b->due_at->format('d M'), $late ? 'warning' : 'info', '/library');
+            Activity::alertUser($b->user_id, 'library', $late ? 'Book overdue: '.$b->book?->title : 'Book due tomorrow: '.$b->book?->title, $late ? 'Fine '.Settings::money(Settings::get('library_fine_per_day')).' per day — please return it.' : 'Due '.$b->due_at->format('d M'), $late ? 'warning' : 'info', '/library');
             $b->forceFill(['reminded_at' => now()])->save();
             $n++;
         }

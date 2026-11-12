@@ -207,13 +207,13 @@ class SecurityOpsController extends Controller
         }
         $hit = VisitorController::watchlistMatch($d['cnic'], $d['phone'] ?? null, null);
         if ($hit && $hit->level === 'blocked') {
-            abort(422, 'This CNIC / phone is blacklisted by security — '.$hit->reason);
+            abort(422, 'This '.\App\Support\Settings::idLabel().' / phone is blacklisted by security — '.$hit->reason);
         }
         $this->staffFiles($request, $d);
         $s = DomesticStaff::create($d + ['code' => GateLog::token('DS', DomesticStaff::class, 'code'), 'created_by' => $u->id, 'verification' => 'pending']);
         $s->load('house');
         Activity::log('security', 'staff', "Registered {$s->type} {$s->name}".($s->house ? ' for '.$s->house->label : '').' — verification pending', $s);
-        Activity::alertModule('security', 3, 'Verify domestic staff: '.$s->name, ucfirst($s->type).($s->house ? ' · Plot '.$s->house->label : '').' · CNIC '.$s->cnic, $hit ? 'warning' : 'info', '/security?tab=staff', $s->house_id);
+        Activity::alertModule('security', 3, 'Verify domestic staff: '.$s->name, ucfirst($s->type).($s->house ? ' · '.\App\Support\Settings::unit().' '.$s->house->label : '').' · '.\App\Support\Settings::idLabel().' '.$s->cnic, $hit ? 'warning' : 'info', '/security?tab=staff', $s->house_id);
 
         return $s;
     }
@@ -278,7 +278,7 @@ class SecurityOpsController extends Controller
             Activity::alertHouse($staff->house_id, 'security', ucfirst($staff->type).' arrived: '.$staff->name, $off ? '⚠ '.$off : 'Entered at '.now()->format('h:i A'), $off ? 'warning' : 'info', '/security?tab=staff');
         }
         if ($off || $staff->verification !== 'verified') {
-            Activity::alertModule('security', 3, 'Staff entry needs attention: '.$staff->name, ($off ?: 'Not verified').($staff->house ? ' · Plot '.$staff->house->label : ''), 'warning', '/security?tab=staff', $staff->house_id);
+            Activity::alertModule('security', 3, 'Staff entry needs attention: '.$staff->name, ($off ?: 'Not verified').($staff->house ? ' · '.\App\Support\Settings::unit().' '.$staff->house->label : ''), 'warning', '/security?tab=staff', $staff->house_id);
         }
 
         return ['action' => 'entry', 'entry' => $e, 'staff' => $staff->load('house', 'inside')];
@@ -306,7 +306,7 @@ class SecurityOpsController extends Controller
         $this->staffOnly($request);
         $d = $request->validate(['service' => 'required|in:ambulance,fire,police,rescue,utility,other', 'house_id' => 'nullable|exists:houses,id', 'location' => 'nullable|string|max:150',
             'vehicle_no' => 'nullable|string|max:30', 'crew' => 'nullable|integer|min:1|max:100', 'contact' => 'nullable|string|max:120', 'notes' => 'nullable|string|max:500', 'gate' => 'nullable|string|max:50']);
-        $labels = ['ambulance' => '🚑 Ambulance', 'fire' => '🚒 Fire brigade', 'police' => '🚓 Police', 'rescue' => '🛟 Rescue 1122', 'utility' => '⚡ Utility emergency', 'other' => '⚠ Emergency service'];
+        $labels = ['ambulance' => '🚑 Ambulance', 'fire' => '🚒 Fire brigade', 'police' => '🚓 Police', 'rescue' => '🛟 Rescue', 'utility' => '⚡ Utility emergency', 'other' => '⚠ Emergency service'];
         $v = Visitor::create([
             'house_id' => $d['house_id'] ?? null, 'name' => $labels[$d['service']].(! empty($d['contact']) ? ' — '.$d['contact'] : ''), 'category' => 'emergency', 'access_type' => 'emergency',
             'emergency_service' => $d['service'], 'purpose' => $d['notes'] ?? ('Emergency '.$d['service'].(! empty($d['location']) ? ' at '.$d['location'] : '')), 'vehicle_no' => isset($d['vehicle_no']) ? strtoupper($d['vehicle_no']) : null,
@@ -316,7 +316,7 @@ class SecurityOpsController extends Controller
         ]);
         GateLog::visitorVehicleIn($v);
         $v->load('house');
-        $where = $v->house ? 'Plot '.$v->house->label.($v->house->street ? ', '.$v->house->street : '') : ($d['location'] ?? 'inside the community');
+        $where = $v->house ? ''.\App\Support\Settings::unit().' '.$v->house->label.($v->house->street ? ', '.$v->house->street : '') : ($d['location'] ?? 'inside the community');
         $sos = $v->house_id ? SosAlert::where('house_id', $v->house_id)->whereIn('status', ['active', 'responding'])->latest('id')->first() : null;
         Activity::log('security', 'emergency_entry', "PRIORITY ENTRY: {$labels[$d['service']]} → {$where}".($sos ? " (SOS #{$sos->id})" : ''), $v);
         Activity::alertModule('security', 2, '🚨 PRIORITY ENTRY: '.$labels[$d['service']], 'Clear the way → '.$where.'. Open the map for the route.', 'danger', $v->house_id ? '/map?house='.$v->house_id.'&route=1' : '/security?tab=emergency', $v->house_id);

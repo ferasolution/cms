@@ -23,12 +23,14 @@ class SecurityDemo
         if (Camera::exists()) {
             return;
         }
+        $D = \App\Support\DemoData::for();
+        $pk = $D === \App\Support\DemoData::PK;
         // cameras (demo feeds until real NVR / camera URLs are entered)
         foreach ([
-            ['Main Gate — Entry', 'Main Gate', 'Rashid Minhas Road entrance', 392, 492],
+            ['Main Gate — Entry', 'Main Gate', $D['gate_road'], 392, 492],
             ['Main Gate — Exit', 'Main Gate', 'Exit lane', 404, 520],
-            ['Gate 2', 'Gate 2', 'Graveyard Road entrance', 1100, 150],
-            ['Central Park', null, 'Park & mosque', 650, 445],
+            ['Gate 2', 'Gate 2', $pk ? 'Graveyard Road entrance' : 'Service road entrance', 1100, 150],
+            ['Central Park', null, $pk ? 'Park & mosque' : 'Park & clubhouse', 650, 445],
             ['Shopping Complex', null, 'Commercial area', 772, 410],
             ['North Park', null, 'North park & office', 760, 205],
         ] as $i => [$n, $g, $l, $x, $y]) {
@@ -38,16 +40,16 @@ class SecurityDemo
         // patrol checkpoints around Block 19
         $cps = [];
         foreach ([
-            ['Main Gate', 400, 505], ['Mosque', 484, 446], ['Central Park', 686, 443], ['Shopping Complex', 772, 425], ['North Park', 752, 188],
+            ['Main Gate', 400, 505], [$D['mosque'], 484, 446], ['Central Park', 686, 443], ['Shopping Complex', 772, 425], ['North Park', 752, 188],
             ['Community Office', 869, 250], ['Gate 2', 1105, 155], ['East Corner', 1285, 545], ['South Corner', 530, 715], ['North-West Corner', 605, 45],
         ] as $i => [$n, $x, $y]) {
-            $cps[] = PatrolCheckpoint::create(['code' => GateLog::token('CP', PatrolCheckpoint::class, 'code'), 'name' => $n, 'location' => 'Block 19', 'map_x' => $x, 'map_y' => $y, 'sort' => $i]);
+            $cps[] = PatrolCheckpoint::create(['code' => GateLog::token('CP', PatrolCheckpoint::class, 'code'), 'name' => $n, 'location' => \App\Support\Tenant::get()?->name ?? 'Community', 'map_x' => $x, 'map_y' => $y, 'sort' => $i]);
         }
 
         // guards + this week's shifts
         $guards = Employee::where('department', 'Security')->get();
-        foreach (['Nadeem Akhtar', 'Shahid Khan'] as $k => $n) {
-            $guards->push(Employee::create(['code' => 'EMP-G'.($k + 1), 'name' => $n, 'department' => 'Security', 'designation' => 'Security Guard', 'phone' => '0301-55500'.$k, 'joined_on' => now()->subYear(), 'shift_start' => '07:00', 'shift_end' => '15:00']));
+        foreach ($D['guards'] as $k => $n) {
+            $guards->push(Employee::create(['code' => 'EMP-G'.($k + 1), 'name' => $n, 'department' => 'Security', 'designation' => 'Security Guard', 'phone' => \App\Support\DemoData::phone(5550 + $k, $D), 'joined_on' => now()->subYear(), 'shift_start' => '07:00', 'shift_end' => '15:00']));
         }
         $slots = SecurityOpsController::slots();
         $plan = [['morning', 'Main Gate'], ['evening', 'Main Gate'], ['night', 'Main Gate'], ['morning', 'Gate 2']];
@@ -94,16 +96,12 @@ class SecurityDemo
         // domestic staff
         $houses = House::whereNotNull('map_x')->inRandomOrder()->limit(8)->pluck('id')->all();
         $resHouse = User::where('email', 'resident@demo.local')->value('house_id') ?? ($houses[0] ?? null);
-        $people = [
-            ['Shabana Bibi', 'maid', '42101-1112223-4', 'Mon,Tue,Wed,Thu,Fri,Sat', '09:00', '13:00', 'verified', $resHouse, true],
-            ['Akbar Ali', 'driver', '42201-2223334-5', 'Mon,Tue,Wed,Thu,Fri', '08:00', '18:00', 'verified', $resHouse, true],
-            ['Gul Muhammad', 'gardener', '42301-3334445-6', 'Tue,Fri', '07:00', '11:00', 'verified', $houses[1] ?? null, false],
-            ['Rubina', 'cook', '42101-4445556-7', 'Mon,Tue,Wed,Thu,Fri,Sat,Sun', '11:00', '20:00', 'verified', $houses[2] ?? null, true],
-            ['Sajid Masih', 'cleaner', '42101-5556667-8', 'Mon,Wed,Fri', '10:00', '12:00', 'pending', $houses[3] ?? null, false],
-            ['Naseem Akhtar', 'nanny', '42101-6667778-9', 'Mon,Tue,Wed,Thu,Fri', '08:00', '17:00', 'pending', $houses[4] ?? null, false],
-        ];
+        $types = [['maid', 'Mon,Tue,Wed,Thu,Fri,Sat', '09:00', '13:00', 'verified', $resHouse, true], ['driver', 'Mon,Tue,Wed,Thu,Fri', '08:00', '18:00', 'verified', $resHouse, true],
+            ['gardener', 'Tue,Fri', '07:00', '11:00', 'verified', $houses[1] ?? null, false], ['cook', 'Mon,Tue,Wed,Thu,Fri,Sat,Sun', '11:00', '20:00', 'verified', $houses[2] ?? null, true],
+            ['cleaner', 'Mon,Wed,Fri', '10:00', '12:00', 'pending', $houses[3] ?? null, false], ['nanny', 'Mon,Tue,Wed,Thu,Fri', '08:00', '17:00', 'pending', $houses[4] ?? null, false]];
+        $people = array_map(fn ($t, $k) => [$D['domestic'][$k], $t[0], \App\Support\DemoData::idNumber(700 + $k, $D), ...array_slice($t, 1)], $types, array_keys($types));
         foreach ($people as [$n, $t, $c, $days, $f, $to, $ver, $h, $in]) {
-            $s = DomesticStaff::create(['code' => GateLog::token('DS', DomesticStaff::class, 'code'), 'house_id' => $h, 'name' => $n, 'type' => $t, 'cnic' => $c, 'phone' => '0300-'.rand(1000000, 9999999),
+            $s = DomesticStaff::create(['code' => GateLog::token('DS', DomesticStaff::class, 'code'), 'house_id' => $h, 'name' => $n, 'type' => $t, 'cnic' => $c, 'phone' => \App\Support\DemoData::phone(rand(1, 99999), $D),
                 'work_days' => $days, 'time_from' => $f, 'time_to' => $to, 'verification' => $ver, 'verified_by' => $ver === 'verified' ? $boss : null, 'verified_at' => $ver === 'verified' ? now()->subDays(20) : null,
                 'valid_until' => today()->addMonths(6), 'created_by' => $boss]);
             for ($d = 3; $d >= 1; $d--) {

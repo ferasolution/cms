@@ -27,6 +27,17 @@ class Tenant
         Settings::flush();
     }
 
+    /** Dates are stored and shown in the society's own timezone (Settings → region). */
+    public static function applyTimezone(): void
+    {
+        static $base = null;
+        $base ??= config('app.timezone');
+        $tz = self::$current ? Settings::get('timezone') : null;
+        $tz = $tz && in_array($tz, timezone_identifiers_list(), true) ? $tz : $base;
+        config(['app.timezone' => $tz]);
+        date_default_timezone_set($tz);
+    }
+
     public static function get(): ?Society
     {
         return self::$current;

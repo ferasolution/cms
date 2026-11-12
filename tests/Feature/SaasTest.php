@@ -23,7 +23,7 @@ class SaasTest extends TestCase
 
     private function signUp(array $o = []): array
     {
-        return $this->postJson('/_p/api/register', $o + ['name' => 'Bahria Town Precinct 10', 'slug' => 'bahria', 'city' => 'Karachi', 'admin_name' => 'Bahria Admin',
+        return $this->postJson('/_p/api/register', $o + ['name' => 'Willow Creek Estates', 'slug' => 'bahria', 'city' => 'Austin', 'country' => 'US', 'admin_name' => 'Sarah Mitchell',
             'email' => 'admin@bahria.pk', 'phone' => '0300-1234567', 'password' => 'bahria-pass-1', 'houses' => 220])->assertSuccessful()->json();
     }
 
@@ -36,8 +36,11 @@ class SaasTest extends TestCase
         $this->assertSame('trial', $soc->status);
 
         // the new admin is signed in to their own society only
-        $this->getJson('/bahria/api/me')->assertSuccessful()->assertJsonPath('user.role', 'super_admin')->assertJsonPath('community', 'Bahria Town Precinct 10');
+        $this->getJson('/bahria/api/me')->assertSuccessful()->assertJsonPath('user.role', 'super_admin')->assertJsonPath('community', 'Willow Creek Estates');
         $this->getJson('/bahria/api/houses')->assertSuccessful()->assertJsonPath('total', 0);
+        // region preset from the country: dollars, US wording; Block 19 keeps rupees & CNIC
+        $this->getJson('/bahria/api/settings')->assertJsonPath('currency', 'USD')->assertJsonPath('id_label', 'ID number')->assertJsonPath('unit_label', 'Lot');
+        $this->get('/block19/')->assertSee('"currency":"PKR"', false)->assertSee('"id_label":"CNIC"', false);
         $this->getJson('/bahria/api/users')->assertSuccessful()->assertJsonPath('total', 1);
         $this->getJson('/block19/api/me')->assertUnauthorized();                       // other society → guest
         $this->getJson('/bahria/api/houses/'.House::withoutGlobalScopes()->where('society_id', 1)->value('id'))->assertNotFound();   // a Block 19 house
@@ -66,7 +69,7 @@ class SaasTest extends TestCase
         $this->getJson('/_p/api/slug-check?slug=block19')->assertJsonPath('ok', false);
         $this->getJson('/_p/api/slug-check?slug=security')->assertJsonPath('ok', false);   // a portal page name
         $this->getJson('/_p/api/slug-check?slug=dha-phase-6')->assertJsonPath('ok', true);
-        $this->postJson('/_p/api/register', ['name' => 'X', 'slug' => 'api', 'city' => 'K', 'admin_name' => 'A', 'email' => 'a@b.pk', 'phone' => '1', 'password' => 'password1'])->assertUnprocessable();
+        $this->postJson('/_p/api/register', ['name' => 'X', 'slug' => 'api', 'city' => 'K', 'country' => 'US', 'admin_name' => 'A', 'email' => 'a@b.pk', 'phone' => '1', 'password' => 'password1'])->assertUnprocessable();
         $this->getJson('/_p/api/lookup?q=block')->assertSuccessful()->assertJsonPath('0.slug', 'block19');
     }
 

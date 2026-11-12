@@ -56,10 +56,10 @@ class FinanceController extends Controller
         $t = Transaction::create($data + ['recorded_by' => $request->user()->id, 'status' => $data['status'] ?? 'paid']);
         $t->load('house', 'staff');
         $who = $t->house?->label ?? $t->staff?->name ?? $t->party;
-        Activity::log('finance', $t->type, ucfirst($t->type).' Rs '.number_format($t->amount).' — '.$t->category.($who ? " ({$who})" : ''), $t);
+        Activity::log('finance', $t->type, ucfirst($t->type).' '.\App\Support\Settings::money($t->amount).' — '.$t->category.($who ? " ({$who})" : ''), $t);
         if ($t->type === 'revenue' && $t->house_id) {
             foreach ($t->house->residents as $r) {
-                Activity::alertUser($r->id, 'finance', 'Payment received', 'Rs '.number_format($t->amount).' for '.$t->category.($t->period ? ' ('.$t->period.')' : ''), 'success');
+                Activity::alertUser($r->id, 'finance', 'Payment received', \App\Support\Settings::money($t->amount).' for '.$t->category.($t->period ? ' ('.$t->period.')' : ''), 'success');
             }
         }
 
@@ -69,7 +69,7 @@ class FinanceController extends Controller
     public function destroy(Request $request, Transaction $transaction)
     {
         abort_unless($request->user()->canApprove('finance'), 403, 'You need Manage access on Finance to delete entries.');
-        Activity::log('finance', 'delete', 'Deleted '.$transaction->type.' entry Rs '.number_format($transaction->amount));
+        Activity::log('finance', 'delete', 'Deleted '.$transaction->type.' entry '.\App\Support\Settings::money($transaction->amount));
         $transaction->delete();
 
         return response()->noContent();
@@ -173,8 +173,8 @@ class FinanceController extends Controller
         $data['receipt_path'] = Uploads::store($request->file('receipt'), 'receipts');
         unset($data['receipt']);
         $er = ExpenseRequest::create($data + ['requested_by' => $request->user()->id]);
-        Activity::log('finance', 'request', "{$request->user()->name} requested Rs ".number_format($er->amount)." — {$er->title}", $er);
-        Activity::alertAdmins('finance', 'Expense approval needed', "{$er->title} · Rs ".number_format($er->amount)." by {$request->user()->name}", 'warning', '/finance');
+        Activity::log('finance', 'request', "{$request->user()->name} requested ".\App\Support\Settings::money($er->amount)." — {$er->title}", $er);
+        Activity::alertAdmins('finance', 'Expense approval needed', "{$er->title} · ".\App\Support\Settings::money($er->amount)." by {$request->user()->name}", 'warning', '/finance');
 
         return $er;
     }
@@ -185,10 +185,10 @@ class FinanceController extends Controller
         $data = $request->validate(['status' => 'required|in:approved,rejected', 'review_note' => 'nullable|string|max:1000']);
         abort_if($expenseRequest->status !== 'pending', 422, 'Already reviewed.');
         $expenseRequest->update($data + ['reviewed_by' => $request->user()->id, 'reviewed_at' => now()]);
-        Activity::log('finance', $data['status'], ucfirst($data['status'])." expense request \"{$expenseRequest->title}\" (Rs ".number_format($expenseRequest->amount).')', $expenseRequest);
+        Activity::log('finance', $data['status'], ucfirst($data['status'])." expense request \"{$expenseRequest->title}\" (".\App\Support\Settings::money($expenseRequest->amount).')', $expenseRequest);
         Activity::alertUser($expenseRequest->requested_by, 'finance', 'Expense request '.$data['status'], $expenseRequest->title, $data['status'] === 'approved' ? 'success' : 'danger', '/finance');
         if ($data['status'] === 'approved') {
-            Activity::alertModule('finance', 2, 'Approved expense to pay', $expenseRequest->title.' · Rs '.number_format($expenseRequest->amount), 'info', '/finance');
+            Activity::alertModule('finance', 2, 'Approved expense to pay', $expenseRequest->title.' · '.\App\Support\Settings::money($expenseRequest->amount), 'info', '/finance');
         }
 
         return $expenseRequest->load('requester', 'reviewer');
@@ -205,8 +205,8 @@ class FinanceController extends Controller
             'party' => $expenseRequest->requester->name, 'reference' => 'EXR-'.$expenseRequest->id, 'date' => now()->toDateString(),
             'description' => $expenseRequest->title, 'receipt_path' => $expenseRequest->receipt_path, 'recorded_by' => $request->user()->id,
         ]);
-        Activity::log('finance', 'paid', "Paid expense request \"{$expenseRequest->title}\" Rs ".number_format($expenseRequest->amount), $expenseRequest);
-        Activity::alertUser($expenseRequest->requested_by, 'finance', 'Expense paid', $expenseRequest->title.' · Rs '.number_format($expenseRequest->amount), 'success');
+        Activity::log('finance', 'paid', "Paid expense request \"{$expenseRequest->title}\" ".\App\Support\Settings::money($expenseRequest->amount), $expenseRequest);
+        Activity::alertUser($expenseRequest->requested_by, 'finance', 'Expense paid', $expenseRequest->title.' · '.\App\Support\Settings::money($expenseRequest->amount), 'success');
 
         return $expenseRequest->load('requester', 'reviewer');
     }

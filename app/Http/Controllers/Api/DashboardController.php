@@ -57,10 +57,10 @@ class DashboardController extends Controller
             $rev = Transaction::where('type', 'revenue')->whereBetween('date', $range)->sum('amount');
             $exp = Transaction::whereIn('type', ['expense', 'salary'])->whereBetween('date', $range)->sum('amount');
             $paid = Transaction::where('category', 'maintenance')->where('period', now()->format('Y-m'))->distinct('house_id')->count('house_id');
-            $cards[] = ['module' => 'finance', 'label' => 'Revenue this month', 'value' => (float) $rev, 'money' => true, 'sub' => 'Expenses Rs '.number_format($exp).' · '.$paid.'/'.House::count().' maintenance paid'];
+            $cards[] = ['module' => 'finance', 'label' => 'Revenue this month', 'value' => (float) $rev, 'money' => true, 'sub' => 'Expenses '.\App\Support\Settings::money($exp).' · '.$paid.'/'.House::count().' maintenance paid'];
         } elseif ($own && $u->house) {
             $paid = Transaction::where('house_id', $hid)->where('category', 'maintenance')->where('period', now()->format('Y-m'))->exists();
-            $cards[] = ['module' => 'finance', 'label' => 'This month\'s maintenance', 'value' => $paid ? 'Paid' : 'Due', 'sub' => 'Rs '.number_format($u->house->monthly_maintenance).' / month', 'warn' => ! $paid];
+            $cards[] = ['module' => 'finance', 'label' => 'This month\'s maintenance', 'value' => $paid ? 'Paid' : 'Due', 'sub' => \App\Support\Settings::money($u->house->monthly_maintenance).' / month', 'warn' => ! $paid];
         }
         if ($u->canView('events')) {
             $q = $own ? Event::where('requested_by', $u->id) : Event::query();

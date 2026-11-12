@@ -28,6 +28,7 @@ class SettingsController extends Controller
         'staff_auto_checkout_hours' => 'integer|min:0|max:24', 'noc_sla_days' => 'integer|min:0|max:60', 'daily_digest' => 'boolean', 'leave_auto_status' => 'boolean',
         // security suite
         'gate_names' => 'nullable|string|max:500', 'gate_receipt_footer' => 'nullable|string|max:255', 'shift_slots' => 'nullable|string|max:500', 'shift_posts' => 'nullable|string|max:500',
+        'country' => 'string|size:2', 'currency' => 'string|size:3', 'timezone' => 'timezone', 'locale' => 'string|max:10', 'unit_label' => 'string|max:20', 'id_label' => 'string|max:30',
         'shift_late_minutes' => 'integer|min:0|max:240', 'shift_alerts' => 'boolean', 'patrol_interval_minutes' => 'integer|min:0|max:1440', 'patrol_alerts' => 'boolean',
         'staff_schedule_alerts' => 'boolean', 'staff_notify_household' => 'boolean',
     ];

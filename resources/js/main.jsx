@@ -27,6 +27,7 @@ const Workspace = lazy(() => import('./pages/Workspace'));
 const ActivityPage = lazy(() => import('./pages/ActivityPage'));
 const AutomationsPage = lazy(() => import('./pages/AutomationsPage'));
 const Profile = lazy(() => import('./pages/Profile'));
+const Billing = lazy(() => import('./pages/Billing'));
 
 const Loading = () => <div className="grid h-full place-items-center"><Spinner /></div>;
 
@@ -53,6 +54,7 @@ function App() {
                         {employee && <Route path="workspace" element={<Workspace />} />}
                         {isAdmin && <Route path="activity" element={<ActivityPage />} />}
                         {isAdmin && <Route path="automations" element={<AutomationsPage />} />}
+                        {isAdmin && <Route path="billing" element={<Billing />} />}
                         <Route path="profile" element={<Profile />} />
                         <Route path="*" element={<Navigate to="/" replace />} />
                     </Route>

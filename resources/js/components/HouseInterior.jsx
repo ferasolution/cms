@@ -1,4 +1,5 @@
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { UNIT } from '../lib/api';
 import { createPortal } from 'react-dom';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { CameraControls, RoundedBox, Environment, Lightformer } from '@react-three/drei';
@@ -752,7 +753,7 @@ export default function HouseInterior({ house, signals = [], onClose, onRoute })
                 <div className="pointer-events-auto flex items-center gap-3 rounded-2xl bg-white/85 px-3 py-2 text-stone-800 shadow-lg backdrop-blur">
                     <button onClick={onClose} className="grid size-9 place-items-center rounded-xl bg-stone-900 text-white" title="Back to map"><X size={17} /></button>
                     <div>
-                        <div className="text-sm font-bold leading-tight">Plot {house.label} <span className="font-normal text-stone-500">· {plan.kind}</span></div>
+                        <div className="text-sm font-bold leading-tight">{UNIT} {house.label} <span className="font-normal text-stone-500">· {plan.kind}</span></div>
                         <div className="text-[11px] text-stone-500">{house.owner || 'Owner not set'} · {plan.floors.length} floor{plan.floors.length > 1 ? 's' : ''} · ~{covered} m² covered · plot {Math.round(plan.plotW)}×{Math.round(plan.plotD)} m</div>
                     </div>
                 </div>
