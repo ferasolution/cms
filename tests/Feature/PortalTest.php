@@ -388,6 +388,7 @@ class PortalTest extends TestCase
         $this->actingAs($guard)->getJson('/api/patrol')->assertSuccessful()->assertJsonPath('checkpoints.0.overdue', false);
 
         // shifts: schedule → check in → handover → next guard acknowledges
+        $this->travelTo(today()->setTime(11, 0));   // keep both shifts on the same day whatever the clock says
         $e1 = \App\Models\Employee::where('user_id', $guard->id)->first();
         $e2 = \App\Models\Employee::where('user_id', $boss->id)->first();
         $a = $this->actingAs($boss)->postJson('/api/shifts', ['employee_id' => $e1->id, 'post' => 'Main Gate', 'date' => today()->toDateString(), 'slot' => 'custom', 'from' => now()->subMinutes(30)->format('H:i'), 'to' => now()->addHours(2)->format('H:i')])->assertSuccessful()->json();
