@@ -4,7 +4,7 @@ import { Check, X, Loader2 } from 'lucide-react';
 import { papi } from '../lib/api';
 import { Logo, PlanArt } from './Brand';
 
-const COUNTRIES = [['US', 'United States'], ['CA', 'Canada'], ['GB', 'United Kingdom'], ['AU', 'Australia'], ['AE', 'United Arab Emirates'], ['SA', 'Saudi Arabia'], ['QA', 'Qatar'], ['PK', 'Pakistan'], ['IN', 'India']];
+const COUNTRIES = [['US', 'United States'], ['CA', 'Canada'], ['GB', 'United Kingdom'], ['AU', 'Australia'], ['AE', 'United Arab Emirates'], ['SA', 'Saudi Arabia'], ['QA', 'Qatar'], ['PK', 'Pakistan']];
 const guessCountry = () => { const l = (navigator.language || 'en-US').split('-')[1]; return COUNTRIES.some(([c]) => c === l) ? l : (window.APP?.default_country || 'US'); };
 
 const slugify = (s) => s.toLowerCase().normalize('NFKD').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40);

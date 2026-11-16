@@ -7,7 +7,7 @@ import { Logo } from '../Brand';
 export const STATUS = { active: 'bg-emerald-50 text-emerald-700', trial: 'bg-sky-50 text-sky-700', suspended: 'bg-red-50 text-red-700', expired: 'bg-amber-50 text-amber-700' };
 export const usd = (n, digits = 0) => '$' + Number(n || 0).toLocaleString('en-US', { minimumFractionDigits: digits, maximumFractionDigits: digits === 0 ? 0 : 2 });
 export const FLAG = (c) => (c && c.length === 2 ? String.fromCodePoint(...[...c.toUpperCase()].map((x) => 127397 + x.charCodeAt(0))) : '');
-export const COUNTRIES = [['US', 'United States'], ['CA', 'Canada'], ['GB', 'United Kingdom'], ['AU', 'Australia'], ['AE', 'United Arab Emirates'], ['SA', 'Saudi Arabia'], ['QA', 'Qatar'], ['PK', 'Pakistan'], ['IN', 'India']].map(([value, label]) => ({ value, label }));
+export const COUNTRIES = [['US', 'United States'], ['CA', 'Canada'], ['GB', 'United Kingdom'], ['AU', 'Australia'], ['AE', 'United Arab Emirates'], ['SA', 'Saudi Arabia'], ['QA', 'Qatar'], ['PK', 'Pakistan']].map(([value, label]) => ({ value, label }));
 export const PROVIDER = { lemonsqueezy: 'Lemon Squeezy', stripe: 'Stripe', manual: 'Manual' };
 
 export function StatusPill({ status }) {

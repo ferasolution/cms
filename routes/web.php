@@ -276,6 +276,8 @@ Route::prefix('api')->middleware(ResolveSociety::class)->group($api);
 Route::get('files/{path}', [Api\FileController::class, 'show'])->where('path', '.*')->middleware([ResolveSociety::class, 'auth']);
 
 // ---------------------------------------------------------------- platform pages
+// links that carry the server's /public folder name: send them to the real address
+Route::get('public/{any?}', fn (?string $any = null) => redirect('/'.ltrim((string) $any, '/').(request()->getQueryString() ? '?'.request()->getQueryString() : ''), 301))->where('any', '.*');
 Route::get('/', [SpaController::class, 'platform'])->name('login');
 Route::get('register', [SpaController::class, 'platform']);
 Route::get('platform/{any?}', [SpaController::class, 'platform'])->where('any', '.*');

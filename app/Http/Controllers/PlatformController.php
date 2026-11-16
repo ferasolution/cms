@@ -63,7 +63,7 @@ class PlatformController extends Controller
         }
         $request->merge(['slug' => strtolower((string) $request->input('slug'))]);
         $d = $request->validate([
-            'name' => 'required|string|max:120', 'slug' => $this->slugRules(), 'city' => 'required|string|max:80', 'address' => 'nullable|string|max:255', 'country' => 'required|string|size:2',
+            'name' => 'required|string|max:120', 'slug' => $this->slugRules(), 'city' => 'required|string|max:80', 'address' => 'nullable|string|max:255', 'country' => 'required|string|in:US,CA,GB,AU,AE,SA,QA,PK',
             'houses' => 'nullable|integer|min:1|max:20000', 'admin_name' => 'required|string|max:120', 'email' => 'required|email|max:190', 'phone' => 'required|string|max:30',
             'password' => 'required|string|min:8|max:100', 'plan' => ['nullable', Rule::in(Plans::keys())],
         ]);

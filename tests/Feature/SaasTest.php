@@ -114,4 +114,12 @@ class SaasTest extends TestCase
         $this->postJson('/_p/api/login', ['email' => 'owner@fera.pk', 'password' => 'owner-pass-123'])->assertSuccessful();
         $this->getJson('/_p/api/overview')->assertSuccessful();
     }
+
+    public function test_public_folder_links_redirect_and_unsupported_country_is_refused(): void
+    {
+        $this->get('/public/demo')->assertRedirect('/demo');
+        $this->get('/public/block19/visitors?tab=staff')->assertRedirect('/block19/visitors?tab=staff');
+        $this->postJson('/_p/api/register', ['name' => 'Delhi Heights', 'slug' => 'delhi-heights', 'city' => 'Delhi', 'country' => 'IN', 'admin_name' => 'A', 'email' => 'a@d.test', 'phone' => '1', 'password' => 'pass-12345'])
+            ->assertUnprocessable()->assertJsonValidationErrors('country');
+    }
 }
