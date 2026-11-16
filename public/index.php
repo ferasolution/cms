@@ -1,5 +1,11 @@
 <?php
 
+// Links that carry the server's folder name (cms.ferasolution.com/public/demo) -> the real address.
+if (preg_match('#^/public(/[^?]*)?(\?.*)?$#', $_SERVER['REQUEST_URI'] ?? '', $m)) {
+    header('Location: '.(($m[1] ?? '') !== '' ? $m[1] : '/').($m[2] ?? ''), true, 301);
+    exit;
+}
+
 use Illuminate\Foundation\Application;
 use Illuminate\Http\Request;
 

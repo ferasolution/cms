@@ -3,9 +3,6 @@
 <IfModule mod_rewrite.c>
     RewriteEngine On
     RewriteRule ^(\.env|\.git|composer\.(json|lock)|package(-lock)?\.json|artisan|vendor/|storage/|bootstrap/|config/|database/|routes/|app/|resources/|tests/) - [F,L,NC]
-    # old links with /public in them (cms.ferasolution.com/public/demo) -> the real address
-    RewriteCond %{THE_REQUEST} \s/public/([^\s?]*) [NC]
-    RewriteRule ^ /%1 [R=301,L,NE]
     RewriteCond %{REQUEST_URI} !^/public/
     RewriteRule ^(.*)$ public/$1 [L]
 </IfModule>

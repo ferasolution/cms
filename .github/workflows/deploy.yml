@@ -92,6 +92,7 @@ jobs:
           server-dir: ${{ secrets.FTP_DIR || './' }}
           timeout: 600000
           exclude: |
+            .htaccess
             **/.git*
             **/.git*/**
             **/node_modules/**
