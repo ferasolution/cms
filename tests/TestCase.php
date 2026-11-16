@@ -11,5 +11,7 @@ abstract class TestCase extends BaseTestCase
     {
         parent::setUp();
         Tenant::set(null);   // the current society is static — never carry it from one test into the next
+        \App\Support\Platform::reset();
+        \App\Services\Billing::reset();
     }
 }

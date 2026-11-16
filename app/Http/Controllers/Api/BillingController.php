@@ -20,7 +20,7 @@ class BillingController extends Controller
 
         return [
             'society' => $s->publicInfo() + ['open' => $s->isOpen(), 'billing_status' => $s->billing_status, 'renews_at' => $s->billing_renews_at, 'subscribed' => (bool) $s->billing_subscription_id, 'houses' => \App\Models\House::count()],
-            'plans' => collect(Plans::PLANS)->map(fn ($p, $k) => ['key' => $k, 'name' => $p['name'], 'price' => $p['price'], 'max_houses' => $p['max_houses'], 'modules' => $p['modules'] === '*' ? 'all' : count($p['modules'])])->values(),
+            'plans' => collect(Plans::all())->map(fn ($p, $k) => ['key' => $k, 'name' => $p['name'], 'price' => $p['price'], 'max_houses' => $p['max_houses'], 'modules' => $p['modules'] === '*' ? 'all' : count($p['modules'])])->values(),
             'online' => Billing::ready(),
             'provider' => Billing::provider(),
             'support_email' => Billing::config()['support_email'] ?: null,
@@ -31,9 +31,9 @@ class BillingController extends Controller
     public function checkout(Request $request)
     {
         abort_unless($request->user()->isAdmin(), 403, 'Only community admins can change the subscription.');
-        $d = $request->validate(['plan' => ['required', Rule::in(array_keys(Plans::PLANS))]]);
+        $d = $request->validate(['plan' => ['required', Rule::in(Plans::keys())]]);
         $s = Tenant::get();
-        $limit = Plans::PLANS[$d['plan']]['max_houses'];
+        $limit = Plans::get($d["plan"])["max_houses"];
         if ($limit && \App\Models\House::count() > $limit) {
             return response()->json(['message' => "This community has more than {$limit} homes — please pick a bigger plan."], 422);
         }

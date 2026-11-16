@@ -5,7 +5,7 @@ import { papi } from '../lib/api';
 import { Logo, PlanArt } from './Brand';
 
 const COUNTRIES = [['US', 'United States'], ['CA', 'Canada'], ['GB', 'United Kingdom'], ['AU', 'Australia'], ['AE', 'United Arab Emirates'], ['SA', 'Saudi Arabia'], ['QA', 'Qatar'], ['PK', 'Pakistan'], ['IN', 'India']];
-const guessCountry = () => { const l = (navigator.language || 'en-US').split('-')[1]; return COUNTRIES.some(([c]) => c === l) ? l : 'US'; };
+const guessCountry = () => { const l = (navigator.language || 'en-US').split('-')[1]; return COUNTRIES.some(([c]) => c === l) ? l : (window.APP?.default_country || 'US'); };
 
 const slugify = (s) => s.toLowerCase().normalize('NFKD').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40);
 
@@ -34,6 +34,15 @@ export default function Register() {
             window.location.href = r.redirect;
         } catch (ex) { setErr({ ...ex.errors, _: ex.message }); setBusy(false); }
     };
+    if (window.APP?.registration_open === false) {
+        return (
+            <div className="grid min-h-full place-items-center bg-night p-6 text-center text-white">
+                <div className="max-w-md"><div className="mb-6 flex justify-center"><Logo /></div><h1 className="text-2xl font-bold">New sign-ups are paused</h1>
+                    <p className="mt-3 text-white/65">We're not taking new communities through the website right now. You can still try the live demo.</p>
+                    <div className="mt-6 flex justify-center gap-3"><a href="/demo/" className="btn bg-sand-400 text-night">Open the live demo</a><Link to="/" className="btn border border-white/15">Back to home</Link></div></div>
+            </div>
+        );
+    }
     const field = (k, label, props = {}) => (
         <label className="block">
             <span className="label">{label}</span>

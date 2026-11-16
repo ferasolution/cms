@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Society;
 use App\Support\Plans;
+use App\Models\Platform\BillingEvent;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Crypt;
@@ -104,14 +105,14 @@ class Billing
     /** A hosted checkout page for this society and plan. */
     public static function checkout(Society $s, string $plan, string $email, string $returnUrl): string
     {
-        if (! isset(Plans::PLANS[$plan])) {
+        if (! isset(Plans::all()[$plan])) {
             throw new RuntimeException('Unknown plan.');
         }
         if (! self::ready()) {
             throw new RuntimeException('Online payment is not switched on yet. Please contact the platform team.');
         }
         $c = self::config();
-        $p = Plans::PLANS[$plan];
+        $p = Plans::all()[$plan];
 
         if (self::provider() === 'lemonsqueezy') {
             $variant = $c['ls_variant_'.$plan] ?? '';
@@ -202,6 +203,17 @@ class Billing
         $event = $p['meta']['event_name'] ?? '';
         $a = $p['data']['attributes'] ?? [];
         $sid = $p['meta']['custom_data']['society_id'] ?? null;
+        if (($p['data']['type'] ?? '') === 'subscription-invoices') {          // a charge (first, renewal or refund)
+            $soc = ($sid ? Society::find($sid) : null) ?? Society::where('billing_subscription_id', (string) ($a['subscription_id'] ?? '-'))->first();
+            $refund = str_contains($event, 'refund');
+            BillingEvent::record($soc, 'lemonsqueezy', $refund ? 'refund' : 'payment', [
+                'amount' => round(((int) ($refund ? ($a['refunded_amount'] ?? $a['total'] ?? 0) : ($a['total'] ?? 0))) / 100, 2) * ($refund ? -1 : 1),
+                'currency' => strtoupper($a['currency'] ?? 'USD'), 'status' => $a['status'] ?? null, 'plan' => $soc?->plan,
+                'reference' => 'inv_'.($p['data']['id'] ?? uniqid()).($refund ? '_r' : ''), 'description' => $refund ? 'Refund' : (($a['billing_reason'] ?? '') === 'initial' ? 'First payment' : 'Renewal'),
+            ]);
+
+            return [200, 'OK'];
+        }
         if (! str_starts_with($event, 'subscription_') || ($p['data']['type'] ?? '') !== 'subscriptions') {
             return [200, 'Ignored.'];
         }
@@ -210,7 +222,7 @@ class Billing
             return [200, 'Unknown society.'];
         }
         $c = self::config();
-        $plan = collect(array_keys(Plans::PLANS))->first(fn ($k) => (string) $c['ls_variant_'.$k] !== '' && (string) $c['ls_variant_'.$k] === (string) ($a['variant_id'] ?? ''))
+        $plan = collect(Plans::keys())->first(fn ($k) => (string) $c['ls_variant_'.$k] !== '' && (string) $c['ls_variant_'.$k] === (string) ($a['variant_id'] ?? ''))
             ?? ($p['meta']['custom_data']['plan'] ?? null);
         self::apply($soc, 'lemonsqueezy', [
             'status' => $a['status'] ?? 'active',
@@ -243,6 +255,19 @@ class Billing
         $o = $e['data']['object'] ?? [];
         $type = $e['type'] ?? '';
 
+        if (in_array($type, ['invoice.paid', 'charge.refunded'], true)) {
+            $subId = $o['subscription'] ?? ($o['parent']['subscription_details']['subscription'] ?? null);
+            $meta = $o['subscription_details']['metadata'] ?? ($o['parent']['subscription_details']['metadata'] ?? []);
+            $soc = Society::find($meta['society_id'] ?? 0) ?? ($subId ? Society::where('billing_subscription_id', $subId)->first() : null) ?? Society::where('billing_customer_id', $o['customer'] ?? '-')->first();
+            $refund = $type === 'charge.refunded';
+            BillingEvent::record($soc, 'stripe', $refund ? 'refund' : 'payment', [
+                'amount' => round(($refund ? ($o['amount_refunded'] ?? 0) : ($o['amount_paid'] ?? 0)) / 100, 2) * ($refund ? -1 : 1), 'currency' => strtoupper($o['currency'] ?? 'usd'),
+                'status' => $refund ? 'refunded' : 'paid', 'plan' => $soc?->plan, 'reference' => $o['id'] ?? null,
+                'description' => $refund ? 'Refund' : (($o['billing_reason'] ?? '') === 'subscription_create' ? 'First payment' : 'Renewal'),
+            ]);
+
+            return [200, 'OK'];
+        }
         if ($type === 'checkout.session.completed' && ($o['mode'] ?? '') === 'subscription') {
             $soc = Society::find($o['metadata']['society_id'] ?? $o['client_reference_id'] ?? 0);
             if ($soc) {
@@ -286,11 +311,16 @@ class Billing
             'billing_portal_url' => $d['portal'] ?? null,
             'billing_renews_at' => $renews ? Carbon::parse($renews) : null,
             'paid_until' => $until ? Carbon::parse($until)->toDateString() : null,
-            'plan' => isset($d['plan'], Plans::PLANS[$d['plan']]) ? $d['plan'] : null,
+            'plan' => isset($d["plan"]) && in_array($d["plan"], Plans::keys(), true) ? $d['plan'] : null,
         ], fn ($v) => $v !== null));
         if ($s->status !== 'suspended') {             // a pause by the platform owner always wins
             $s->status = $open ? 'active' : 'expired';
         }
+        $changed = $s->isDirty(['status', 'plan', 'billing_status']);
         $s->save();
+        if ($changed) {
+            BillingEvent::create(['society_id' => $s->id, 'provider' => $provider, 'type' => 'subscription', 'status' => $status, 'plan' => $s->plan,
+                'reference' => $d['subscription'] ?? null, 'description' => 'Subscription '.str_replace('_', ' ', $status), 'occurred_at' => now()]);
+        }
     }
 }

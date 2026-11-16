@@ -289,6 +289,18 @@ function Field({ f, value, set }) {
                     {(f.options || []).map((o) => (typeof o === 'string' ? <option key={o} value={o}>{title(o)}</option> : <option key={o.value} value={o.value}>{o.label}</option>))}
                 </select>
             );
+        case 'chips': {
+            const arr = Array.isArray(value) ? value : [];
+            return (
+                <div className="flex flex-wrap gap-1.5">
+                    {(f.options || []).map((o) => {
+                        const on = arr.map(String).includes(String(o.value));
+                        return <button type="button" key={o.value} onClick={() => set(on ? arr.filter((x) => String(x) !== String(o.value)) : [...arr, o.value])}
+                            className={`rounded-lg px-2.5 py-1.5 text-xs font-semibold transition-colors ${on ? 'bg-night text-white' : 'bg-ink/[.05] text-ink/60 hover:bg-ink/10'}`}>{o.label}</button>;
+                    })}
+                </div>
+            );
+        }
         case 'checkbox':
             return <label className="flex items-center gap-2 text-sm"><input type="checkbox" className="size-4 accent-brand-600" checked={!!value} onChange={(e) => set(e.target.checked)} />{f.label}</label>;
         case 'file':

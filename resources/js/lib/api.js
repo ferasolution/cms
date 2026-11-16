@@ -78,6 +78,7 @@ export const papi = {
     get: (url, params) => api('GET', url, undefined, { params, root: '/_p/api/' }),
     post: (url, data) => api('POST', url, data ?? {}, { root: '/_p/api/' }),
     put: (url, data) => api('PUT', url, data ?? {}, { root: '/_p/api/' }),
+    del: (url, data) => api('DELETE', url, data ?? {}, { root: '/_p/api/' }),
 };
 
 export const fileUrl = (path, download = false) => (path ? `${BASE}/files/${path}${download ? '?download=1' : ''}` : null);

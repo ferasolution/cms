@@ -18,13 +18,15 @@ class SpaController extends Controller
         [$name, $region] = Tenant::run($soc, fn () => [Settings::get('community_name'), array_intersect_key(Settings::all(), array_flip(['country', 'currency', 'locale', 'timezone', 'unit_label', 'id_label']))]);
         $name = $name ?: $soc->name;
 
-        return ['app' => ['mode' => 'tenant', 'name' => $name, 'base' => '/'.$soc->slug, 'society' => $soc->publicInfo() + ['open' => $soc->isOpen(), 'display_name' => $name] + $region],
+        return ['app' => ['mode' => 'tenant', 'name' => $name, 'base' => '/'.$soc->slug, 'society' => $soc->publicInfo() + ['open' => $soc->isOpen(), 'display_name' => $name] + $region, 'notices' => \App\Models\Platform\Notice::for($soc)],
             'title' => $name, 'manifest' => '/'.$soc->slug.'/manifest.webmanifest'];
     }
 
     public static function platformData(array $extra = []): array
     {
-        return ['app' => ['mode' => 'platform', 'name' => 'Fera Community Cloud', 'base' => ''] + $extra, 'title' => 'Fera Community Cloud — society management platform', 'manifest' => '/manifest.webmanifest'];
+        $brand = \App\Support\Platform::setting('brand_name');
+
+        return ['app' => ['mode' => 'platform', 'name' => $brand, 'base' => '', 'default_country' => \App\Support\Platform::setting('default_country'), 'registration_open' => (bool) \App\Support\Platform::setting('registration_open')] + $extra, 'title' => $brand.' — the control room for gated communities and HOAs', 'manifest' => '/manifest.webmanifest'];
     }
 
     public function tenant()

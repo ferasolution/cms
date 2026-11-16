@@ -45,7 +45,7 @@ class Society extends Model
             return false;
         }
         if ($this->status === 'trial') {
-            return ! $this->trial_ends_at || $this->trial_ends_at->isFuture();
+            return ! $this->trial_ends_at || $this->trial_ends_at->isFuture() || ! \App\Support\Platform::setting('require_card_after_trial');
         }
 
         return true;

@@ -14,6 +14,7 @@ use Illuminate\Support\Facades\Route;
 | JSON API uses the normal web session (cookie) auth, so it works on shared hosting with no extra services.
 */
 use App\Http\Controllers\PlatformController;
+use App\Http\Controllers\PlatformConsoleController;
 use App\Http\Controllers\SpaController;
 use App\Http\Middleware\PlatformOwner;
 use App\Http\Middleware\ResolveSociety;
@@ -232,8 +233,36 @@ Route::prefix('_p/api')->middleware(PlatformOwner::class.':owner')->group(functi
     Route::put('societies/{society}', [PlatformController::class, 'update']);
     Route::post('societies/{society}/site-plan', [PlatformController::class, 'sitePlan']);
     Route::post('societies/{society}/impersonate', [PlatformController::class, 'impersonate']);
+    Route::get('dashboard', [PlatformConsoleController::class, 'dashboard']);
+    Route::get('societies', [PlatformConsoleController::class, 'societies']);
+    Route::get('societies/{society}', [PlatformConsoleController::class, 'society']);
+    Route::post('societies/{society}/extend-trial', [PlatformConsoleController::class, 'extendTrial']);
+    Route::post('societies/{society}/status', [PlatformConsoleController::class, 'setStatus']);
+    Route::post('societies/{society}/admins', [PlatformConsoleController::class, 'addAdmin']);
+    Route::post('societies/{society}/admins/{user}/reset', [PlatformConsoleController::class, 'resetAdmin']);
+    Route::get('payments', [PlatformConsoleController::class, 'payments']);
+    Route::get('plans/manage', [PlatformConsoleController::class, 'plans']);
+    Route::get('notices', [PlatformConsoleController::class, 'notices']);
+    Route::get('audit', [PlatformConsoleController::class, 'audit']);
+    Route::put('account', [PlatformConsoleController::class, 'account']);
+    Route::get('system', [PlatformConsoleController::class, 'system']);
+});
+// owner-only: money, plans, team, settings, deleting
+Route::prefix('_p/api')->middleware(PlatformOwner::class.':admin')->group(function () {
     Route::get('billing', [PlatformController::class, 'billing']);
     Route::put('billing', [PlatformController::class, 'saveBilling']);
+    Route::post('societies/{society}/payments', [PlatformConsoleController::class, 'recordPayment']);
+    Route::delete('societies/{society}', [PlatformConsoleController::class, 'destroy']);
+    Route::put('plans/manage', [PlatformConsoleController::class, 'savePlans']);
+    Route::post('notices', [PlatformConsoleController::class, 'saveNotice']);
+    Route::put('notices/{notice}', [PlatformConsoleController::class, 'saveNotice']);
+    Route::delete('notices/{notice}', [PlatformConsoleController::class, 'deleteNotice']);
+    Route::get('team', [PlatformConsoleController::class, 'teamIndex']);
+    Route::post('team', [PlatformConsoleController::class, 'teamStore']);
+    Route::put('team/{user}', [PlatformConsoleController::class, 'teamUpdate']);
+    Route::get('settings', [PlatformConsoleController::class, 'settings']);
+    Route::put('settings', [PlatformConsoleController::class, 'saveSettings']);
+    Route::post('system/clear-cache', [PlatformConsoleController::class, 'clearCache']);
 });
 // payment provider callbacks (signed by the provider, no session or CSRF)
 Route::post('_p/webhooks/lemonsqueezy', [Api\BillingController::class, 'lemonsqueezy'])->withoutMiddleware(ValidateCsrfToken::class);

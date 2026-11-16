@@ -213,6 +213,22 @@ function BottomNav({ onMenu }) {
     );
 }
 
+/** Messages from the platform team (maintenance windows, new features). Dismissed per browser. */
+function PlatformNotices({ isAdmin }) {
+    const key = 'cms-notices-dismissed';
+    const [gone, setGone] = useState(() => { try { return JSON.parse(localStorage.getItem(key) || '[]'); } catch { return []; } });
+    const list = (window.APP?.notices || []).filter((n) => (!n.admins_only || isAdmin) && !gone.includes(n.id));
+    if (!list.length) return null;
+    const tone = { info: 'border-brand-500/20 bg-brand-50 text-brand-700', warning: 'border-sand-400/40 bg-sand-50 text-sand-500', critical: 'border-red-300 bg-red-50 text-red-700' };
+    const close = (id) => { const next = [...gone, id]; setGone(next); try { localStorage.setItem(key, JSON.stringify(next)); } catch { /* private mode */ } };
+    return list.map((n) => (
+        <div key={n.id} className={`mb-4 flex items-start gap-3 rounded-2xl border px-4 py-2.5 text-sm ${tone[n.level] || tone.info}`}>
+            <div className="min-w-0 flex-1"><b>{n.title}</b>{n.body && <span className="opacity-80"> — {n.body}</span>}</div>
+            <button type="button" onClick={() => close(n.id)} className="shrink-0 text-xs font-semibold opacity-70 hover:opacity-100">Dismiss</button>
+        </div>
+    ));
+}
+
 export default function Layout() {
     const location = useLocation();
     const outlet = useOutlet();
@@ -298,6 +314,7 @@ export default function Layout() {
                     </div>
                 </header>
                 <main className="flex-1 overflow-y-auto px-3 pb-24 pt-6 sm:px-6 lg:px-8 lg:pb-8">
+                    <PlatformNotices isAdmin={isAdmin} />
                     {window.APP?.society?.status === 'trial' && window.APP.society.trial_ends_at && (
                         <div className="mb-4 flex flex-wrap items-center gap-2 rounded-2xl border border-sand-400/30 bg-sand-50 px-4 py-2.5 text-sm text-sand-500">
                             <span className="lamp-breathe size-2 rounded-full bg-sand-400" />

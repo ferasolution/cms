@@ -30,7 +30,7 @@ class PlatformController extends Controller
 
     public function plans()
     {
-        return collect(Plans::PLANS)->map(fn ($p, $k) => ['key' => $k] + $p)->values();
+        return collect(Plans::all())->map(fn ($p, $k) => ['key' => $k] + $p)->values();
     }
 
     /** "Find your society" on the landing page. */
@@ -56,6 +56,7 @@ class PlatformController extends Controller
     public function register(Request $request)
     {
         abort_if(filled($request->input('website')), 422, 'Invalid request.');   // honeypot
+        abort_unless(\App\Support\Platform::setting('registration_open'), 403, 'New sign-ups are paused right now. Please contact us.');
         $key = 'register:'.$request->ip();
         if (RateLimiter::tooManyAttempts($key, 5)) {
             throw ValidationException::withMessages(['email' => 'Too many sign-ups from this network. Try again later.']);
@@ -64,14 +65,14 @@ class PlatformController extends Controller
         $d = $request->validate([
             'name' => 'required|string|max:120', 'slug' => $this->slugRules(), 'city' => 'required|string|max:80', 'address' => 'nullable|string|max:255', 'country' => 'required|string|size:2',
             'houses' => 'nullable|integer|min:1|max:20000', 'admin_name' => 'required|string|max:120', 'email' => 'required|email|max:190', 'phone' => 'required|string|max:30',
-            'password' => 'required|string|min:8|max:100', 'plan' => ['nullable', Rule::in(array_keys(Plans::PLANS))],
+            'password' => 'required|string|min:8|max:100', 'plan' => ['nullable', Rule::in(Plans::keys())],
         ]);
         RateLimiter::hit($key, 3600);
 
         $soc = DB::transaction(function () use ($d) {
             $soc = Society::create([
                 'slug' => $d['slug'], 'name' => $d['name'], 'city' => $d['city'], 'address' => $d['address'] ?? null, 'country' => strtoupper($d['country']), 'status' => 'trial', 'plan' => $d['plan'] ?? 'pro',
-                'trial_ends_at' => now()->addDays(config('saas.trial_days')), 'contact_name' => $d['admin_name'], 'contact_email' => $d['email'], 'contact_phone' => $d['phone'],
+                'trial_ends_at' => now()->addDays((int) \App\Support\Platform::setting('trial_days')), 'contact_name' => $d['admin_name'], 'contact_email' => $d['email'], 'contact_phone' => $d['phone'],
                 'notes' => isset($d['houses']) ? "About {$d['houses']} houses (from sign-up)" : null,
             ]);
             Tenant::run($soc, function () use ($soc, $d) {
@@ -79,6 +80,7 @@ class PlatformController extends Controller
                 User::create(['name' => $d['admin_name'], 'email' => strtolower($d['email']), 'phone' => $d['phone'], 'password' => Hash::make($d['password']), 'role' => 'super_admin', 'active' => true]);
                 ActivityLog::create(['module' => 'system', 'action' => 'created', 'description' => "{$soc->name} joined the platform (trial)"]);
             });
+            \App\Support\Platform::audit('signup', "{$soc->name} signed up (/{$soc->slug}, {$soc->country})", $soc->id);
 
             return $soc;
         });
@@ -96,7 +98,8 @@ class PlatformController extends Controller
         $u = Auth::user();
 
         return ['needs_setup' => ! User::withoutGlobalScopes()->where('role', 'platform_owner')->exists(),
-            'user' => $u && $u->role === 'platform_owner' && ! $u->society_id ? $u->only(['id', 'name', 'email']) : null];
+            'user' => $u && in_array($u->role, \App\Http\Middleware\PlatformOwner::ROLES, true) && ! $u->society_id ? $u->only(['id', 'name', 'email', 'role']) : null,
+            'brand' => \App\Support\Platform::setting('brand_name')];
     }
 
     /** One-time: create the platform owner. Protected by the server's deploy token. */
@@ -120,7 +123,7 @@ class PlatformController extends Controller
         if (RateLimiter::tooManyAttempts($key, 5)) {
             throw ValidationException::withMessages(['email' => 'Too many attempts. Try again in '.RateLimiter::availableIn($key).' seconds.']);
         }
-        $u = User::withoutGlobalScopes()->whereNull('society_id')->where('role', 'platform_owner')->where('email', strtolower($d['email']))->where('active', true)->first();
+        $u = User::withoutGlobalScopes()->whereNull('society_id')->whereIn('role', \App\Http\Middleware\PlatformOwner::ROLES)->where('email', strtolower($d['email']))->where('active', true)->first();
         if (! $u || ! Hash::check($d['password'], $u->password)) {
             RateLimiter::hit($key, 300);
             throw ValidationException::withMessages(['email' => 'Invalid email or password.']);
@@ -128,6 +131,7 @@ class PlatformController extends Controller
         RateLimiter::clear($key);
         Auth::login($u, true);
         $request->session()->regenerate();
+        \App\Support\Platform::audit('login', "{$u->name} signed in to the console");
 
         return $this->status();
     }
@@ -179,12 +183,13 @@ class PlatformController extends Controller
     public function store(Request $request)
     {
         $request->merge(['slug' => strtolower((string) $request->input('slug'))]);
-        $d = $request->validate(['name' => 'required|string|max:120', 'slug' => $this->slugRules(), 'city' => 'nullable|string|max:80', 'plan' => ['required', Rule::in(array_keys(Plans::PLANS))], 'country' => 'nullable|string|size:2',
+        $d = $request->validate(['name' => 'required|string|max:120', 'slug' => $this->slugRules(), 'city' => 'nullable|string|max:80', 'plan' => ['required', Rule::in(Plans::keys())], 'country' => 'nullable|string|size:2',
             'status' => 'required|in:trial,active,suspended,expired', 'admin_name' => 'required|string|max:120', 'email' => 'required|email', 'password' => 'required|string|min:8', 'phone' => 'nullable|string|max:30']);
         $soc = Society::create(['name' => $d['name'], 'slug' => $d['slug'], 'city' => $d['city'] ?? null, 'country' => strtoupper($d['country'] ?? 'US'), 'plan' => $d['plan'], 'status' => $d['status'],
-            'trial_ends_at' => $d['status'] === 'trial' ? now()->addDays(config('saas.trial_days')) : null, 'contact_name' => $d['admin_name'], 'contact_email' => $d['email'], 'contact_phone' => $d['phone'] ?? null]);
+            'trial_ends_at' => $d['status'] === 'trial' ? now()->addDays((int) \App\Support\Platform::setting('trial_days')) : null, 'contact_name' => $d['admin_name'], 'contact_email' => $d['email'], 'contact_phone' => $d['phone'] ?? null]);
+        \App\Support\Platform::audit('society.create', "Created {$soc->name} (/{$soc->slug}) on {$soc->plan}", $soc->id);
         Tenant::run($soc, function () use ($soc, $d) {
-            Settings::save(['community_name' => $soc->name]);
+            Settings::save(Settings::region($soc->country) + ['community_name' => $soc->name]);
             User::create(['name' => $d['admin_name'], 'email' => strtolower($d['email']), 'phone' => $d['phone'] ?? null, 'password' => Hash::make($d['password']), 'role' => 'super_admin', 'active' => true]);
         });
 
@@ -205,6 +210,7 @@ class PlatformController extends Controller
             'stripe_secret' => ['nullable', 'string', 'max:300', 'regex:/^(sk|rk)_(live|test)_/'], 'stripe_webhook_secret' => ['nullable', 'string', 'max:300', 'regex:/^whsec_/'],
         ], ['stripe_secret.regex' => 'Stripe secret keys start with sk_live_ or sk_test_.', 'stripe_webhook_secret.regex' => 'Stripe webhook secrets start with whsec_.']);
         \App\Services\Billing::save($d);
+        \App\Support\Platform::audit('billing.settings', 'Changed payment settings (provider: '.$d['provider'].')');
 
         return \App\Services\Billing::publicConfig();
     }
@@ -214,11 +220,16 @@ class PlatformController extends Controller
         $request->merge(['slug' => strtolower((string) $request->input('slug', $society->slug))]);
         $d = $request->validate([
             'name' => 'required|string|max:120', 'slug' => $this->slugRules($society->id), 'city' => 'nullable|string|max:80', 'address' => 'nullable|string|max:255',
-            'status' => 'required|in:trial,active,suspended', 'plan' => ['required', Rule::in(array_keys(Plans::PLANS))], 'trial_ends_at' => 'nullable|date', 'paid_until' => 'nullable|date',
+            'status' => 'required|in:trial,active,suspended,expired', 'plan' => ['required', Rule::in(Plans::keys())], 'trial_ends_at' => 'nullable|date', 'paid_until' => 'nullable|date',
             'max_houses' => 'nullable|integer|min:1', 'modules' => 'nullable|array', 'modules.*' => Rule::in(array_keys(\App\Support\Access::MODULES)),
             'contact_name' => 'nullable|string|max:120', 'contact_email' => 'nullable|email', 'contact_phone' => 'nullable|string|max:30', 'notes' => 'nullable|string|max:2000',
         ]);
-        $society->update($d);
+        $society->fill($d);
+        $changes = collect($society->getDirty())->except(['updated_at'])->map(fn ($v, $k) => $k.': '.json_encode($society->getOriginal($k)).' → '.json_encode($v))->implode('; ');
+        $society->save();
+        if ($changes) {
+            \App\Support\Platform::audit('society.update', "Edited {$society->name}", $society->id, ['changes' => $changes]);
+        }
 
         return $this->row($society->fresh());
     }
@@ -231,6 +242,7 @@ class PlatformController extends Controller
         abort_unless(is_array($json) && isset($json['plots'], $json['site']['boundary']), 422, 'Not a site plan file (needs "plots" and "site.boundary").');
         $society->update(['site_plan' => $json]);
         $r = Tenant::run($society->fresh(), fn () => \App\Services\SitePlan::apply(adoptExisting: true));
+        \App\Support\Platform::audit('society.map', "Loaded a site plan for {$society->name} (".count($json['plots']).' plots)', $society->id);
 
         return $this->row($society->fresh()) + ['applied' => $r];
     }
@@ -241,6 +253,7 @@ class PlatformController extends Controller
         $owner = $request->user();
         $admin = User::withoutGlobalScopes()->where('society_id', $society->id)->where('role', 'super_admin')->where('active', true)->orderBy('id')->first();
         abort_unless($admin, 422, 'This society has no active Super Admin.');
+        \App\Support\Platform::audit('society.impersonate', "Opened {$society->name} as {$admin->name}", $society->id);
         Tenant::run($society, fn () => ActivityLog::create(['module' => 'system', 'action' => 'support_login', 'description' => "Platform support ({$owner->name}) opened the portal as {$admin->name}"]));
         Auth::login($admin);
         $request->session()->regenerate();

@@ -1,10 +1,12 @@
 import { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { motion, useInView, useReducedMotion, useScroll, useTransform } from 'motion/react';
+import { AnimatePresence, motion, useInView, useReducedMotion, useScroll, useTransform } from 'motion/react';
 import {
     Search, ShieldCheck, Map, MessageSquareWarning, Wallet, CalendarDays, FileCheck2, Siren, Users, Dumbbell, BookOpen, Archive, Workflow,
     Check, ArrowRight, BellRing, Wrench, ScanLine, Car, QrCode, Smartphone, Home,
+    LayoutDashboard, Lock, KeyRound, History, CreditCard, Globe2, MonitorSmartphone, Plus, Minus, Video, Printer,
 } from 'lucide-react';
+import { QrImage } from '../components/ui';
 import { papi } from '../lib/api';
 import { Logo } from './Brand';
 
@@ -233,6 +235,218 @@ const TEAMS = [
 
 const DEMO_LOGINS = [['Community admin', 'admin@demo.local'], ['Gate security', 'security@demo.local'], ['Resident', 'resident@demo.local']];
 
+
+const MODULE_LABELS = {
+    security: 'Gatehouse, visitors & vehicles', complaints: 'Work orders', announcements: 'Announcements', emergency: 'SOS & emergency entry', finance: 'HOA dues & finance',
+    events: 'Events & amenity booking', users: 'Residents & households', settings: 'Roles & permissions', noc: 'Architectural & resale approvals', records: 'Records room',
+    inventory: 'Inventory & assets', library: 'Library', crm: 'Staff, attendance & payroll', gym: 'Gym & club',
+};
+
+/* ---------- product tour: three live-looking screens, switched by the visitor ---------- */
+const LOTS = Array.from({ length: 270 }, (_, i) => ({ i, s: [7, 49, 83, 121, 158, 203, 247].includes(i) ? 'work' : [22, 104, 190].includes(i) ? 'visitor' : i === 141 ? 'sos' : (i * 37) % 13 === 0 ? 'due' : 'ok' }));
+const LOT_COLOR = { ok: 'bg-white/[.09]', due: 'bg-sand-400/45', work: 'bg-orange-400', visitor: 'bg-emerald-400', sos: 'bg-red-500 animate-pulse' };
+
+function ControlRoom() {
+    return (
+        <div className="grid h-full gap-3 p-4 sm:grid-cols-[1fr_15rem] sm:p-5">
+            <div className="flex min-w-0 flex-col gap-3">
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                    {[['Homes', '392'], ['Visitors today', '41'], ['Open work orders', '7'], ['Dues collected', '86%']].map(([l, v]) => (
+                        <div key={l} className="rounded-xl bg-white/[.05] px-3 py-2.5"><div className="text-[11px] text-white/50">{l}</div><div className="text-[22px] font-bold leading-tight">{v}</div></div>
+                    ))}
+                </div>
+                <div className="flex-1 rounded-xl bg-white/[.04] p-3">
+                    <div className="mb-2 flex items-center justify-between text-[12px] text-white/55"><span>Site map · live</span><span className="flex gap-3"><span className="flex items-center gap-1"><i className="size-2 rounded-sm bg-orange-400" />Work order</span><span className="flex items-center gap-1"><i className="size-2 rounded-sm bg-emerald-400" />Visitor</span><span className="hidden items-center gap-1 sm:flex"><i className="size-2 rounded-sm bg-sand-400/60" />Dues pending</span></span></div>
+                    <div className="grid grid-cols-[repeat(30,minmax(0,1fr))] gap-[3px]">
+                        {LOTS.map((l) => <span key={l.i} className={`aspect-square rounded-[2px] ${LOT_COLOR[l.s]} ${Math.floor(l.i / 30) % 3 === 2 ? 'mb-1.5' : ''}`} />)}
+                    </div>
+                </div>
+            </div>
+            <div className="hidden flex-col gap-2 sm:flex">
+                <div className="text-[12px] font-semibold text-white/55">Live feed</div>
+                {[['bg-red-400', 'SOS · 27 Oak Lane', 'Guard on the way · 1 min'], ['bg-emerald-400', 'Visitor approved', 'UPS for 14 Oak Lane'], ['bg-orange-400', 'New work order', 'Water leak · Lot S-12'], ['bg-sky-400', 'Patrol checkpoint', 'East wall · scanned'], ['bg-sand-400', 'Dues paid', 'Lot N-04 · $185']].map(([c, t, d]) => (
+                    <div key={t} className="flex gap-2.5 rounded-xl bg-white/[.04] px-3 py-2">
+                        <span className={`mt-1.5 size-2 shrink-0 rounded-full ${c}`} />
+                        <div className="min-w-0"><div className="truncate text-[13px] font-semibold">{t}</div><div className="truncate text-[11.5px] text-white/50">{d}</div></div>
+                    </div>
+                ))}
+            </div>
+        </div>
+    );
+}
+
+function Gatehouse() {
+    return (
+        <div className="grid h-full gap-4 p-4 sm:grid-cols-2 sm:p-5">
+            <div className="space-y-3">
+                <div className="text-[12px] font-semibold text-white/55">New walk-in · Gate 1</div>
+                {[['Visiting', '14 Oak Lane · Emily Johnson'], ['Name', 'Package — UPS'], ['Vehicle', 'TX · KXR-4471 · van'], ['Purpose', 'Delivery']].map(([l, v]) => (
+                    <div key={l}><div className="text-[11px] text-white/45">{l}</div><div className="rounded-lg border border-white/10 bg-white/[.04] px-3 py-2 text-[14px]">{v}</div></div>
+                ))}
+                <div className="flex items-center gap-2 rounded-lg bg-emerald-500/15 px-3 py-2.5 text-[13px] font-semibold text-emerald-300"><Check size={15} />Approved by Emily on her phone · 0:21</div>
+            </div>
+            <div className="flex flex-col items-center justify-center">
+                <div className="w-64 rotate-[-2deg] rounded-md bg-white p-4 text-night shadow-[0_24px_50px_-20px_rgba(0,0,0,.8)]">
+                    <div className="text-center text-[11px] font-bold">Maple Grove Estates<br />Gate pass</div>
+                    <div className="mx-auto my-3 w-28"><QrImage text="GV-4K7Q2M" size={112} /></div>
+                    <div className="text-center font-mono text-[13px] font-bold">GV-4K7Q2M</div>
+                    <div className="mt-2 space-y-0.5 text-[11px] text-night/70"><div>Package — UPS → 14 Oak Lane</div><div>In 6:42 PM · scan at exit</div></div>
+                </div>
+                <div className="mt-4 flex items-center gap-2 text-[12px] text-white/50"><Printer size={13} />Prints on any 80 mm receipt printer</div>
+            </div>
+        </div>
+    );
+}
+
+function ResidentPhone() {
+    return (
+        <div className="flex h-full items-center justify-center gap-8 p-4 sm:p-5">
+            <div className="w-[15.5rem] rounded-[2.2rem] border-[6px] border-[#1d2742] bg-[#f2f4f8] p-3 text-ink shadow-[0_30px_60px_-25px_rgba(0,0,0,.9)]">
+                <div className="mx-auto mb-3 h-1.5 w-16 rounded-full bg-ink/15" />
+                <div className="rounded-2xl bg-night p-3 text-white">
+                    <div className="flex items-center gap-2 text-[11px] text-white/55"><BellRing size={12} />Gate 1 · now</div>
+                    <div className="mt-1 text-[13px] font-semibold">Package — UPS is here for you</div>
+                    <div className="mt-2 grid grid-cols-2 gap-1.5 text-[12px] font-semibold"><span className="rounded-lg bg-white/10 py-1.5 text-center">Deny</span><span className="rounded-lg bg-emerald-500 py-1.5 text-center text-night">Approve</span></div>
+                </div>
+                <div className="mt-2.5 rounded-2xl bg-white p-3"><div className="text-[11px] text-ink/50">HOA dues · November</div><div className="flex items-baseline justify-between"><span className="text-[20px] font-bold">$185.00</span><span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold text-emerald-700">Paid</span></div></div>
+                <div className="mt-2.5 grid grid-cols-2 gap-2 text-[12px] font-semibold">
+                    <span className="flex flex-col gap-1 rounded-2xl bg-white p-3"><Wrench size={16} className="text-brand-600" />Report a problem</span>
+                    <span className="flex flex-col gap-1 rounded-2xl bg-white p-3"><CalendarDays size={16} className="text-brand-600" />Book the pool</span>
+                </div>
+                <div className="mt-2.5 rounded-2xl bg-white p-3 text-[12px]"><div className="font-semibold">Clubhouse · Sat 4 PM</div><div className="text-ink/50">Birthday party · confirmed</div></div>
+            </div>
+            <ul className="hidden max-w-[15rem] space-y-3 text-[14px] text-white/75 md:block">
+                <li className="flex gap-2.5"><MonitorSmartphone size={17} className="mt-0.5 shrink-0 text-sand-400" />Installs from the browser like an app — no app store.</li>
+                <li className="flex gap-2.5"><BellRing size={17} className="mt-0.5 shrink-0 text-sand-400" />Visitor requests arrive as notifications.</li>
+                <li className="flex gap-2.5"><Lock size={17} className="mt-0.5 shrink-0 text-sand-400" />Each household sees only its own home.</li>
+            </ul>
+        </div>
+    );
+}
+
+const SCREENS = [['control', 'Control room', LayoutDashboard, ControlRoom], ['gate', 'Gatehouse', ShieldCheck, Gatehouse], ['phone', 'Resident app', Smartphone, ResidentPhone]];
+
+function ProductTour() {
+    const [tab, setTab] = useState('control');
+    const Screen = SCREENS.find((x) => x[0] === tab)[3];
+    return (
+        <section id="product" className="bg-[#0a1226] px-5 pb-24">
+            <div className="mx-auto max-w-6xl">
+                <div className="flex flex-wrap items-end justify-between gap-6">
+                    <h2 className="max-w-xl text-[34px] font-bold leading-[1.08] tracking-tight sm:text-[44px]">What each team sees.</h2>
+                    <div role="tablist" className="flex gap-1 rounded-2xl bg-white/[.06] p-1">
+                        {SCREENS.map(([k, label, Icon]) => (
+                            <button key={k} role="tab" aria-selected={tab === k} onClick={() => setTab(k)} className={`relative flex items-center gap-2 rounded-xl px-3.5 py-2 text-[13.5px] font-semibold transition-colors ${tab === k ? 'text-night' : 'text-white/65 hover:text-white'}`}>
+                                {tab === k && <motion.span layoutId="tour-pill" className="absolute inset-0 rounded-xl bg-sand-400" transition={{ type: 'spring', stiffness: 480, damping: 38 }} />}
+                                <span className="relative flex items-center gap-2"><Icon size={15} />{label}</span>
+                            </button>
+                        ))}
+                    </div>
+                </div>
+                <div className="mt-8 overflow-hidden rounded-[22px] border border-white/10 bg-[#0d1630] shadow-[0_40px_90px_-40px_rgba(0,0,0,.9)]">
+                    <div className="flex items-center gap-2 border-b border-white/[.07] px-4 py-3">
+                        <span className="size-2.5 rounded-full bg-white/15" /><span className="size-2.5 rounded-full bg-white/15" /><span className="size-2.5 rounded-full bg-white/15" />
+                        <span className="ml-3 truncate rounded-md bg-white/[.06] px-3 py-1 text-[12px] text-white/50">cms.ferasolution.com/maple-grove{tab === 'gate' ? '/security' : tab === 'phone' ? '/home' : '/dashboard'}</span>
+                    </div>
+                    <div className="relative min-h-[26rem]">
+                        <AnimatePresence mode="wait" initial={false}>
+                            <motion.div key={tab} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.25 }} className="h-full">
+                                <Screen />
+                            </motion.div>
+                        </AnimatePresence>
+                    </div>
+                </div>
+            </div>
+        </section>
+    );
+}
+
+/* ---------- trust ---------- */
+const TRUST = [
+    [Lock, 'Every community walled off', 'Each community has its own address, users and data. Nobody from another community can see in — not even by guessing a link.'],
+    [KeyRound, 'Roles for every job', 'Guards, accounts, maintenance and residents each get only the screens their work needs. Residents see only their own home.'],
+    [History, 'A record of every change', 'Who approved what, who edited a payment, who opened the gate — every action is logged with a time and a name.'],
+    [CreditCard, 'Cards never touch our servers', 'Subscriptions are paid through Lemon Squeezy or Stripe. We never see or store a card number.'],
+    [Video, 'Works with what you have', 'Bring your own CCTV streams, any receipt printer for gate passes, and any phone or tablet at the gate.'],
+    [Globe2, 'Your country, your currency', 'Dollars or pounds, dirhams or rupees; lots or plots; local time zone and ID wording — set per community.'],
+];
+
+function Trust() {
+    return (
+        <section className="bg-canvas px-5 py-24 text-ink">
+            <div className="mx-auto max-w-6xl">
+                <h2 className="max-w-2xl text-[34px] font-bold leading-[1.08] tracking-tight sm:text-[44px]">Built to be trusted with a community.</h2>
+                <div className="mt-12 grid gap-x-10 gap-y-9 sm:grid-cols-2 lg:grid-cols-3">
+                    {TRUST.map(([Icon, t, d]) => (
+                        <div key={t}>
+                            <Icon size={22} className="text-brand-600" />
+                            <div className="mt-3 text-[17px] font-bold">{t}</div>
+                            <p className="mt-1.5 text-[14.5px] leading-relaxed text-ink/60">{d}</p>
+                        </div>
+                    ))}
+                </div>
+            </div>
+        </section>
+    );
+}
+
+/* ---------- plan comparison ---------- */
+function Compare({ plans }) {
+    if (!plans.length) return null;
+    const has = (p, k) => p.modules === '*' || (Array.isArray(p.modules) && p.modules.includes(k));
+    return (
+        <div className="mt-10 overflow-x-auto rounded-[24px] border border-ink/10 bg-surface">
+            <table className="w-full min-w-[620px] text-[14px]">
+                <thead><tr className="border-b border-ink/10"><th className="px-5 py-4 text-left font-semibold text-ink/55">Compare plans</th>{plans.map((p) => <th key={p.key} className="px-5 py-4 text-center font-bold">{p.name}</th>)}</tr></thead>
+                <tbody className="divide-y divide-ink/[.06]">
+                    <tr><td className="px-5 py-3">Homes</td>{plans.map((p) => <td key={p.key} className="px-5 py-3 text-center font-semibold">{p.max_houses ? `up to ${p.max_houses}` : 'Unlimited'}</td>)}</tr>
+                    <tr><td className="px-5 py-3">3D site map with inner view</td>{plans.map((p) => <td key={p.key} className="px-5 py-3 text-center"><Check size={16} className="mx-auto text-brand-600" /></td>)}</tr>
+                    {Object.entries(MODULE_LABELS).map(([k, l]) => (
+                        <tr key={k}><td className="px-5 py-3">{l}</td>{plans.map((p) => <td key={p.key} className="px-5 py-3 text-center">{has(p, k) ? <Check size={16} className="mx-auto text-brand-600" /> : <span className="text-ink/25">—</span>}</td>)}</tr>
+                    ))}
+                </tbody>
+            </table>
+        </div>
+    );
+}
+
+/* ---------- FAQ ---------- */
+const FAQ = [
+    ['Do we need a card to start?', 'No. Register your community and use every feature of your plan free for the trial period. Choose a plan before it ends to keep going — your data stays exactly as you left it.'],
+    ['Is the price per user?', 'No. You pay one monthly price per community, based on the plan. Add as many residents, guards and office staff as you like.'],
+    ['Can we use our own site plan?', 'Yes. Send us your plot plan and we digitise it, so every lot and street sits on your community\'s 3D map. Until then, the portal works without a map.'],
+    ['Do residents need to download an app?', 'No app store needed. Residents open your community\'s address on their phone and add it to the home screen; it works like an app, with notifications.'],
+    ['Which countries do you support?', 'Communities anywhere. Currency, time zone, "lot" or "plot", and the ID wording on visitor forms are set per community. Subscriptions are billed in US dollars.'],
+    ['Can we cancel or change plan?', 'Any time, from the Subscription page. A change of plan takes effect straight away; a cancellation keeps the portal on until the end of the paid month.'],
+];
+
+function Faq() {
+    const [open, setOpen] = useState(0);
+    return (
+        <section id="faq" className="bg-canvas px-5 pb-24 text-ink">
+            <div className="mx-auto grid max-w-6xl gap-10 lg:grid-cols-[1fr_1.6fr]">
+                <h2 className="self-start text-[34px] font-bold leading-[1.08] tracking-tight sm:text-[44px] lg:sticky lg:top-24">Questions boards ask us.</h2>
+                <div className="divide-y divide-ink/10 border-y border-ink/10">
+                    {FAQ.map(([q, a], i) => (
+                        <div key={q}>
+                            <button type="button" aria-expanded={open === i} onClick={() => setOpen(open === i ? -1 : i)} className="flex w-full items-center justify-between gap-4 py-5 text-left text-[17px] font-semibold">
+                                {q}{open === i ? <Minus size={18} className="shrink-0 text-ink/45" /> : <Plus size={18} className="shrink-0 text-ink/45" />}
+                            </button>
+                            <AnimatePresence initial={false}>
+                                {open === i && (
+                                    <motion.p initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.22 }} className="overflow-hidden">
+                                        <span className="block max-w-2xl pb-5 text-[15px] leading-relaxed text-ink/65">{a}</span>
+                                    </motion.p>
+                                )}
+                            </AnimatePresence>
+                        </div>
+                    ))}
+                </div>
+            </div>
+        </section>
+    );
+}
+
 export default function Landing() {
     const [plans, setPlans] = useState([]);
     const [scrolled, setScrolled] = useState(false);
@@ -251,8 +465,11 @@ export default function Landing() {
                     <span className="whitespace-nowrap"><Logo /></span>
                     <div className="flex items-center gap-1 text-sm">
                         <a href="#teams" className="hidden rounded-lg px-3 py-2 text-white/65 hover:text-white md:block">Features</a>
+                        <a href="#product" className="hidden rounded-lg px-3 py-2 text-white/65 hover:text-white lg:block">Product</a>
                         <a href="#demo" className="hidden rounded-lg px-3 py-2 text-white/65 hover:text-white md:block">Demo</a>
                         <a href="#pricing" className="hidden rounded-lg px-3 py-2 text-white/65 hover:text-white md:block">Pricing</a>
+                        <a href="#faq" className="hidden rounded-lg px-3 py-2 text-white/65 hover:text-white lg:block">FAQ</a>
+                        <Link to="/platform" className="hidden rounded-lg px-3 py-2 text-white/65 hover:text-white xl:block">Sign in</Link>
                         <Link to="/register" className="btn ml-2 whitespace-nowrap bg-sand-400 text-night hover:bg-sand-100"><span className="sm:hidden">Free trial</span><span className="hidden sm:inline">Register your community</span></Link>
                     </div>
                 </div>
@@ -278,6 +495,8 @@ export default function Landing() {
                 </div>
             </section>
 
+            <ProductTour />
+
             <section id="demo" className="px-5 pb-24">
                 <div className="relative mx-auto grid max-w-6xl gap-10 overflow-hidden rounded-[28px] bg-sand-400 p-8 text-night sm:p-12 lg:grid-cols-[1.2fr_1fr]">
                     <div>
@@ -297,11 +516,13 @@ export default function Landing() {
                 </div>
             </section>
 
-            <section className="bg-canvas px-5 py-24 text-ink">
+            <Trust />
+
+            <section className="bg-canvas px-5 pb-24 text-ink">
                 <div className="mx-auto max-w-6xl">
                     <h2 className="text-[34px] font-bold tracking-tight sm:text-[44px]">Live in an afternoon.</h2>
                     <ol className="mt-12 grid gap-10 md:grid-cols-3">
-                        {[['Register your community', 'Pick an address like cms.ferasolution.com/maple-grove and create the admin account. The 14-day trial starts at once — no card needed.'],
+                        {[['Register your community', 'Pick an address like cms.ferasolution.com/maple-grove and create the admin account. The free trial starts at once — no card needed.'],
                             ['Add homes and staff', 'Upload your site plan so every lot lands on the map, then add residents, guards and office staff and set who sees what.'],
                             ['Residents join on their phones', 'They install the portal like an app, approve visitors from a notification and report problems that light up on the map.']].map(([t, d], i) => (
                             <li key={t} className="border-t-2 border-ink pt-5">
@@ -328,9 +549,10 @@ export default function Landing() {
                                     <div className="flex items-center justify-between"><span className="text-lg font-bold">{p.name}</span>{pro && <span className="rounded-full bg-sand-400 px-2.5 py-0.5 text-xs font-bold text-night">Most picked</span>}</div>
                                     <div className="mt-5 text-[46px] font-bold leading-none tracking-tight">${Number(p.price).toLocaleString('en-US')}<span className={`text-sm font-medium ${pro ? 'text-white/50' : 'text-ink/45'}`}> / month</span></div>
                                     <div className={`mt-2 text-sm ${pro ? 'text-white/60' : 'text-ink/55'}`}>{p.max_houses ? `Up to ${p.max_houses} homes` : 'Unlimited homes'}</div>
+                                    {p.tagline && <p className={`mt-4 text-[14px] leading-snug ${pro ? 'text-white/75' : 'text-ink/70'}`}>{p.tagline}</p>}
                                     <ul className="mt-6 flex-1 space-y-2.5 text-[14px]">
-                                        {(p.modules === '*' ? ['Every module', '3D map with inner view of each home', 'Security suite with CCTV and patrols', 'Gym and club', 'Priority onboarding'] : pro
-                                            ? ['Gatehouse, work orders, dues, events', 'Approvals, record room, inventory, library', 'Staff attendance and payroll', '3D map of your community'] : ['Gate and visitor approvals', 'Work orders and announcements', 'HOA dues and expenses', 'Events and SOS'])
+                                        {(p.modules === '*' ? ['Every module, gym and club included', '3D site map with inner view', 'Security suite with CCTV and patrols', 'Unlimited residents and staff']
+                                            : [...p.modules.filter((m) => MODULE_LABELS[m] && !['settings', 'users'].includes(m)).slice(0, 5).map((m) => MODULE_LABELS[m]), ...(p.modules.length > 7 ? [`and ${p.modules.length - 7} more modules`] : []), 'Unlimited residents and staff'])
                                             .map((x) => <li key={x} className="flex gap-2"><Check size={16} className={`mt-0.5 shrink-0 ${pro ? 'text-sand-400' : 'text-brand-600'}`} />{x}</li>)}
                                     </ul>
                                     <Link to={`/register?plan=${p.key}`} className={`mt-7 w-full ${pro ? 'btn bg-sand-400 text-night hover:bg-sand-100' : 'btn-outline'}`}>Start free trial</Link>
@@ -338,14 +560,31 @@ export default function Landing() {
                             );
                         })}
                     </div>
+                    <Compare plans={plans} />
                 </div>
             </section>
 
-            <footer className="bg-[#0a1226] px-5 py-10 text-sm text-white/50">
-                <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4">
-                    <Logo />
-                    <div className="flex gap-5"><a href="/demo/" className="hover:text-white">Live demo</a><Link to="/platform" className="hover:text-white">Platform sign in</Link><a href="https://www.ferasolution.com" className="hover:text-white">Built by Fera Solution</a></div>
+            <Faq />
+
+            <section className="relative overflow-hidden bg-night px-5 py-24 text-center text-white">
+                <div className="jaali absolute inset-0 opacity-[.05]" aria-hidden="true" />
+                <div className="relative mx-auto max-w-2xl">
+                    <h2 className="text-[36px] font-bold leading-[1.05] tracking-tight sm:text-[52px]">Give your gate, office and residents one place to work.</h2>
+                    <div className="mt-8 flex flex-wrap justify-center gap-3">
+                        <Link to="/register" className="btn bg-sand-400 px-5 py-3 text-[15px] text-night hover:bg-sand-100">Start the free trial</Link>
+                        <a href="/demo/" className="btn border border-white/15 px-5 py-3 text-[15px] hover:bg-white/10">Open the live demo</a>
+                    </div>
                 </div>
+            </section>
+
+            <footer className="border-t border-white/[.06] bg-[#0a1226] px-5 pb-10 pt-14 text-sm text-white/55">
+                <div className="mx-auto grid max-w-6xl gap-10 sm:grid-cols-2 lg:grid-cols-[1.4fr_1fr_1fr_1fr]">
+                    <div><Logo /><p className="mt-4 max-w-xs leading-relaxed">The control room for gated communities and HOAs — gate, office and residents on one live map.</p></div>
+                    <div><div className="mb-3 font-semibold text-white">Product</div><ul className="space-y-2"><li><a href="#teams" className="hover:text-white">Features</a></li><li><a href="#product" className="hover:text-white">Screens</a></li><li><a href="#pricing" className="hover:text-white">Pricing</a></li><li><a href="#faq" className="hover:text-white">FAQ</a></li></ul></div>
+                    <div><div className="mb-3 font-semibold text-white">Try it</div><ul className="space-y-2"><li><a href="/demo/" className="hover:text-white">Live demo</a></li><li><Link to="/register" className="hover:text-white">Start free trial</Link></li><li><Link to="/platform" className="hover:text-white">Team sign in</Link></li></ul></div>
+                    <div><div className="mb-3 font-semibold text-white">Company</div><ul className="space-y-2"><li><a href="https://www.ferasolution.com" className="hover:text-white">Fera Solution</a></li></ul></div>
+                </div>
+                <div className="mx-auto mt-12 max-w-6xl border-t border-white/[.06] pt-6 text-xs text-white/35">© {new Date().getFullYear()} Fera Solution. All rights reserved.</div>
             </footer>
         </div>
     );
