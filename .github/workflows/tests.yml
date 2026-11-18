@@ -45,5 +45,14 @@ jobs:
       - name: Generate app key
         run: php artisan key:generate
 
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Build front-end assets
+        run: npm ci && npm run build
+
       - name: Execute tests
         run: php artisan test

@@ -68,6 +68,15 @@ const PlatformApp = lazy(() => import('./platform/PlatformApp'));
 const SocietyClosed = lazy(() => import('./platform/SocietyClosed'));
 const mode = window.APP?.mode || 'tenant';
 
+// remember this community on the device, so /signin can offer it next time
+if (mode !== 'platform' && window.APP?.society?.slug) {
+    try {
+        const s = window.APP.society;
+        const list = JSON.parse(localStorage.getItem('cms-recent-communities') || '[]').filter((x) => x.slug !== s.slug);
+        localStorage.setItem('cms-recent-communities', JSON.stringify([{ slug: s.slug, name: s.display_name || s.name }, ...list].slice(0, 4)));
+    } catch { /* private mode */ }
+}
+
 createRoot(document.getElementById('root')).render(
     mode === 'platform' ? (
         <BrowserRouter>

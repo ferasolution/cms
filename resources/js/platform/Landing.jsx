@@ -469,7 +469,7 @@ export default function Landing() {
                         <a href="#demo" className="hidden rounded-lg px-3 py-2 text-white/65 hover:text-white md:block">Demo</a>
                         <a href="#pricing" className="hidden rounded-lg px-3 py-2 text-white/65 hover:text-white md:block">Pricing</a>
                         <a href="#faq" className="hidden rounded-lg px-3 py-2 text-white/65 hover:text-white lg:block">FAQ</a>
-                        <Link to="/platform" className="hidden rounded-lg px-3 py-2 text-white/65 hover:text-white xl:block">Sign in</Link>
+                        <Link to="/signin" className="whitespace-nowrap rounded-lg px-2 py-2 font-semibold text-white hover:text-sand-400 sm:px-3">Sign in</Link>
                         <Link to="/register" className="btn ml-2 whitespace-nowrap bg-sand-400 text-night hover:bg-sand-100"><span className="sm:hidden">Free trial</span><span className="hidden sm:inline">Register your community</span></Link>
                     </div>
                 </div>
@@ -581,7 +581,7 @@ export default function Landing() {
                 <div className="mx-auto grid max-w-6xl gap-10 sm:grid-cols-2 lg:grid-cols-[1.4fr_1fr_1fr_1fr]">
                     <div><Logo /><p className="mt-4 max-w-xs leading-relaxed">The control room for gated communities and HOAs — gate, office and residents on one live map.</p></div>
                     <div><div className="mb-3 font-semibold text-white">Product</div><ul className="space-y-2"><li><a href="#teams" className="hover:text-white">Features</a></li><li><a href="#product" className="hover:text-white">Screens</a></li><li><a href="#pricing" className="hover:text-white">Pricing</a></li><li><a href="#faq" className="hover:text-white">FAQ</a></li></ul></div>
-                    <div><div className="mb-3 font-semibold text-white">Try it</div><ul className="space-y-2"><li><a href="/demo/" className="hover:text-white">Live demo</a></li><li><Link to="/register" className="hover:text-white">Start free trial</Link></li><li><Link to="/platform" className="hover:text-white">Team sign in</Link></li></ul></div>
+                    <div><div className="mb-3 font-semibold text-white">Try it</div><ul className="space-y-2"><li><a href="/demo/" className="hover:text-white">Live demo</a></li><li><Link to="/register" className="hover:text-white">Start free trial</Link></li><li><Link to="/signin" className="hover:text-white">Sign in</Link></li><li><Link to="/platform" className="hover:text-white">Fera team console</Link></li></ul></div>
                     <div><div className="mb-3 font-semibold text-white">Company</div><ul className="space-y-2"><li><a href="https://www.ferasolution.com" className="hover:text-white">Fera Solution</a></li></ul></div>
                 </div>
                 <div className="mx-auto mt-12 max-w-6xl border-t border-white/[.06] pt-6 text-xs text-white/35">© {new Date().getFullYear()} Fera Solution. All rights reserved.</div>
