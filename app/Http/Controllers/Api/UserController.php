@@ -102,6 +102,7 @@ class UserController extends Controller
     {
         $this->authorizeManage($request, 'users');
         $this->guardSuper($request, $user);
+        abort_if(\App\Support\DemoAccounts::protects($user), 422, 'This is a shared demo account, so it cannot be changed or removed. Add a new user to try editing.');
         $data = $request->validate($this->rules($request, $user));
         if (empty($data['password'])) {
             unset($data['password']);
@@ -129,6 +130,7 @@ class UserController extends Controller
         abort_unless($request->user()->canApprove('users'), 403, 'You need Manage access on Users to delete accounts.');
         $this->guardSuper($request, $user);
         abort_if($user->id === $request->user()->id, 422, 'You cannot delete your own account.');
+        abort_if(\App\Support\DemoAccounts::protects($user), 422, 'This is a shared demo account, so it cannot be changed or removed. Add a new user to try editing.');
         Activity::log('users', 'delete', "Deleted account of {$user->name}");
         $user->delete();
 

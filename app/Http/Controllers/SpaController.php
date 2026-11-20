@@ -18,7 +18,7 @@ class SpaController extends Controller
         [$name, $region] = Tenant::run($soc, fn () => [Settings::get('community_name'), array_intersect_key(Settings::all(), array_flip(['country', 'currency', 'locale', 'timezone', 'unit_label', 'id_label']))]);
         $name = $name ?: $soc->name;
 
-        return ['app' => ['mode' => 'tenant', 'name' => $name, 'base' => '/'.$soc->slug, 'society' => $soc->publicInfo() + ['open' => $soc->isOpen(), 'display_name' => $name] + $region, 'notices' => \App\Models\Platform\Notice::for($soc)],
+        return ['app' => ['mode' => 'tenant', 'name' => $name, 'base' => '/'.$soc->slug, 'society' => $soc->publicInfo() + ['open' => $soc->isOpen(), 'display_name' => $name] + $region, 'notices' => \App\Models\Platform\Notice::for($soc), 'demo_accounts' => $soc->slug === 'demo' ? \App\Support\DemoAccounts::forLogin() : []],
             'title' => $name, 'manifest' => '/'.$soc->slug.'/manifest.webmanifest'];
     }
 

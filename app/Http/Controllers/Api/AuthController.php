@@ -68,6 +68,9 @@ class AuthController extends Controller
             'current_password' => 'nullable|required_with:password|string',
             'password' => 'nullable|string|min:8|confirmed',
         ]);
+        if (\App\Support\DemoAccounts::protects($user) && (! empty($data['password']) || (isset($data['name']) && $data['name'] !== $user->name))) {
+            abort(422, 'This is a shared demo account, so its name and password stay as they are.');
+        }
         if (! empty($data['password'])) {
             if (! Hash::check($data['current_password'], $user->password)) {
                 throw ValidationException::withMessages(['current_password' => 'Current password is incorrect.']);

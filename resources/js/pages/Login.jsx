@@ -1,9 +1,38 @@
 import { useState } from 'react';
-import { Loader2, ShieldCheck, Boxes, BookOpen, Wallet, CalendarHeart, MessageSquareWarning, FileCheck2, Archive } from 'lucide-react';
+import { Loader2, LogIn, ShieldCheck, Boxes, BookOpen, Wallet, CalendarHeart, MessageSquareWarning, FileCheck2, Archive } from 'lucide-react';
 import { useAuth } from '../lib/auth';
 
 const FEATURES = [[ShieldCheck, 'Gate security & visitor tracking'], [Wallet, 'Maintenance, dues & salaries'], [CalendarHeart, 'Event booking with time alerts'],
     [MessageSquareWarning, 'Online complaints'], [FileCheck2, 'NOC processing'], [Archive, 'Digital record room'], [BookOpen, 'Library & e-books'], [Boxes, 'Inventory issuance']];
+
+/** One-click sign-ins for the public demo community. */
+function DemoAccounts({ onPick, busy }) {
+    const list = window.APP?.demo_accounts || [];
+    if (!list.length) return null;
+    const groups = [...new Set(list.map((a) => a.group))];
+    return (
+        <div className="mt-8 border-t border-ink/[.07] pt-6">
+            <div className="text-[15px] font-bold">Try a demo account</div>
+            <p className="mt-0.5 text-[13px] text-ink/55">One click signs you in. Every account uses the password <b className="text-ink/80">password</b>.</p>
+            <div className="mt-4 space-y-4">
+                {groups.map((g) => (
+                    <div key={g}>
+                        <div className="mb-1.5 text-[12px] font-semibold text-ink/45">{g}</div>
+                        <div className="grid gap-1.5 sm:grid-cols-2">
+                            {list.filter((a) => a.group === g).map((a) => (
+                                <button key={a.email} type="button" disabled={!!busy} onClick={() => onPick(a.email)} title={a.about}
+                                    className="group flex items-center gap-2.5 rounded-xl border border-ink/10 bg-surface px-3 py-2.5 text-left transition-colors hover:border-brand-500/40 hover:bg-brand-50 disabled:opacity-60">
+                                    <span className="min-w-0 flex-1"><span className="block truncate text-[13.5px] font-semibold">{a.label}</span><span className="block truncate text-[11.5px] text-ink/50">{a.about}</span></span>
+                                    {busy === a.email ? <Loader2 size={15} className="shrink-0 animate-spin text-brand-600" /> : <LogIn size={15} className="shrink-0 text-ink/30 group-hover:text-brand-600" />}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                ))}
+            </div>
+        </div>
+    );
+}
 
 export default function Login() {
     const { login } = useAuth();
@@ -16,6 +45,13 @@ export default function Login() {
         setBusy(true);
         setError('');
         try { await login(form.email, form.password, form.remember); } catch (err) { setError(err.message); } finally { setBusy(false); }
+    };
+    const demo = !!window.APP?.demo_accounts?.length;
+    const pick = async (email) => {
+        setForm({ ...form, email, password: 'password' });
+        setBusy(email);
+        setError('');
+        try { await login(email, 'password', true); } catch (err) { setError(err.message); } finally { setBusy(false); }
     };
 
     return (
@@ -39,8 +75,8 @@ export default function Login() {
                 </div>
                 <div className="relative text-xs text-white/35">Built by Fera Solution</div>
             </div>
-            <div className="flex items-center justify-center p-6">
-                <form onSubmit={submit} className="w-full max-w-sm">
+            <div className={`flex justify-center p-6 ${demo ? 'items-start overflow-y-auto py-10 lg:max-h-screen' : 'items-center'}`}>
+                <form onSubmit={submit} className={`w-full ${demo ? 'max-w-md' : 'max-w-sm'}`}>
                     <img src="/icon.svg" className="mb-6 size-12 rounded-2xl lg:hidden" alt="" />
                     <h2 className="text-[30px] font-bold leading-tight tracking-tight">Sign in</h2>
                     {window.APP?.society && <div className="mt-1 text-[15px] font-semibold text-brand-700">{window.APP.society.display_name || window.APP.society.name}</div>}
@@ -56,9 +92,10 @@ export default function Login() {
                         </div>
                         <label className="flex items-center gap-2 text-sm text-ink/65"><input type="checkbox" className="size-4 accent-brand-600" checked={form.remember} onChange={(e) => setForm({ ...form, remember: e.target.checked })} />Keep me signed in</label>
                         {error && <div className="rounded-xl bg-red-50 px-3 py-2 text-sm text-red-700">{error}</div>}
-                        <button className="btn-primary w-full py-3 text-[15px]" disabled={busy}>{busy && <Loader2 size={16} className="animate-spin" />}Sign in</button>
+                        <button className="btn-primary w-full py-3 text-[15px]" disabled={!!busy}>{busy === true && <Loader2 size={16} className="animate-spin" />}Sign in</button>
                     </div>
-                    <p className="mt-6 text-center text-sm text-ink/50">Not your society? <a href="/" className="font-semibold text-brand-600 hover:underline">Find yours</a></p>
+                    <DemoAccounts onPick={pick} busy={busy} />
+                    <p className="mt-6 text-center text-sm text-ink/50">Not your community? <a href="/signin" className="font-semibold text-brand-600 hover:underline">Find yours</a></p>
                 </form>
             </div>
         </div>

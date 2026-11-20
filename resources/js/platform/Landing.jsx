@@ -233,7 +233,7 @@ const TEAMS = [
         [Wallet, 'See and pay dues'], [BookOpen, 'Library, gym and club'], [Archive, 'Their house file, always at hand']] },
 ];
 
-const DEMO_LOGINS = [['Community admin', 'admin@demo.local'], ['Gate security', 'security@demo.local'], ['Resident', 'resident@demo.local']];
+const DEMO_LOGINS = [['Super admin', 'superadmin@demo.local'], ['Finance manager', 'finance@demo.local'], ['Security guard', 'guard@demo.local'], ['Home owner', 'resident@demo.local']];
 
 
 const MODULE_LABELS = {
@@ -511,7 +511,7 @@ export default function Landing() {
                                 <span className="text-right text-[13.5px] text-night/70">{email}</span>
                             </div>
                         ))}
-                        <div className="px-4 pb-2 pt-3 text-[13px] text-night/65">Password for every demo account: <b className="text-night">password</b></div>
+                        <div className="px-4 pb-2 pt-3 text-[13px] text-night/65">Password for every demo account: <b className="text-night">password</b>. The demo sign-in page has 13 accounts, one per role, ready to open with one click.</div>
                     </div>
                 </div>
             </section>
